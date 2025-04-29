@@ -1,0 +1,76 @@
+## モジュール詳細設計書: 分散型SLMアーキテクチャ（モジュール版）
+
+**目的**：
+
+- 本システムを「単一のLLMのように呼び出せるモジュール」として提供
+- 内部で複数SLMエージェント＋黒板＋RAG＋メタ適応を実行
+- 後段でTauri+React GUIと組み合わせ可能なAPI設計
+
+---
+
+### 1. 全体構成図
+
+```
+Client (Python API or Tauri/React)
+    │  call .generate(request)
+    ▼
+DistributedSLM Module
+ ├─ Input Reception (Input Preprocessor)
+ ├─ Blackboard (Shared Memory)
+ ├─ Summary Engine
+ ├─ Agent Pool Manager
+ │    ├─ Model Agent 1
+ │    ├─ Agent 1
+ │    ├─ Model Agent 2
+ │    ├─ Agent 2
+ │    └─ Agent N
+ ├─ RAG Knowledge Base (RAG Retriever)
+ ├─ Output Agent (Output Synthesizer)
+```
+
+---
+
+### 2. モジュール一覧と責務
+
+| モジュール                      | 主な責務                                                                                 |
+|-------------------------------|-----------------------------------------------------------------------------------------|
+| Input Reception                | ・ユーザー入力の受け取り・正規化・トークナイズ・embedding取得                            |
+| Blackboard (Shared Memory)     | ・共有メモリAPI（write/read）提供・同期・状態管理                                        |
+| Summary Engine                 | ・黒板上の情報を要約し簡潔化                                                           |
+| Agent Pool Manager             | ・各エージェント（Model Agent / Functional Agent）のライフサイクル管理・並列実行制御  |
+| Model Agent                    | ・主モデル推論（Gemma-3 1B のみ）                                                         |
+| Functional Agent               | ・役割別処理（要約Agent, 分析Agent, 批判Agentなど）                                      |
+| RAG Knowledge Base (Retriever) | ・オンデバイス検索（埋め込み近傍／SQLiteインデックス）・外部知識取得                    |
+| Output Agent                   | ・最終応答生成（黒板＋要約結果の統合）                                                  |
+| Public API                     | ・`generate(request: str) -> response: str` インターフェース提供                         |
+
+---
+
+### 3. API仕様（Public API）
+
+```python
+class DistributedSLM:
+    def __init__(self, config: dict = None):
+        """コンストラクタ：各モジュール初期化"""
+    
+    async def generate(self, input_text: str) -> str:
+        """
+        入力文字列から最終応答を生成
+        ・エンドツーエンド非同期呼び出し
+        """
+```
+
+- **config**: モジュールごとのパラメータ
+  - `num_agents`: int
+  - `rag_top_k`: int
+
+---
+
+### 4. 設計の注意点
+- **KISS原則**（Keep It Simple, Stupid）を遵守: モジュールはできるだけ単純に保ち、不要な複雑化を避ける
+- **プラグイン／拡張性**: 各エージェントやリトリーバーはインターフェースを実装するプラグイン形式とし、管理者が新しいAgentクラスを追加可能
+- **設定ファイル駆動**: 全モジュールのパラメータ（エージェント数、RAG設定など）は外部YAML/JSONファイルで定義し、コードを変更せずに調整可能
+- **フックポイント提供**: 入出力前後や黒板読書時点にフックを用意し、追加処理やログ出力を容易に差し込める設計
+- **バージョン管理**: モジュールAPIにはバージョン番号を付与し、後方互換性を保ちながら段階的に機能追加できるようにする
+- **ドキュメント自動生成**: config定義やプラグイン仕様からAPIドキュメントを自動生成し、管理者が変更点を即座に把握できるようにする
+
