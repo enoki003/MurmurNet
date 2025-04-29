@@ -22,3 +22,8 @@ python murmurnet/distributed_slm.py
 ## 注意
 - モデルファイルは大容量のため、別途ダウンロード・配置してください。
 - 詳細な使い方や設定は、計画.txtや各モジュールのdocstringを参照してください。
+
+推奨モデル
+https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf
+
+
