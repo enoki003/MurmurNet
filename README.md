@@ -140,4 +140,59 @@ class DistributedSLM:
 推奨モデル
 https://huggingface.co/google/gemma-3-1b-it-qat-q4_0-gguf
 
+---
+
+## 使い方（モジュールとして呼び出す例・引数と設定）
+
+Pythonプログラムから直接importして利用できます。
+
+```python
+from murmurnet.distributed_slm import DistributedSLM
+import asyncio
+
+# 設定例
+config = {
+    "num_agents": 2,           # 並列エージェント数（デフォルト2）
+    "rag_top_k": 3,             # RAGで検索する知識数（デフォルト3）
+    # その他、各モジュールの詳細設定もdictで渡せます
+}
+
+slm = DistributedSLM(config)
+result = asyncio.run(slm.generate("AIは教育をどう変えると思う？"))
+print(result)
+```
+
+### DistributedSLMの主な引数・設定項目
+- `num_agents` : 並列で動作させるエージェント数（int）
+- `rag_top_k`  : RAG Knowledge Baseから取得する知識数（int）
+- その他、各モジュール（AgentPool, RAGRetriever, OutputAgent等）の詳細設定もconfigで渡せます
+
+#### 例: カスタム設定
+```python
+config = {
+    "num_agents": 4,
+    "rag_top_k": 5,
+    "output": {"max_tokens": 256},
+    # ...他の詳細設定も可
+}
+slm = DistributedSLM(config)
+```
+
+- `generate`は非同期関数です。Jupyterや他のasync環境では`await slm.generate(...)`で呼び出してください。
+- configを省略した場合はデフォルト設定で動作します。
+
+## （補足）コマンドラインでの動作確認
+
+テストスクリプトを使ってコマンドラインから動作確認も可能です。
+
+```
+python murmurnet/test_script.py > output.txt
+```
+
+output.txtにAIの応答や黒板の内容が記録されます。
+
+---
+
+何か不明点があれば、計画.txtや各モジュールのdocstringも参照してください。
+
 
