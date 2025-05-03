@@ -7,6 +7,7 @@ from modules.summary_engine import SummaryEngine
 from modules.agent_pool import AgentPoolManager
 from modules.rag_retriever import RAGRetriever
 from modules.output_agent import OutputAgent
+from modules.controller import Controller
 
 class DistributedSLM:
     def __init__(self, config: dict = None):
@@ -21,6 +22,7 @@ class DistributedSLM:
         self.agent_pool = AgentPoolManager(self.config, self.blackboard)
         self.rag_retriever = RAGRetriever(self.config)
         self.output_agent = OutputAgent(self.config)
+        self.controller = Controller(self.config)
         self.logger = self.setup_logger()
 
     def setup_logger(self):
@@ -58,26 +60,22 @@ class DistributedSLM:
         self.logger.info("Writing input to blackboard")
         self.blackboard.write('input', {'normalized': input_text})
 
-        # 要約エンジンで要約を生成
-        self.logger.info("Generating summary")
-        summary = self.summary_engine.summarize(self.blackboard)
-        self.blackboard.write('summary', summary)
-
-        # RAGRetrieverでデータを取得し、黒板に書き込む
-        self.logger.info("Retrieving data using RAGRetriever")
-        rag_data = self.rag_retriever.retrieve(input_text)
-        if not rag_data:
-            self.logger.warning("No data found by RAGRetriever")
-            rag_data = "知識が見つかりませんでした"
-        self.blackboard.write('rag', rag_data)
-
         # エージェントプールを実行
         self.logger.info("Running agent pool")
         self.agent_pool.run_agents(self.blackboard)
 
-        # 最終応答を生成
-        self.logger.info("Generating final response")
-        final_response = self.output_agent.generate(self.blackboard)
+        # agent_outputsの収集
+        agent_outputs = []
+        for i in range(num_agents):
+            out = self.blackboard.read(f'agent_{i}_output')
+            if out:
+                agent_outputs.append(out)
 
-        self.logger.info("Generation process completed")
+        # 最終応答の生成
+        if agent_outputs:
+            final_response = "\n".join(agent_outputs)
+        else:
+            final_response = "申し訳ありませんが、適切な応答を生成できませんでした。"
+
+        self.logger.info("Final response generated")
         return final_response

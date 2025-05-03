@@ -20,34 +20,40 @@ from modules import agent_pool, blackboard, input_reception, output_agent, rag_r
 
 def main():
     logging.info("MurmurNet テスト開始")
-    # 各モジュールの初期化テスト
+    config = {
+        "num_agents": 2,
+        "rag_mode": "dummy",
+        "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_template.txt",
+        "params": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_params.json"
+    }
     try:
-        ap = agent_pool.AgentPool()
+        ap = agent_pool.AgentPoolManager(config, None)
         logging.info("agent_pool: OK")
     except Exception as e:
         logging.error(f"agent_pool: NG ({e})", exc_info=True)
     try:
-        bb = blackboard.Blackboard()
+        bb = blackboard.Blackboard(config)
         logging.info("blackboard: OK")
     except Exception as e:
         logging.error(f"blackboard: NG ({e})", exc_info=True)
     try:
-        ir = input_reception.InputReception()
+        ir = input_reception.InputReception(config)
         logging.info("input_reception: OK")
     except Exception as e:
         logging.error(f"input_reception: NG ({e})", exc_info=True)
     try:
-        oa = output_agent.OutputAgent()
+        oa = output_agent.OutputAgent(config)
         logging.info("output_agent: OK")
     except Exception as e:
         logging.error(f"output_agent: NG ({e})", exc_info=True)
     try:
-        rag = rag_retriever.RagRetriever()
+        rag = rag_retriever.RAGRetriever(config)
         logging.info("rag_retriever: OK")
     except Exception as e:
         logging.error(f"rag_retriever: NG ({e})", exc_info=True)
     try:
-        se = summary_engine.SummaryEngine()
+        se = summary_engine.SummaryEngine(config)
         logging.info("summary_engine: OK")
     except Exception as e:
         logging.error(f"summary_engine: NG ({e})", exc_info=True)
@@ -70,7 +76,12 @@ def print_blackboard(bb):
 
 # 冗長な出力を削減
 async def main():
-    config = {"num_agents": 2}
+    config = {
+        "num_agents": 2,
+        "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_template.txt",
+        "params": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_params.json"
+    }
     slm = DistributedSLM(config)
 
     input_text = "AIは教育をどう変えると思う？"

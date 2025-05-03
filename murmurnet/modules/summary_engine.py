@@ -5,8 +5,11 @@ import os
 class SummaryEngine:
     def __init__(self, config):
         self.config = config
-        model_path = os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf')
-        self.llm = Llama(
+        chat_template = config.get('chat_template')
+        model_path = config.get('model_path')
+        if not model_path:
+            model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
+        llama_kwargs = dict(
             model_path=model_path,
             n_ctx=4096,
             n_threads=6,
@@ -16,6 +19,9 @@ class SummaryEngine:
             seed=42,
             chat_format="gemma"
         )
+        if chat_template:
+            llama_kwargs['chat_template'] = chat_template
+        self.llm = Llama(**llama_kwargs)
 
     def summarize(self, blackboard):
         # 黒板上の情報を要約
@@ -27,7 +33,7 @@ class SummaryEngine:
         messages_summary_1 = [
             {"role": "user", "content": prompt_summary_1}
         ]
-        response_summary_1 = self.llm.create_chat_completion(messages=messages_summary_1, max_tokens=128)
+        response_summary_1 = self.llm.create_chat_completion(messages=messages_summary_1, max_tokens=512)
         summary_1 = response_summary_1["choices"][0]["message"]["content"].strip()
         blackboard.write('summary_1', summary_1)
 
@@ -36,7 +42,7 @@ class SummaryEngine:
         messages_final_summary = [
             {"role": "user", "content": prompt_final_summary}
         ]
-        response_final_summary = self.llm.create_chat_completion(messages=messages_final_summary, max_tokens=128)
+        response_final_summary = self.llm.create_chat_completion(messages=messages_final_summary, max_tokens=512)
         final_summary = response_final_summary["choices"][0]["message"]["content"].strip()
         blackboard.write('final_summary', final_summary)
 
