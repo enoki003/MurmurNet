@@ -11,7 +11,7 @@ class SummaryEngine:
             model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=4096,
+            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -33,7 +33,7 @@ class SummaryEngine:
         messages_summary_1 = [
             {"role": "user", "content": prompt_summary_1}
         ]
-        response_summary_1 = self.llm.create_chat_completion(messages=messages_summary_1, max_tokens=512)
+        response_summary_1 = self.llm.create_chat_completion(messages=messages_summary_1, max_tokens=1024)  # Increased max_tokens for better output
         summary_1 = response_summary_1["choices"][0]["message"]["content"].strip()
         blackboard.write('summary_1', summary_1)
 
@@ -42,7 +42,7 @@ class SummaryEngine:
         messages_final_summary = [
             {"role": "user", "content": prompt_final_summary}
         ]
-        response_final_summary = self.llm.create_chat_completion(messages=messages_final_summary, max_tokens=512)
+        response_final_summary = self.llm.create_chat_completion(messages=messages_final_summary, max_tokens=1024)  # Increased max_tokens for better output
         final_summary = response_final_summary["choices"][0]["message"]["content"].strip()
         blackboard.write('final_summary', final_summary)
 

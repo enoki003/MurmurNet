@@ -3,10 +3,18 @@ import os
 import argparse
 import asyncio
 from pathlib import Path
+import logging
 
 # murmurunetパスを追加
 sys.path.append(str(Path(__file__).parent.parent / 'murmurnet'))
 from distributed_slm import DistributedSLM
+
+# ログ設定
+logging.basicConfig(
+    filename='console_app.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 def print_debug(slm):
     print("\n[DEBUG] 黒板の内容:")
@@ -32,6 +40,7 @@ def get_chat_template():
 async def main():
     parser = argparse.ArgumentParser(description="MurmurNet Console App")
     parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
+    parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
     args = parser.parse_args()
 
     chat_template = get_chat_template()
@@ -44,14 +53,21 @@ async def main():
     slm = DistributedSLM(config)
     print(f"MurmurNet Console (type 'exit' to quit, 多言語対応)")
     while True:
-        user_input = input("あなた> ").strip()
-        if user_input.lower() in ['exit', 'quit']:
-            print("終了します。")
-            break
-        response = await slm.generate(user_input)
-        print(f"AI> {response}")
-        if args.debug:
-            print_debug(slm)
+        try:
+            user_input = input("あなた> ").strip()
+            if user_input.lower() in ['exit', 'quit']:
+                print("終了します。")
+                break
+            response = await slm.generate(user_input)
+            print(f"AI> {response}")
+            if args.debug:
+                print_debug(slm)
+            if args.log:
+                logging.info(f"User Input: {user_input}")
+                logging.info(f"AI Response: {response}")
+        except Exception as e:
+            print("エラーが発生しました。詳細はログを確認してください。")
+            logging.error("エラー:", exc_info=True)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -117,3 +117,29 @@ class TestInputReception(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+import asyncio
+from murmurnet.distributed_slm import DistributedSLM
+
+def main():
+    config = {
+        "num_agents": 2,
+        "rag_mode": "dummy",
+        "rag_score_threshold": 0.5,
+        "rag_top_k": 1,
+        "debug": True,
+        "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_template.txt"
+    }
+
+    slm = DistributedSLM(config)
+
+    async def test():
+        input_text = "AIが教育に与える影響について教えてください。"
+        response = await slm.generate(input_text)
+        print("最終出力:", response)
+
+    asyncio.run(test())
+
+if __name__ == "__main__":
+    main()

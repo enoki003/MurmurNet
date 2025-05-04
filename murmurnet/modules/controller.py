@@ -70,7 +70,7 @@ class Controller:
             model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=4096,
+            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -87,7 +87,7 @@ class Controller:
         messages = [
             {"role": "user", "content": prompt}
         ]
-        response = llm.create_chat_completion(messages=messages, max_tokens=512)
+        response = llm.create_chat_completion(messages=messages, max_tokens=1024, temperature=0.7)  # Adjusted max_tokens and temperature for consistency
         final_response = response["choices"][0]["message"]["content"].strip()
         # 途中終了対策
         def is_complete(text):
@@ -113,7 +113,7 @@ class Controller:
             model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=4096,
+            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -129,7 +129,7 @@ class Controller:
         messages = [
             {"role": "user", "content": prompt}
         ]
-        response = llm.create_chat_completion(messages=messages, max_tokens=512, temperature=temperature)
+        response = llm.create_chat_completion(messages=messages, max_tokens=1024, temperature=0.7)  # Adjusted max_tokens and temperature for consistency
         final_response = response["choices"][0]["message"]["content"].strip()
         def is_complete(text):
             return text.strip().endswith(('。', '！', '？', '.', '!', '?'))

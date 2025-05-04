@@ -1,0 +1,28 @@
+2025-05-04 17:37:29,867 - INFO - Use pytorch device_name: cpu
+2025-05-04 17:37:29,867 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-04 17:37:39,123 - INFO - Starting generation process
+2025-05-04 17:37:39,124 - INFO - Writing input to blackboard
+2025-05-04 17:37:39,124 - INFO - Running agent pool
+2025-05-04 17:38:12,180 - INFO - Final response generated
+2025-05-04 17:42:51,807 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 57, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-04 17:42:58,446 - INFO - Use pytorch device_name: cpu
+2025-05-04 17:42:58,446 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-04 17:43:07,806 - INFO - Starting generation process
+2025-05-04 17:43:07,807 - INFO - Writing input to blackboard
+2025-05-04 17:43:07,807 - INFO - Running agent pool
+2025-05-04 17:43:58,888 - INFO - Final response generated
+2025-05-04 17:44:29,235 - INFO - Starting generation process
+2025-05-04 17:44:29,235 - INFO - Writing input to blackboard
+2025-05-04 17:44:29,235 - INFO - Running agent pool
+2025-05-04 17:45:33,309 - INFO - Final response generated
+2025-05-04 17:45:49,350 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 57, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
