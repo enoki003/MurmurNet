@@ -22,7 +22,8 @@ def main():
     logging.info("MurmurNet テスト開始")
     config = {
         "num_agents": 2,
-        "rag_mode": "dummy",
+        "rag_mode": "zim",
+        "zim_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\wikipedia_en_top_nopic_2025-03.zim",
         "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
         "chat_template": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_template.txt",
         "params": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_params.json"

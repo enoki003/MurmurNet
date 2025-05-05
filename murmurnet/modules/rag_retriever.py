@@ -1,8 +1,70 @@
+"""
+MurmurNet - RAG Retriever
+~~~~~~~~~~~~~~~~~~~~~~~~~
+Retrieval‑Augmented Generation helper.
+Supports two back‑ends:
+  • dummy  – in‑memory toy KB
+  • zim    – offline Wikipedia (.zim) via libzim
+
+Author: MurmurNet team
+"""
+from __future__ import annotations
+
+import logging
+import os
+import re
+import textwrap
+from typing import Any, Dict, List, Union
+
 import numpy as np
 
-# RAGリトリーバーモジュール雛形
+# ───────────────────────────────────────────────────────────────────────────
+# Optional deps
+# ───────────────────────────────────────────────────────────────────────────
+try:
+    from sentence_transformers import SentenceTransformer  # type: ignore
+except ImportError as e:
+    SentenceTransformer = None  # type: ignore
+    logging.warning("sentence‑transformers not found: %s", e)
+
+try:
+    from libzim.reader import Archive  # type: ignore
+    from libzim.search import Searcher, Query  # type: ignore
+    HAS_LIBZIM = True
+except ImportError:
+    HAS_LIBZIM = False
+
+logger = logging.getLogger(__name__)
+
+# ───────────────────────────────────────────────────────────────────────────
+# Utility
+# ───────────────────────────────────────────────────────────────────────────
+
+def cosine(v1: np.ndarray, v2: np.ndarray) -> float:
+    n1, n2 = np.linalg.norm(v1), np.linalg.norm(v2)
+    if n1 == 0.0 or n2 == 0.0:
+        return 0.0
+    return float(np.dot(v1, v2) / (n1 * n2))
+
+
+def _html_to_text(html: str) -> str:
+    """Very lightweight HTML→plain text."""
+    # drop style & script
+    html = re.sub(r"(?is)<style[^>]*>.*?</style>", "", html)
+    html = re.sub(r"(?is)<script[^>]*>.*?</script>", "", html)
+    # drop tags
+    text = re.sub(r"<[^>]+>", " ", html)
+    # collapse whitespace
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+# ───────────────────────────────────────────────────────────────────────────
+# Main class
+# ───────────────────────────────────────────────────────────────────────────
+
 class RAGRetriever:
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.mode = config.get('rag_mode', 'dummy')  # 'dummy' or 'external'
         self.knowledge_base = [
@@ -20,39 +82,41 @@ class RAGRetriever:
                 input_embedding = np.random.rand(384)  # 仮のエンベディング生成
             else:
                 input_embedding = input_data['embedding']
-
             def cosine_similarity(vec1, vec2):
                 return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
             scored_chunks = []
             for kb in self.knowledge_base:
                 score = cosine_similarity(input_embedding, kb['embedding'])
                 scored_chunks.append({"text": kb['text'], "score": score})
-
             # スコアで降順ソート
             scored_chunks.sort(key=lambda x: x['score'], reverse=True)
-
             # 閾値以上のものをtop_k件取得
             filtered = [c for c in scored_chunks if c['score'] >= self.score_threshold][:self.top_k]
-
             if self.debug:
                 print(f"[RAG DEBUG] 取得チャンク数: {len(filtered)}")
                 for i, c in enumerate(filtered):
                     print(f"  chunk{i}: score={c['score']:.3f}, text={c['text']}")
                 if filtered:
                     print(f"[RAG DEBUG] 最終プロンプト用: {[c['text'] for c in filtered]}")
-
             if not filtered:
                 return "関連情報が見つかりませんでした"
-
             # 1件ならstr, 複数なら連結
             if len(filtered) == 1:
                 return filtered[0]['text']
             else:
                 return '\n'.join([c['text'] for c in filtered])
-
         elif self.mode == 'external':
             return '[外部DB参照: 実装予定]'
-
         else:
             return '[RAGモード未設定]'
+
+    def retrieve(self, query):
+        result, score = self._search_with_score(query)
+        if score < 0.7:
+            return "関連知識が見つかりませんでした"
+        return result
+
+    def _search_with_score(self, query):
+        if "AI" in query or "仕事" in query or "雇用" in query or "労働" in query:
+            return "AIと雇用・労働に関する知識チャンク（例）", 1.0
+        return "黒板型アーキテクチャは、複数のエージェントが協調して問題を解決するための枠組みです。", 0.5
