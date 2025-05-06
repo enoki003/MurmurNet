@@ -66,57 +66,100 @@ def _html_to_text(html: str) -> str:
 class RAGRetriever:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.mode = config.get('rag_mode', 'dummy')  # 'dummy' or 'external'
-        self.knowledge_base = [
-            {"text": "AIは人工知能の略であり、機械が人間のように学習する技術です。", "embedding": np.random.rand(384)},
-            {"text": "黒板型アーキテクチャは、複数のエージェントが協調して問題を解決するための枠組みです。", "embedding": np.random.rand(384)},
-            {"text": "RAGはRetrieval-Augmented Generationの略で、検索と生成を組み合わせた技術です。", "embedding": np.random.rand(384)}
+        self.mode: str = config.get("rag_mode", "dummy")
+        self.score_threshold: float = float(config.get("rag_score_threshold", 0.5))
+        self.top_k: int = int(config.get("rag_top_k", 5))
+        self.debug: bool = bool(config.get("debug", False))
+        self.knowledge_base: List[Dict[str, Any]] = config.get("knowledge_base", [])
+
+        if self.mode == "zim":
+            self._init_zim()
+            self._init_embedding()
+
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
+
+    # ───────────────────── init helpers ─────────────────────
+    def _init_zim(self) -> None:
+        if not HAS_LIBZIM:
+            logger.warning("libzim absent → dummy mode")
+            self.mode = "dummy"; return
+        path = self.config.get("zim_path")
+        if not path or not os.path.exists(path):
+            logger.warning("ZIM not found: %s → dummy", path)
+            self.mode = "dummy"; return
+        try:
+            self.zim_archive = Archive(path)
+            logger.info("Loaded ZIM: %s", path)
+        except Exception as e:
+            logger.exception("Archive open failed: %s", e)
+            self.mode = "dummy"
+
+    def _init_embedding(self) -> None:
+        if self.mode != "zim":
+            return
+        if SentenceTransformer is None:
+            logger.warning("embedding lib absent → no embeddings")
+            self.embedding_model = None; return
+        model_name = self.config.get("embedding_model", "all-MiniLM-L6-v2")
+        try:
+            self.embedding_model = SentenceTransformer(model_name)
+            logger.info("Embedding model: %s", model_name)
+        except Exception as e:
+            logger.exception("Embedding load fail: %s", e)
+            self.embedding_model = None
+
+    # ───────────────────── public ─────────────────────
+    def retrieve(self, query: Union[str, Dict[str, Any]]) -> str:
+        if self.mode == "zim":
+            return self._retrieve_zim(query)
+        return self._retrieve_dummy(query)
+
+    # ───────────────────── dummy ─────────────────────
+    def _retrieve_dummy(self, query: Union[str, Dict[str, Any]]) -> str:
+        if not self.knowledge_base:
+            return "ダミーモード: KBが空です"
+        emb = query.get("embedding") if isinstance(query, dict) else None
+        if emb is None:
+            emb = np.random.default_rng(abs(hash(str(query)))%(2**32)).random(384)
+        scored = [
+            {"text": kb["text"], "s": cosine(emb, kb["embedding"])}
+            for kb in self.knowledge_base
         ]
-        self.score_threshold = config.get('rag_score_threshold', 0.5)
-        self.top_k = config.get('rag_top_k', 1)
-        self.debug = config.get('debug', False)
+        scored = [s for s in scored if s["s"] >= self.score_threshold]
+        scored.sort(key=lambda x: x["s"], reverse=True)
+        if not scored:
+            return "関連情報が見つかりませんでした"
+        return "\n".join(s["text"] for s in scored[: self.top_k])
 
-    def retrieve(self, input_data):
-        if self.mode == 'dummy':
-            if isinstance(input_data, str):
-                input_embedding = np.random.rand(384)  # 仮のエンベディング生成
-            else:
-                input_embedding = input_data['embedding']
-            def cosine_similarity(vec1, vec2):
-                return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-            scored_chunks = []
-            for kb in self.knowledge_base:
-                score = cosine_similarity(input_embedding, kb['embedding'])
-                scored_chunks.append({"text": kb['text'], "score": score})
-            # スコアで降順ソート
-            scored_chunks.sort(key=lambda x: x['score'], reverse=True)
-            # 閾値以上のものをtop_k件取得
-            filtered = [c for c in scored_chunks if c['score'] >= self.score_threshold][:self.top_k]
-            if self.debug:
-                print(f"[RAG DEBUG] 取得チャンク数: {len(filtered)}")
-                for i, c in enumerate(filtered):
-                    print(f"  chunk{i}: score={c['score']:.3f}, text={c['text']}")
-                if filtered:
-                    print(f"[RAG DEBUG] 最終プロンプト用: {[c['text'] for c in filtered]}")
-            if not filtered:
-                return "関連情報が見つかりませんでした"
-            # 1件ならstr, 複数なら連結
-            if len(filtered) == 1:
-                return filtered[0]['text']
-            else:
-                return '\n'.join([c['text'] for c in filtered])
-        elif self.mode == 'external':
-            return '[外部DB参照: 実装予定]'
-        else:
-            return '[RAGモード未設定]'
 
-    def retrieve(self, query):
-        result, score = self._search_with_score(query)
-        if score < 0.7:
-            return "関連知識が見つかりませんでした"
-        return result
-
-    def _search_with_score(self, query):
-        if "AI" in query or "仕事" in query or "雇用" in query or "労働" in query:
-            return "AIと雇用・労働に関する知識チャンク（例）", 1.0
-        return "黒板型アーキテクチャは、複数のエージェントが協調して問題を解決するための枠組みです。", 0.5
+    # ───────────────────── ZIM ─────────────────────
+    def _retrieve_zim(self, query: Union[str, Dict[str, Any]]) -> str:
+        qtext = query.get("normalized", "") if isinstance(query, dict) else str(query)
+        if not qtext:
+            return "検索クエリが空です"
+        try:
+            srch = Searcher(self.zim_archive)
+            paths = srch.search(Query().set_query(qtext)).getResults(0, self.top_k*4)
+        except Exception as e:
+            logger.exception("search fail: %s", e)
+            return f"検索エラー: {e}"
+        q_emb = self.embedding_model.encode(qtext) if getattr(self, "embedding_model", None) else None
+        hits: List[Dict[str, Any]] = []
+        for p in paths:
+            try:
+                entry = self.zim_archive.get_entry_by_path(p)
+                data = entry.get_item().content
+                if isinstance(data, memoryview):
+                    data = data.tobytes()
+                plain = _html_to_text(data.decode("utf-8", "ignore"))
+                snippet = textwrap.shorten(plain, 1000, placeholder="…")
+                sim = cosine(q_emb, self.embedding_model.encode(snippet)) if q_emb is not None else 1.0
+                if sim >= self.score_threshold:
+                    hits.append({"title": entry.title, "content": snippet, "s": sim})
+            except Exception as e:
+                logger.debug("skip: %s", e)
+        hits.sort(key=lambda x: x["s"], reverse=True)
+        if not hits:
+            return "関連情報が見つかりませんでした"
+        return "\n\n".join(f"【{h['title']}】\n{h['content']}" for h in hits[: self.top_k])

@@ -1,16 +1,16 @@
+# output_agent.py
 from llama_cpp import Llama
 import os
 import re
 
 class OutputAgent:
-    def __init__(self, config):
-        self.config = config
-        chat_template = config.get('chat_template')
-        model_path = config.get('model_path', os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf')))
-        rag_db_path = config.get('rag_db_path')
+    def __init__(self, config: dict = None):
+        model_path = config.get('model_path') or os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf')
+        )
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
+            n_ctx=32768,
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -18,53 +18,52 @@ class OutputAgent:
             seed=42,
             chat_format="gemma"
         )
+        chat_template = config.get('chat_template')
         if chat_template:
             llama_kwargs['chat_template'] = chat_template
+
         self.llm = Llama(**llama_kwargs)
-        self.rag_db_path = rag_db_path
+        self.config = config or {}
 
-    def generate(self, blackboard):
-        # 1ターン分のみの明示的プロンプト構成
-        user_input = blackboard.read('input')
-        if isinstance(user_input, dict):
-            user_input = user_input.get('normalized', str(user_input))
-        rag_info = blackboard.read('rag')
+    def generate(self, blackboard, entries: list) -> str:
+        # 1) 入力と RAG を取得
+        inp = blackboard.read('input')
+        user_input = inp.get('normalized') if isinstance(inp, dict) else str(inp)
+        rag = blackboard.read('rag')
 
-        # 黒板から英語の内部処理結果を取得
-        agent_outputs = []
-        for k, v in blackboard.memory.items():
-            if k.startswith('agent_') and k.endswith('_output'):
-                agent_outputs.append(v)
+        # 2) システムプロンプト設定
+        def detect_lang(text):
+            if re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', text):
+                return 'ja'
+            if re.search(r'[A-Za-z]', text):
+                return 'en'
+            return 'ja'
+        lang = detect_lang(user_input)
+        sys_p = (
+            "あなたは日本語話者向けの多言語アシスタントです。必ず日本語で返答してください。"
+            if lang == 'ja' else
+            "You are a general-purpose AI assistant. Answer in English."
+        )
 
-        english_content = "\n".join(agent_outputs)
-
-        # 日本語での最終回答を生成するプロンプト
-        system_prompt = "あなたは翻訳者兼要約者です。以下の英語の内容を日本語に翻訳し、簡潔にまとめてください。必ず日本語で回答してください。"
-
-        prompt = f"{system_prompt}\n\n元の質問: {user_input}\n\n英語の内容:\n{english_content}\n\n日本語での回答:"
-
+        # 3) プロンプト組み立て
         messages = [
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": sys_p},
+            {"role": "user", "content": (
+                f"問い: {user_input}\n\n"
+                f"参考情報: {rag}\n\n"
+                "以下の各エージェントの意見を参考に最適な回答を作成してください。"
+            )}
         ]
+        resp = self.llm.create_chat_completion(
+            messages=messages,
+            max_tokens=1024,
+            temperature=0.7
+        )
+        # llama_cpp returns a dict, so access choices via key
+        if isinstance(resp, dict):
+            answer = resp['choices'][0]['message']['content'].strip()
+        else:
+            answer = resp.choices[0].message.content.strip()
 
-        # max_tokensの増加
-        response = self.llm.create_chat_completion(messages=messages, max_tokens=1024, temperature=0.7)  # Adjusted temperature for more deterministic output
-        answer = response["choices"][0]["message"]["content"].strip()
-
-        # 応答の完全性チェック機能の追加
-        def check_response_completeness(text):
-            # 文が途中で切れていないか確認
-            if text.endswith(('。', '！', '？', '」', '）', ')', '.', '!', '?', '"')):
-                return True
-            return False
-
-        # 応答生成後
-        if not check_response_completeness(answer):
-            # 応答が不完全な場合、続きを生成
-            continuation_prompt = f"以下の文章の続きを短く完結させてください（日本語で）：\n{answer}"
-            continuation_messages = [{"role": "user", "content": continuation_prompt}]
-            continuation_response = self.llm.create_chat_completion(messages=continuation_messages, max_tokens=512)
-            continuation = continuation_response["choices"][0]["message"]["content"].strip()
-            answer = answer + continuation
 
         return answer

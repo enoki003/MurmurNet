@@ -1,17 +1,15 @@
+# summary_engine.py
 from llama_cpp import Llama
 import os
 
-# 要約エンジンの雛形
 class SummaryEngine:
-    def __init__(self, config):
-        self.config = config
-        chat_template = config.get('chat_template')
-        model_path = config.get('model_path')
-        if not model_path:
-            model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
+    def __init__(self, config: dict = None):
+        model_path = config.get('model_path') or os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf')
+        )
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
+            n_ctx=32768,
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -19,31 +17,20 @@ class SummaryEngine:
             seed=42,
             chat_format="gemma"
         )
+        chat_template = config.get('chat_template')
         if chat_template:
             llama_kwargs['chat_template'] = chat_template
+
         self.llm = Llama(**llama_kwargs)
 
-    def summarize(self, blackboard):
-        # 黒板上の情報を要約
-        input_text = blackboard.read('input')['normalized']
-        rag_result = blackboard.read('rag')
-        prompt_summary_1 = f"Summarize the following:\nInput: {input_text}\nRAG: {rag_result}"
-
-        # summary_1 を生成
-        messages_summary_1 = [
-            {"role": "user", "content": prompt_summary_1}
-        ]
-        response_summary_1 = self.llm.create_chat_completion(messages=messages_summary_1, max_tokens=1024)  # Increased max_tokens for better output
-        summary_1 = response_summary_1["choices"][0]["message"]["content"].strip()
-        blackboard.write('summary_1', summary_1)
-
-        # final_summary を生成
-        prompt_final_summary = f"Integrate and refine the following summary:\nSummary_1: {summary_1}"
-        messages_final_summary = [
-            {"role": "user", "content": prompt_final_summary}
-        ]
-        response_final_summary = self.llm.create_chat_completion(messages=messages_final_summary, max_tokens=1024)  # Increased max_tokens for better output
-        final_summary = response_final_summary["choices"][0]["message"]["content"].strip()
-        blackboard.write('final_summary', final_summary)
-
-        return final_summary
+    def summarize_blackboard(self, entries: list) -> str:
+        # entries: List[{'agent': id, 'text': str}]
+        combined = "\n\n".join(e['text'] for e in entries)
+        prompt = (
+            "以下の各エージェントの出力を統合・要約してください。\n\n" + combined
+        )
+        resp = self.llm.create_chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1024
+        )
+        return resp.choices[0].message.content.strip()

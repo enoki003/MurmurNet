@@ -16,7 +16,7 @@ class AgentPoolManager:
             model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
         llama_kwargs = dict(
             model_path=model_path,
-            n_ctx=32768,  # Context size updated to maximum supported by gemma3:1b
+            n_ctx=1024,  # Context size updated to maximum supported by gemma3:1b
             n_threads=6,
             use_mmap=True,
             use_mlock=False,
@@ -32,19 +32,29 @@ class AgentPoolManager:
         # 各エージェントの処理をGemma-3 1Bで実行
         input_data = blackboard.read('input')
 
-        # エージェントの役割を英語で定義
+        # agentごとに視点・トーンを割り当て
         agent_roles = [
-            {"role": "Economic Perspective", "system": "You are an economics expert. Provide specific opinions from an economic perspective.", "temperature": 0.7},
-            {"role": "Ethical Perspective", "system": "You are an ethics expert. Provide specific opinions from an ethical perspective.", "temperature": 0.9},
-            {"role": "Technical Perspective", "system": "You are a technology expert. Provide specific opinions from a technical perspective.", "temperature": 0.6},
-            {"role": "Social Perspective", "system": "You are a sociology expert. Provide specific opinions from a social perspective.", "temperature": 0.8}
+            {"role": "経済視点", "system": "あなたは経済の専門家です。経済的観点から具体的な意見を述べてください。", "temperature": 0.7},
+            {"role": "倫理視点", "system": "あなたは倫理の専門家です。倫理的観点から具体的な意見を述べてください。", "temperature": 0.9},
+            {"role": "技術視点", "system": "あなたは技術の専門家です。技術的観点から多言語で答えてください。", "temperature": 0.6},
+            {"role": "社会視点", "system": "あなたは社会学の専門家です。社会的観点から多言語で答えてください。", "temperature": 0.8}
         ]
-
         role = agent_roles[agent_id % len(agent_roles)]
-
-        # 常に英語で内部処理を行うよう指示
-        system_prompt = role['system'] + " Always respond in English for internal processing."
-        prompt = f"{system_prompt}\n\nQuestion: {input_data['normalized']}"
+        # 入力言語を判定し、system promptを調整
+        import re
+        def detect_lang(text):
+            if re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', text):
+                return 'ja'
+            elif re.search(r'[a-zA-Z]', text):
+                return 'en'
+            else:
+                return 'ja'
+        lang = detect_lang(input_data['normalized'])
+        if lang == 'ja':
+            system_prompt = role['system'] + " 必ず日本語で返答してください。"
+        else:
+            system_prompt = role['system'] + " Always respond in English."
+        prompt = f"{system_prompt}\n\n問い: {input_data['normalized']}"
 
         # 各エージェントの入力データを黒板に記録
         blackboard.write(f'agent_{agent_id}_input', input_data['normalized'])
@@ -52,15 +62,9 @@ class AgentPoolManager:
         messages = [
             {"role": "user", "content": prompt}
         ]
-
+    
         response = self.llm.create_chat_completion(messages=messages, max_tokens=512, temperature=role['temperature'])
-        output = response["choices"][0]["message"]["content"].strip()
-
-        # 出力をトリムしてフォーマットを整える
-        if len(output) > 500:
-            output = output[:500] + "... (truncated)"
-
-        blackboard.write(f'agent_{agent_id}_output', output)
+        blackboard.write(f'agent_{agent_id}_output', response["choices"][0]["message"]["content"].strip())
 
     def run_agents(self, blackboard):
         num_agents = self.config.get('num_agents', 2)

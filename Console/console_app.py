@@ -61,7 +61,7 @@ async def main():
         "num_agents": 2,
         "rag_mode": "zim",
         "rag_score_threshold": 0.0,
-        "rag_top_k": 5,
+        "rag_top_k": 1,
         "debug": args.debug,
         "zim_path": r"C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim",
         "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
