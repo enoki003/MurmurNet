@@ -5521,3 +5521,73 @@ Traceback (most recent call last):
     user_input = input("‚ ‚È‚½> ").strip()
                  ^^^^^^^^^^^^^^^^^
 EOFError
+2025-05-07 22:31:03,967 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:31:03,967 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:32:12,061 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:32:12,061 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:34:39,097 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:34:39,098 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:34:43,344 - INFO - Loaded ZIM: C:\\Users\\‰€–Ø—D—z\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-07 22:34:43,346 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:34:43,346 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:34:45,304 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-07 22:35:25,546 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:35:25,546 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:35:28,516 - INFO - Loaded ZIM: C:\\Users\\‰€–Ø—D—z\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-07 22:35:28,518 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:35:28,519 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:35:30,428 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-07 22:35:40,194 - INFO - Starting generation process
+2025-05-07 22:35:40,194 - INFO - Writing input to blackboard
+2025-05-07 22:35:40,344 - INFO - Retrieving RAG results
+2025-05-07 22:35:40,526 - INFO - Running agent pool
+2025-05-07 22:36:00,670 - INFO - Collected entries: [0, 1]
+2025-05-07 22:36:00,671 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-07 22:36:02,903 - INFO - Final response generated
+2025-05-07 22:38:11,950 - ERROR - ƒGƒ‰[”­¶
+Traceback (most recent call last):
+  File "C:\Users\‰€–Ø—D—z\OneDrive\ƒfƒXƒNƒgƒbƒv\‰Û‘èŒ¤‹†\Console\console_app.py", line 84, in main
+    user_input = input("‚ ‚È‚½> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-07 22:38:24,788 - DEBUG - Using proactor: IocpProactor
+2025-05-07 22:38:24,791 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:38:24,791 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:38:24,793 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-07 22:38:25,394 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-07 22:38:25,900 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-07 22:38:26,401 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-07 22:38:26,586 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-07 22:38:26,769 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-07 22:38:26,958 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-07 22:38:27,137 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-07 22:38:27,540 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-07 22:38:27,757 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6748
+2025-05-07 22:38:27,948 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6748
+2025-05-07 22:38:28,711 - INFO - Loaded ZIM: C:\\Users\\‰€–Ø—D—z\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-07 22:38:28,714 - INFO - Use pytorch device_name: cpu
+2025-05-07 22:38:28,714 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 22:38:28,904 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-07 22:38:29,463 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-07 22:38:29,652 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-07 22:38:29,834 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-07 22:38:30,018 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-07 22:38:30,202 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-07 22:38:30,390 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-07 22:38:30,602 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-07 22:38:30,821 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6748
+2025-05-07 22:38:31,008 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6748
+2025-05-07 22:38:31,010 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-07 22:38:54,917 - INFO - Starting generation process
+2025-05-07 22:38:54,917 - INFO - Writing input to blackboard
+2025-05-07 22:38:54,942 - INFO - Retrieving RAG results
+2025-05-07 22:38:54,980 - INFO - Running agent pool
+2025-05-07 22:39:25,093 - INFO - Collected entries: [0, 1]
+2025-05-07 22:39:25,094 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-07 22:39:57,161 - INFO - Final response generated
+2025-05-07 22:45:08,545 - ERROR - ƒGƒ‰[”­¶
+Traceback (most recent call last):
+  File "C:\Users\‰€–Ø—D—z\OneDrive\ƒfƒXƒNƒgƒbƒv\‰Û‘èŒ¤‹†\Console\console_app.py", line 84, in main
+    user_input = input("‚ ‚È‚½> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError

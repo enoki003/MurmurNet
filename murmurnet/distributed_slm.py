@@ -1,77 +1,68 @@
 # distributed_slm.py
 import os
 import yaml
-from modules.input_reception import InputReception
-from modules.blackboard import Blackboard
-from modules.agent_pool import AgentPoolManager
-from modules.rag_retriever import RAGRetriever
-from modules.output_agent import OutputAgent
+import logging
+from murmurnet.modules.input_reception import InputReception
+from murmurnet.modules.blackboard import Blackboard
+from murmurnet.modules.agent_pool import AgentPoolManager
+from murmurnet.modules.rag_retriever import RAGRetriever
+from murmurnet.modules.output_agent import OutputAgent
 
 class DistributedSLM:
+    """
+    分散創発型言語モデルメインクラス
+    単一の関数呼び出しで高度な対話生成機能を提供するブラックボックス型モジュール
+    """
     def __init__(self, config: dict = None):
         """各モジュール初期化"""
         self.config = config or {}
-        self.num_agents = self.config.get('num_agents', 2)
-        self.prompt_config = self.load_prompt_config()
-        self.input_reception = InputReception(self.config)
         self.blackboard = Blackboard(self.config)
+        self.input_reception = InputReception(self.config)
         self.agent_pool = AgentPoolManager(self.config, self.blackboard)
         self.rag_retriever = RAGRetriever(self.config)
         self.output_agent = OutputAgent(self.config)
-        self.logger = self.setup_logger()
+        self._setup_logger()
 
-    def setup_logger(self):
-        import logging
-        logger = logging.getLogger('DistributedSLM')
-        if not logger.handlers:
+    def _setup_logger(self):
+        """ロガー初期化（内部メソッド）"""
+        self.logger = logging.getLogger('DistributedSLM')
+        if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
-            logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-        return logger
+            self.logger.addHandler(handler)
+        self.logger.setLevel(logging.INFO if not self.config.get('debug') else logging.DEBUG)
 
-    def load_prompt_config(self):
-        try:
-            with open('prompt_config.yaml', 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
-        except FileNotFoundError:
-            return {}
-
-    async def generate(self, input_text: str, num_agents: int = None, max_length: int = 512) -> str:
+    async def generate(self, input_text: str) -> str:
         """
-        入力文字列から最終応答を生成
-        ・エンドツーエンド非同期呼び出し
+        外部公開API: 入力文字列から最終応答を生成
+        引数：
+            input_text: ユーザー入力文字列
+        戻り値：
+            生成された応答文字列
         """
         self.logger.info("Starting generation process")
-
-        # 1) パラメータ反映
-        num_agents = num_agents or self.num_agents
-
-        # 2) 黒板に初期入力を書き込む
-        self.logger.info("Writing input to blackboard")
+        
+        # 1. 入力受付・前処理
         processed = self.input_reception.process(input_text)
         self.blackboard.write('input', processed)
-
-        # 3) RAG結果を取得して黒板に書き込む
-        self.logger.info("Retrieving RAG results")
-        rag_result = self.rag_retriever.retrieve(input_text) or "関連情報が見つかりませんでした"
+        
+        # 2. RAG検索
+        rag_result = self.rag_retriever.retrieve(input_text)
         self.blackboard.write('rag', rag_result)
-
-        # 4) エージェントプールを実行
-        self.logger.info("Running agent pool")
+        
+        # 3. エージェント実行
         self.agent_pool.run_agents(self.blackboard)
-
-        # 5) 黒板から各 agent_i_output を収集
+        
+        # 4. エージェント出力収集
+        num_agents = self.config.get('num_agents', 2)
         entries = []
         for i in range(num_agents):
-            out = self.blackboard.read(f"agent_{i}_output")
-            if out:
-                entries.append({"agent": i, "text": out})
-        self.logger.info(f"Collected entries: {[e['agent'] for e in entries]}")
-
-        # 6) OutputAgent で最終レスポンス生成
+            agent_output = self.blackboard.read(f"agent_{i}_output")
+            if agent_output:
+                entries.append({"agent": i, "text": agent_output})
+                
+        # 5. 最終応答生成
         final_response = self.output_agent.generate(self.blackboard, entries)
-
-        self.logger.info("Final response generated")
+        
         return final_response
