@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+MurmurNet コンソールアプリケーション
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+分散SLMシステムのコマンドラインインターフェース
+対話的に質問応答を行うためのコンソールUI
+
+作者: Yuhi Sonoki
+"""
+
 import sys
 import os
 import argparse
@@ -14,7 +25,18 @@ from murmurnet.distributed_slm import DistributedSLM
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
 parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
 parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
+parser.add_argument('--iter', type=int, default=1, help='反復回数（デフォルト: 1）')
+parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
+parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
+parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
+# RAGモードのオプションを追加
+parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
+                    help='RAGモード（dummy: ダミーモード、zim: ZIMファイル使用）')
+parser.add_argument('--zim-path', type=str, 
+                    default=r"C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim",
+                    help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
 args, _ = parser.parse_known_args()
+
 log_level = logging.DEBUG if args.debug else logging.INFO
 logging.basicConfig(
     filename='console_app.log' if args.log else None,
@@ -26,8 +48,7 @@ if args.log:
     console = logging.StreamHandler()
     console.setLevel(log_level)
     console.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logging.getLogger().addHandler(console)
-
+    logging.getLogger('').addHandler(console)
 
 def print_debug(slm):
     """デバッグモード時の詳細情報表示"""
@@ -40,68 +61,101 @@ def print_debug(slm):
     print("\n[DEBUG] RAG結果:")
     print(f"  {slm.blackboard.read('rag')}")
     
+    # 要約結果を表示
+    if slm.use_summary:
+        print("\n[DEBUG] 要約結果:")
+        for i in range(slm.iterations):
+            summary = slm.blackboard.read(f'summary_{i}')
+            if summary:
+                print(f"  反復{i+1}の要約: {summary[:100]}...")
+    
     print("\n[DEBUG] エージェント出力:")
-    for i in range(slm.config.get('num_agents', 2)):
+    for i in range(slm.num_agents):
         output = slm.blackboard.read(f'agent_{i}_output')
         if output:
             # 長い出力は省略表示
             if len(output) > 100:
                 output = output[:100] + "..."
-            print(f"  エージェント{i}: {output}")
+            print(f"  エージェント{i+1}: {output}")
     print()
 
-
-async def main():
-    """コンソールアプリメイン関数"""
-    # 再度引数パース（debug, log フラグを利用）
-    args = parser.parse_args()
-
-    # モデルと関連ファイルのパス設定
-    DESKTOP_PATH = r"C:\\Users\\園木優陽\\OneDrive\\デスクトップ"
-    MODELS_PATH = os.path.join(DESKTOP_PATH, "models")
-    
-    # 設定を構成
+async def chat_loop():
+    """会話ループのメイン関数"""
+    # 設定
     config = {
-        "num_agents": 2,
-        "rag_mode": "zim",
-        "rag_score_threshold": 0.0,
-        "rag_top_k": 1,
+        "model_path": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma3_template.txt",
+        "num_agents": args.agents,
+        "iterations": args.iter,
+        "use_summary": not args.no_summary,
+        "use_parallel": args.parallel,
         "debug": args.debug,
-        "zim_path": r"C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim",
-        "model_path": os.path.join(MODELS_PATH, "gemma-3-1b-it-q4_0.gguf"),
-        "chat_template": os.path.join(MODELS_PATH, "gemma3_template.txt"),
-        "params": os.path.join(MODELS_PATH, "gemma3_params.json")
+        # RAG設定
+        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
+        "rag_score_threshold": 0.5,
+        "rag_top_k": 3,
+        "embedding_model": "all-MiniLM-L6-v2",
     }
 
-    # DistributedSLMインスタンスを生成
-    slm = DistributedSLM(config)
-    print(f"MurmurNet Console (type 'exit' to quit, 多言語対応)")
+    # ZIMモードの場合、パスを追加
+    if args.rag_mode == "zim":
+        config["zim_path"] = args.zim_path
     
-    # メインループ
+    # SLMインスタンス作成
+    slm = DistributedSLM(config)
+    
+    print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
+    print("終了するには 'quit' または 'exit' を入力してください")
+    
+    if args.parallel:
+        print("[設定] 並列処理: 有効")
+    if not args.no_summary:
+        print("[設定] 要約機能: 有効")
+    print(f"[設定] RAGモード: {args.rag_mode}")
+    if args.rag_mode == "zim":
+        print(f"[設定] ZIMファイル: {args.zim_path}")
+    
+    history = []
+    
     while True:
         try:
-            user_input = input("あなた> ").strip()
-            if user_input.lower() in ['exit', 'quit']:
-                print("終了します。")
+            # ユーザー入力
+            user_input = input("\nあなた> ")
+            if user_input.lower() in ["quit", "exit", "終了"]:
                 break
-                
-            # 非同期で応答生成
-            response = await slm.generate(user_input)
-            print(f"AI> {response}")
             
-            # デバッグモード時は詳細表示
+            # 空入力はスキップ
+            if not user_input.strip():
+                continue
+            
+            # 履歴に追加
+            history.append({"role": "user", "content": user_input})
+            
+            # 生成開始
+            print("AI> ", end="", flush=True)
+            
+            start_time = asyncio.get_event_loop().time()
+            response = await slm.generate(user_input)
+            elapsed = asyncio.get_event_loop().time() - start_time
+            
+            # 応答表示
+            print(f"{response}")
+            
+            # デバッグ情報表示
             if args.debug:
                 print_debug(slm)
-                
-            # ログオプション時はログ出力
-            if args.log:
-                logging.info(f"User Input: {user_input}")
-                logging.info(f"AI Response: {response}")
-                
+                print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
+            
+            # 履歴に追加
+            history.append({"role": "assistant", "content": response})
+            
+        except KeyboardInterrupt:
+            print("\n中断されました。終了するには 'exit' を入力してください。")
         except Exception as e:
-            print(f"エラーが発生しました: {e}")
-            logging.error("エラー発生", exc_info=True)
-
+            print(f"\nエラーが発生しました: {e}")
+            if args.debug:
+                import traceback
+                traceback.print_exc()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(chat_loop())

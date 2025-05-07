@@ -1,12 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-MurmurNet - RAG Retriever
-~~~~~~~~~~~~~~~~~~~~~~~~~
-Retrieval‑Augmented Generation helper.
-Supports two back‑ends:
-  • dummy  – in‑memory toy KB
-  • zim    – offline Wikipedia (.zim) via libzim
+RAG Knowledge Retriever
+~~~~~~~~~~~~~~~~~~~~~
+Retrieval Augmented Generation モジュール
+様々な検索方法に対応（埋め込み、ZIM、データベース）
 
-Author: MurmurNet team
+Author: Yuhi Sonoki
 """
 from __future__ import annotations
 

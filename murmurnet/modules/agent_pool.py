@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Agent Pool モジュール
+~~~~~~~~~~~~~~~~~~~
+複数のエージェントを管理し、並列/逐次実行を制御
+各エージェントの生成や実行を統合的に管理
+
+作者: Yuhi Sonoki
+"""
+
 from concurrent.futures import ThreadPoolExecutor
 from llama_cpp import Llama
 import os
@@ -32,13 +43,14 @@ class AgentPoolManager:
         # モデルパラメータのロード
         llama_kwargs = {
             'model_path': model_path,
-            'n_ctx': 1024,
-            'n_threads': 6,
+            'n_ctx': self.config.get('n_ctx', 1024),  # 親設定から受け取る
+            'n_threads': self.config.get('n_threads', 4),  # 親設定から受け取る
             'use_mmap': True,
             'use_mlock': False,
             'n_gpu_layers': 0,
             'seed': 42,
-            'chat_format': "gemma"
+            'chat_format': "gemma",
+            'verbose': False  # ログ出力抑制
         }
         
         # JSONパラメータがあれば追加ロード
@@ -59,6 +71,10 @@ class AgentPoolManager:
             except Exception as e:
                 if self.debug:
                     print(f"テンプレートロードエラー: {e}")
+        
+        # デバッグログ
+        if self.debug:
+            print(f"エージェントプール: モデル設定 n_ctx={llama_kwargs['n_ctx']}, n_threads={llama_kwargs['n_threads']}")
                     
         self.llm = Llama(**llama_kwargs)
 
@@ -66,10 +82,10 @@ class AgentPoolManager:
         """エージェント役割の初期化（内部メソッド）"""
         # デフォルトの役割定義
         self.agent_roles = [
-            {"role": "レポートまとめAI", "system": "あなたは経済の専門家です。経済的観点から具体的な意見を述べてください。", "temperature": 0.7},
-            {"role": "批判的評価AI", "system": "あなたは倫理の専門家です。倫理的観点から具体的な意見を述べてください。", "temperature": 0.9},
-            {"role": "技術視点", "system": "あなたは技術の専門家です。技術的観点から答えてください。", "temperature": 0.6},
-            {"role": "社会視点", "system": "あなたは社会学の専門家です。社会的観点から答えてください。", "temperature": 0.8}
+            {"role": "レポートまとめAI", "system": "あなたは経済の専門家です。経済的観点から手短に意見を述べてください。", "temperature": 0.7},
+            {"role": "批判的評価AI", "system": "あなたは倫理の専門家です。倫理的観点から手短に意見を述べてください。", "temperature": 0.9},
+            {"role": "技術視点", "system": "あなたは技術の専門家です。技術的観点から簡潔に答えてください。", "temperature": 0.6},
+            {"role": "社会視点", "system": "あなたは社会学の専門家です。社会的観点から簡潔に答えてください。", "temperature": 0.8}
         ]
         
         # カスタム役割があれば上書き
@@ -87,63 +103,88 @@ class AgentPoolManager:
 
     def _agent_task(self, agent_id: int) -> str:
         """単一エージェントの処理（内部メソッド）"""
-        input_data = self.blackboard.read('input')
-        if not input_data:
-            return ""
-            
-        # エージェント役割の選択
-        role = self.agent_roles[agent_id % len(self.agent_roles)]
-        
-        # 入力データから正規化テキストのみを抽出（埋め込みを除外）
-        normalized_text = ""
-        if isinstance(input_data, dict) and 'normalized' in input_data:
-            normalized_text = input_data['normalized']
-        elif isinstance(input_data, str):
-            normalized_text = input_data
-        
-        # 入力言語に合わせた応答言語設定
-        lang = self._detect_language(normalized_text)
-        system_prompt = role['system']
-        if lang == 'ja':
-            system_prompt += " 必ず日本語で返答してください。"
-        else:
-            system_prompt += " Always respond in English."
-            
-        # プロンプト生成
-        prompt = f"{system_prompt}\n\n問い: {normalized_text}"
-        
-        # エージェント入力の保存（埋め込みは除外）
-        self.blackboard.write(f'agent_{agent_id}_input', normalized_text)
-        
-        # LLMの実行
-        messages = [{"role": "user", "content": prompt}]
-        temperature = role.get('temperature', 0.7)
-        max_tokens = self.config.get('max_tokens', 512)
-        
         try:
+            input_data = self.blackboard.read('input')
+            if not input_data:
+                return ""
+                
+            # エージェント役割の選択
+            role_idx = agent_id % len(self.agent_roles)
+            role = self.agent_roles[role_idx]
+            
+            # 入力データから正規化テキストのみを抽出（埋め込みを除外）
+            normalized_text = ""
+            if isinstance(input_data, dict) and 'normalized' in input_data:
+                normalized_text = input_data['normalized']
+            elif isinstance(input_data, str):
+                normalized_text = input_data
+            
+            # 入力言語に合わせた応答言語設定
+            lang = self._detect_language(normalized_text)
+            system_prompt = role['system']
+            if lang == 'ja':
+                system_prompt += " 必ず日本語で100〜200字で簡潔に返答してください。"
+            else:
+                system_prompt += " Always respond briefly in English, around 30-50 words maximum."
+                
+            # プロンプト生成 - トークン数を明示的に制限
+            prompt = f"{system_prompt}\n\n問い: {normalized_text[:200]}"  # 入力も制限
+            
+            # エージェント入力の保存（埋め込みは除外）
+            self.blackboard.write(f'agent_{agent_id}_input', normalized_text[:200])
+            
+            # LLMの実行
+            messages = [{"role": "user", "content": prompt}]
+            temperature = role.get('temperature', 0.7)
+            max_tokens = min(self.config.get('max_tokens', 256), 256)  # トークン生成数制限
+            
             response = self.llm.create_chat_completion(
                 messages=messages, 
                 max_tokens=max_tokens, 
-                temperature=temperature
+                temperature=temperature,
+                stop=["。", ".", "\n\n"]  # 早めに停止
             )
-            output = response["choices"][0]["message"]["content"].strip()
+            
+            # 応答の取得と保存
+            if isinstance(response, dict):
+                output = response["choices"][0]["message"]["content"].strip()
+            else:
+                output = response.choices[0].message.content.strip()
+                
+            # 出力を制限（長すぎる応答を防止）
+            output = output[:300]  # 最大300文字に制限
+            
             self.blackboard.write(f'agent_{agent_id}_output', output)
-            return output
-        except Exception as e:
+            
             if self.debug:
-                print(f"エージェント{agent_id}エラー: {e}")
-            self.blackboard.write(f'agent_{agent_id}_error', str(e))
-            return ""
+                print(f"エージェント{agent_id}({role['role']}): 出力長={len(output)}")
+            
+            return output
+            
+        except Exception as e:
+            error_msg = f"エージェント{agent_id}エラー: {str(e)}"
+            if self.debug:
+                print(error_msg)
+                import traceback
+                traceback.print_exc()
+            self.blackboard.write(f'agent_{agent_id}_error', error_msg)
+            return f"エージェント{agent_id}は応答できませんでした。"
 
     def run_agents(self, blackboard) -> List[str]:
         """すべてのエージェントを実行し、結果を取得"""
         self.blackboard = blackboard  # 黒板参照を更新
         results = []
         
-        # シーケンシャル実行（簡単にするため）
+        # シーケンシャル実行
         for agent_id in range(self.num_agents):
-            result = self._agent_task(agent_id)
-            results.append(result)
+            try:
+                result = self._agent_task(agent_id)
+                results.append(result)
+            except Exception as e:
+                error_msg = f"エージェント実行エラー: {str(e)}"
+                if self.debug:
+                    print(error_msg)
+                results.append(error_msg)
             
         return results
         

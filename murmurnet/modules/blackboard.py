@@ -1,3 +1,14 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Blackboard モジュール
+~~~~~~~~~~~~~~~~~~~
+エージェント間の共有メモリとして機能する黒板パターン実装
+データの読み書き、監視、履歴管理を提供
+
+作者: Yuhi Sonoki
+"""
+
 # 黒板（共有メモリ）モジュール
 from typing import Dict, Any, List, Optional
 import time
