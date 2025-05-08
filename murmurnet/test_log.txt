@@ -1,0 +1,95 @@
+2025-05-05 23:50:27,359 [INFO] Starting generation process
+2025-05-05 23:50:27,359 [INFO] Writing input to blackboard
+2025-05-05 23:50:27,359 [INFO] Running agent pool
+2025-05-05 23:50:57,866 [INFO] Final response generated
+2025-05-07 23:09:49,936 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:09:49,936 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:09:59,633 [INFO] 統合テスト開始
+2025-05-07 23:09:59,635 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:09:59,636 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:10:04,333 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-07 23:10:04,333 [INFO] 初期化時間: 4.70秒
+2025-05-07 23:10:04,334 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-07 23:10:04,334 [INFO] Starting generation process
+2025-05-07 23:10:04,353 [INFO] Starting iteration 0
+2025-05-07 23:11:48,808 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:11:48,809 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:11:58,102 [INFO] 統合テスト開始
+2025-05-07 23:11:58,104 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:11:58,104 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:12:02,412 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-07 23:12:02,413 [INFO] 初期化時間: 4.31秒
+2025-05-07 23:12:02,413 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-07 23:12:02,413 [INFO] Starting generation process
+2025-05-07 23:12:02,432 [INFO] Starting iteration 0
+2025-05-07 23:13:15,778 [DEBUG] Created summary for iteration 0
+2025-05-07 23:13:15,779 [DEBUG] `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-07 23:14:03,703 [INFO] 生成時間: 121.29秒
+2025-05-07 23:14:03,703 [INFO] 応答: のAIがAIに**
+
+**
+
+**、に
+が
+に
+」
+にAI
+**。
+**、
+AIが
+AIに
+このAI
+AI
+に
+AIが**
+
+**
+
+**。
+
+に
+AI
+AI
+。
+
+。
+
+**に
+この
+**
+に
+**...
+2025-05-07 23:14:03,703 [INFO] 黒板エントリ数: 9
+2025-05-07 23:14:03,704 [INFO] テストクエリ: What is the future of technology?
+2025-05-07 23:14:03,704 [INFO] Starting generation process
+2025-05-07 23:14:03,718 [INFO] Starting iteration 0
+2025-05-07 23:15:13,164 [DEBUG] Created summary for iteration 0
+2025-05-07 23:15:13,165 [DEBUG] `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-07 23:20:06,510 [INFO] 統合テスト開始
+2025-05-07 23:20:08,666 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-07 23:20:08,667 [INFO] 初期化時間: 2.16秒
+2025-05-07 23:20:08,667 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-07 23:20:08,667 [INFO] Starting generation process
+2025-05-07 23:20:08,669 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:20:08,669 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:20:13,113 [INFO] Starting iteration 0
+2025-05-07 23:20:15,594 [DEBUG] Created summary for iteration 0
+2025-05-07 23:20:16,599 [INFO] 生成時間: 7.93秒
+2025-05-07 23:20:16,599 [INFO] 応答: AIは教育の可能性を大きく広げますが、同時に課題も抱えています。...
+2025-05-07 23:20:16,600 [INFO] 黒板エントリ数: 9
+2025-05-07 23:20:16,600 [INFO] 統合テスト終了
+2025-05-07 23:20:19,159 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-07 23:20:19,160 [INFO] Starting generation process
+2025-05-07 23:20:19,163 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:20:19,163 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:20:21,283 [INFO] Starting iteration 0
+2025-05-07 23:20:24,168 [DEBUG] Created summary for iteration 0
+2025-05-07 23:20:28,800 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-07 23:20:28,801 [INFO] Starting generation process
+2025-05-07 23:20:28,803 [INFO] Use pytorch device_name: cpu
+2025-05-07 23:20:28,803 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-07 23:20:30,773 [INFO] Starting iteration 0
+2025-05-07 23:20:33,032 [DEBUG] Created summary for iteration 0
+2025-05-07 23:20:34,116 [INFO] Starting generation process
+2025-05-07 23:20:34,127 [INFO] Starting iteration 0
+2025-05-07 23:20:34,127 [INFO] Running agents in parallel

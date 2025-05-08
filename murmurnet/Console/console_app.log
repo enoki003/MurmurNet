@@ -1,0 +1,5523 @@
+2025-05-04 17:37:29,867 - INFO - Use pytorch device_name: cpu
+2025-05-04 17:37:29,867 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-04 17:37:39,123 - INFO - Starting generation process
+2025-05-04 17:37:39,124 - INFO - Writing input to blackboard
+2025-05-04 17:37:39,124 - INFO - Running agent pool
+2025-05-04 17:38:12,180 - INFO - Final response generated
+2025-05-04 17:42:51,807 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 57, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-04 17:42:58,446 - INFO - Use pytorch device_name: cpu
+2025-05-04 17:42:58,446 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-04 17:43:07,806 - INFO - Starting generation process
+2025-05-04 17:43:07,807 - INFO - Writing input to blackboard
+2025-05-04 17:43:07,807 - INFO - Running agent pool
+2025-05-04 17:43:58,888 - INFO - Final response generated
+2025-05-04 17:44:29,235 - INFO - Starting generation process
+2025-05-04 17:44:29,235 - INFO - Writing input to blackboard
+2025-05-04 17:44:29,235 - INFO - Running agent pool
+2025-05-04 17:45:33,309 - INFO - Final response generated
+2025-05-04 17:45:49,350 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 57, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 00:49:06,168 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:49:06,168 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:49:18,659 - INFO - Starting generation process
+2025-05-06 00:49:18,659 - INFO - Writing input to blackboard
+2025-05-06 00:49:18,659 - INFO - Retrieving RAG results
+2025-05-06 00:49:18,660 - INFO - Running agent pool
+2025-05-06 00:49:49,950 - INFO - Final response generated
+2025-05-06 00:50:28,311 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\console\console_app.py", line 57, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 00:50:34,711 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:50:34,711 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:50:42,187 - INFO - Starting generation process
+2025-05-06 00:50:42,187 - INFO - Writing input to blackboard
+2025-05-06 00:50:42,187 - INFO - Retrieving RAG results
+2025-05-06 00:50:42,187 - INFO - Running agent pool
+2025-05-06 00:51:14,398 - INFO - Final response generated
+2025-05-06 00:51:19,690 - ERROR - エラー:
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\console\console_app.py", line 57, in main
+    args = parser.parse_args()
+                         ^^^^^^
+EOFError
+2025-05-06 00:51:26,043 - DEBUG - Using proactor: IocpProactor
+2025-05-06 00:51:26,045 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:51:26,045 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:51:26,048 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 00:51:26,275 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:51:26,775 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 00:51:27,266 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 00:51:27,492 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:51:27,680 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 00:51:27,865 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 00:51:28,040 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 00:51:28,461 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 00:51:28,677 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 00:51:28,865 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 00:51:30,744 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 00:51:30,748 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:51:30,748 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:51:30,926 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:51:31,421 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 00:51:31,632 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 00:51:31,817 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:51:32,044 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 00:51:32,232 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 00:51:32,422 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 00:51:32,645 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 00:51:32,868 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 00:51:33,058 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 00:51:33,061 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 00:51:39,663 - INFO - Starting generation process
+2025-05-06 00:51:39,664 - INFO - Writing input to blackboard
+2025-05-06 00:51:39,664 - INFO - Retrieving RAG results
+2025-05-06 00:51:41,318 - INFO - Running agent pool
+2025-05-06 00:53:02,348 - DEBUG - Using proactor: IocpProactor
+2025-05-06 00:53:02,350 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:53:02,350 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:53:02,353 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 00:53:02,947 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:53:03,126 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 00:53:03,624 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 00:53:03,824 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:53:04,010 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 00:53:04,191 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 00:53:04,371 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 00:53:04,791 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 00:53:05,005 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 00:53:05,187 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 00:53:06,839 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 00:53:06,842 - INFO - Use pytorch device_name: cpu
+2025-05-06 00:53:06,842 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 00:53:07,302 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:53:07,507 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 00:53:07,905 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 00:53:08,083 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 00:53:08,262 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 00:53:08,441 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 00:53:08,622 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 00:53:08,844 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 00:53:09,062 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 00:53:09,246 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 00:53:09,248 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 00:53:28,030 - INFO - Starting generation process
+2025-05-06 00:53:28,030 - INFO - Writing input to blackboard
+2025-05-06 00:53:28,031 - INFO - Retrieving RAG results
+2025-05-06 00:53:29,470 - INFO - Running agent pool
+2025-05-06 00:54:00,139 - INFO - Final response generated
+2025-05-06 00:54:52,209 - INFO - Starting generation process
+2025-05-06 00:54:52,210 - INFO - Writing input to blackboard
+2025-05-06 00:54:52,210 - INFO - Retrieving RAG results
+2025-05-06 00:54:54,079 - INFO - Running agent pool
+2025-05-06 00:55:25,306 - INFO - Final response generated
+2025-05-06 00:58:54,643 - INFO - Starting generation process
+2025-05-06 00:58:54,643 - INFO - Writing input to blackboard
+2025-05-06 00:58:54,643 - INFO - Retrieving RAG results
+2025-05-06 00:58:55,735 - INFO - Running agent pool
+2025-05-06 00:59:26,475 - INFO - Final response generated
+2025-05-06 00:59:33,493 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:00:05,034 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:00:05,037 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:00:05,037 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:00:05,039 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:00:05,709 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:00:05,938 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:00:06,430 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:00:06,635 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:00:06,819 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:00:07,004 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:00:07,188 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:00:07,591 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:00:07,804 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:00:07,995 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:00:09,568 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:00:09,570 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:00:09,570 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:00:09,760 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:00:09,941 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:00:10,122 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:00:10,310 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:00:10,491 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:00:10,937 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:00:11,123 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:00:11,370 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:00:11,580 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:00:11,768 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:00:11,770 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:00:22,844 - INFO - Starting generation process
+2025-05-06 01:00:22,844 - INFO - Writing input to blackboard
+2025-05-06 01:00:22,844 - INFO - Retrieving RAG results
+2025-05-06 01:00:23,968 - INFO - Running agent pool
+2025-05-06 01:00:56,069 - INFO - Final response generated
+2025-05-06 01:13:12,333 - INFO - Starting generation process
+2025-05-06 01:13:12,333 - INFO - Writing input to blackboard
+2025-05-06 01:13:12,333 - INFO - Retrieving RAG results
+2025-05-06 01:13:13,497 - INFO - Running agent pool
+2025-05-06 01:13:20,065 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:13:20,068 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:13:20,068 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:13:20,071 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:13:20,661 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:13:21,163 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:13:21,339 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:13:21,514 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:13:21,704 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:13:21,885 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:13:22,384 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:13:22,817 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:13:23,023 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:13:23,204 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:13:24,878 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:13:24,879 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:13:24,880 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:13:25,055 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:13:25,234 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:13:25,411 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:13:25,587 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:13:25,980 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:13:26,172 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:13:26,348 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:13:26,556 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:13:26,769 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:13:26,955 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:13:26,957 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:13:43,672 - INFO - Starting generation process
+2025-05-06 01:13:43,672 - INFO - Writing input to blackboard
+2025-05-06 01:13:43,672 - INFO - Retrieving RAG results
+2025-05-06 01:13:44,846 - INFO - Running agent pool
+2025-05-06 01:14:17,223 - INFO - Final response generated
+2025-05-06 01:15:51,640 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:15:58,109 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:15:58,111 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:15:58,112 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:15:58,114 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:15:58,640 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:15:59,136 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:15:59,316 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:15:59,501 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:15:59,677 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:15:59,860 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:16:00,033 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:16:00,844 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:16:01,070 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:16:01,255 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:16:02,958 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:16:02,960 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:16:02,960 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:16:03,137 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:16:03,318 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:16:03,536 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:16:03,714 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:16:03,895 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:16:04,074 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:16:04,254 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:16:04,464 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:16:04,676 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:16:04,857 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:16:04,859 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:16:07,452 - INFO - Starting generation process
+2025-05-06 01:16:07,453 - INFO - Writing input to blackboard
+2025-05-06 01:16:07,453 - INFO - Retrieving RAG results
+2025-05-06 01:16:08,604 - INFO - Running agent pool
+2025-05-06 01:16:58,947 - INFO - Final response generated
+2025-05-06 01:21:31,265 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:21:39,784 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:21:39,787 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:21:39,787 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:21:39,790 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:21:40,027 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:21:40,534 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:21:40,719 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:21:41,222 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:21:41,401 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:21:41,582 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:21:41,876 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:21:42,716 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:21:42,930 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:21:43,116 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:21:44,702 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:21:44,704 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:21:44,705 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:21:44,880 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:21:45,063 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:21:45,252 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:21:45,431 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:21:45,612 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:21:45,828 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:21:46,010 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:21:46,223 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:21:46,439 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:21:46,623 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:21:46,625 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:21:49,190 - INFO - Starting generation process
+2025-05-06 01:21:49,190 - INFO - Writing input to blackboard
+2025-05-06 01:21:49,191 - INFO - Retrieving RAG results
+2025-05-06 01:21:50,552 - INFO - Running agent pool
+2025-05-06 01:22:22,243 - INFO - Final response generated
+2025-05-06 01:25:53,722 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:25:59,995 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:25:59,998 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:25:59,998 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:26:00,000 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:26:00,286 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:26:00,476 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:26:00,695 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:26:00,877 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:26:01,055 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:26:01,238 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:26:01,420 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:26:01,816 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:26:02,029 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:26:02,232 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:26:03,776 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:26:03,778 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:26:03,778 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:26:03,955 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:26:04,147 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:26:04,377 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:26:04,555 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:26:04,878 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:26:05,064 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:26:05,247 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:26:05,481 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:26:05,691 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:26:05,875 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:26:05,877 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:26:10,891 - INFO - Starting generation process
+2025-05-06 01:26:10,892 - INFO - Writing input to blackboard
+2025-05-06 01:26:10,892 - INFO - Retrieving RAG results
+2025-05-06 01:26:12,061 - INFO - Running agent pool
+2025-05-06 01:26:12,062 - INFO - Final response generated
+2025-05-06 01:41:21,119 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:41:27,572 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:41:27,575 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:41:27,575 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:41:27,578 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:41:28,173 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:41:28,360 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:41:28,544 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:41:28,721 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:41:29,125 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:41:29,307 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:41:30,100 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:41:30,504 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:41:30,720 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:41:30,904 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:41:32,399 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:41:32,401 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:41:32,401 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:41:32,577 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:41:32,766 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:41:32,971 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:41:33,150 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:41:33,342 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:41:33,523 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:41:33,703 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:41:33,919 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:41:34,132 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:41:34,317 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:41:34,319 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:41:40,206 - INFO - Starting generation process
+2025-05-06 01:41:40,206 - INFO - Writing input to blackboard
+2025-05-06 01:41:40,206 - INFO - Retrieving RAG results
+2025-05-06 01:41:40,242 - INFO - Running agent pool
+2025-05-06 01:41:40,243 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 71, in generate
+    entries = self.blackboard.entries
+              ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Blackboard' object has no attribute 'entries'
+2025-05-06 01:41:46,742 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:43:12,095 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:43:12,097 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:43:12,097 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:43:12,100 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:43:12,333 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:43:12,519 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:43:12,696 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:43:12,875 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:43:13,050 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:43:13,235 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:43:13,450 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:43:13,843 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:43:14,055 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:43:14,322 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:43:15,860 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:43:15,862 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:43:15,862 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:43:16,037 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:43:16,216 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:43:16,391 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:43:16,578 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:43:16,753 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:43:16,943 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:43:17,124 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:43:17,335 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:43:17,559 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:43:17,753 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:43:17,755 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:43:23,083 - INFO - Starting generation process
+2025-05-06 01:43:23,084 - INFO - Writing input to blackboard
+2025-05-06 01:43:23,103 - INFO - Retrieving RAG results
+2025-05-06 01:43:23,132 - INFO - Running agent pool
+2025-05-06 01:43:23,132 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 76, in generate
+    self.agent_pool.run_agents(self.blackboard, roles=roles, instructions=instructions)
+TypeError: AgentPoolManager.run_agents() got an unexpected keyword argument 'roles'
+2025-05-06 01:44:00,336 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:44:44,387 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:44:44,390 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:44:44,390 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:44:44,392 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:44:44,622 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:44:44,804 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:44:45,058 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:44:45,310 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:44:45,490 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:44:45,671 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:44:45,851 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:44:46,243 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:44:46,465 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:44:46,651 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:44:48,137 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:44:48,138 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:44:48,138 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:44:48,324 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:44:48,563 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:44:48,757 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:44:48,934 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:44:49,120 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:44:49,308 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:44:49,640 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:44:49,850 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:44:50,060 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:44:50,247 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:44:50,249 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:44:54,662 - INFO - Starting generation process
+2025-05-06 01:44:54,662 - INFO - Writing input to blackboard
+2025-05-06 01:44:54,682 - INFO - Retrieving RAG results
+2025-05-06 01:44:54,713 - INFO - Running agent pool
+2025-05-06 01:44:54,714 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 75, in generate
+    self.agent_pool.run_agents(self.blackboard, num_agents)
+TypeError: AgentPoolManager.run_agents() takes 2 positional arguments but 3 were given
+2025-05-06 01:45:40,501 - INFO - Starting generation process
+2025-05-06 01:45:40,502 - INFO - Writing input to blackboard
+2025-05-06 01:45:40,510 - INFO - Retrieving RAG results
+2025-05-06 01:45:40,523 - INFO - Running agent pool
+2025-05-06 01:45:40,523 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 75, in generate
+    # 黒板から全エントリ取得
+TypeError: AgentPoolManager.run_agents() takes 2 positional arguments but 3 were given
+2025-05-06 01:45:42,283 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:45:48,339 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:45:48,342 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:45:48,342 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:45:48,344 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:45:48,881 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:45:49,487 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:45:49,985 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:45:50,166 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:45:50,342 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:45:50,527 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:45:50,706 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:45:51,445 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:45:51,659 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:45:51,843 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:45:53,330 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:45:53,332 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:45:53,332 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:45:53,514 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:45:53,698 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:45:53,877 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:45:54,055 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:45:54,229 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:45:54,415 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:45:54,600 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:45:54,811 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:45:55,022 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:45:55,205 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:45:55,207 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:46:01,690 - INFO - Starting generation process
+2025-05-06 01:46:01,690 - INFO - Writing input to blackboard
+2025-05-06 01:46:01,709 - INFO - Retrieving RAG results
+2025-05-06 01:46:01,740 - INFO - Running agent pool
+2025-05-06 01:46:01,741 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 76, in generate
+    entries = list(self.blackboard.entries)  # {'agent': id, 'text': ...}
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Blackboard' object has no attribute 'entries'
+2025-05-06 01:47:19,429 - INFO - Starting generation process
+2025-05-06 01:47:19,430 - INFO - Writing input to blackboard
+2025-05-06 01:47:19,439 - INFO - Retrieving RAG results
+2025-05-06 01:47:19,449 - INFO - Running agent pool
+2025-05-06 01:47:19,449 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 76, in generate
+    final_response = self.summary_engine.summarize(self.blackboard)
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Blackboard' object has no attribute 'entries'
+2025-05-06 01:47:21,242 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:47:27,469 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:47:27,472 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:47:27,472 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:47:27,475 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:47:28,128 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:47:28,305 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:47:28,493 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:47:28,671 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:47:29,171 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:47:29,352 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:47:29,544 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:47:29,947 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:47:30,158 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:47:30,346 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:47:31,849 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:47:31,851 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:47:31,851 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:47:32,032 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:47:32,868 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:47:33,046 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:47:33,229 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:47:33,412 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:47:33,599 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:47:33,783 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:47:33,996 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:47:34,207 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:47:34,389 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:47:34,391 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:47:37,655 - INFO - Starting generation process
+2025-05-06 01:47:37,655 - INFO - Writing input to blackboard
+2025-05-06 01:47:37,676 - INFO - Retrieving RAG results
+2025-05-06 01:47:37,707 - INFO - Running agent pool
+2025-05-06 01:47:47,992 - INFO - Final response generated
+2025-05-06 01:49:28,360 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:49:34,536 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:49:34,539 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:49:34,539 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:49:34,542 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:49:35,102 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:49:35,391 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:49:35,572 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:49:35,750 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:49:35,928 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:49:36,463 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:49:36,649 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:49:37,046 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:49:37,260 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:49:37,442 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:49:38,937 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:49:38,939 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:49:38,939 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:49:39,116 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:49:39,296 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:49:39,476 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:49:39,834 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:49:40,010 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:49:40,195 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:49:40,382 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:49:40,601 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:49:40,816 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:49:41,000 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:49:41,002 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:49:44,734 - INFO - Starting generation process
+2025-05-06 01:49:44,735 - INFO - Writing input to blackboard
+2025-05-06 01:49:44,757 - INFO - Retrieving RAG results
+2025-05-06 01:49:44,792 - INFO - Running agent pool
+2025-05-06 01:49:44,792 - INFO - Collected entries: []
+2025-05-06 01:49:44,793 - INFO - Final response generated
+2025-05-06 01:50:13,285 - INFO - Starting generation process
+2025-05-06 01:50:13,285 - INFO - Writing input to blackboard
+2025-05-06 01:50:13,293 - INFO - Retrieving RAG results
+2025-05-06 01:50:14,385 - INFO - Running agent pool
+2025-05-06 01:50:14,385 - INFO - Collected entries: []
+2025-05-06 01:50:14,386 - INFO - Final response generated
+2025-05-06 01:51:12,975 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:51:19,537 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:51:19,539 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:51:19,539 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:51:19,542 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:51:19,801 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:51:19,979 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:51:20,160 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:51:20,388 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:51:20,572 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:51:20,767 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:51:20,952 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:51:21,357 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:51:21,570 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:51:21,758 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:51:23,252 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:51:23,254 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:51:23,254 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:51:23,430 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:51:23,613 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:51:24,021 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:51:24,222 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:51:24,482 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:51:24,666 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:51:24,848 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:51:25,066 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:51:25,280 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:51:25,480 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:51:25,482 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:51:33,603 - INFO - Starting generation process
+2025-05-06 01:51:33,603 - INFO - Writing input to blackboard
+2025-05-06 01:51:33,624 - INFO - Retrieving RAG results
+2025-05-06 01:51:34,745 - INFO - Running agent pool
+2025-05-06 01:51:34,745 - INFO - Collected entries: []
+2025-05-06 01:51:34,745 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 85, in generate
+    final_response = self.output_agent.generate_final(entries, self.summary_engine)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OutputAgent' object has no attribute 'generate_final'
+2025-05-06 01:52:30,503 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:52:36,314 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:52:36,316 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:52:36,316 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:52:36,318 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:52:36,911 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:52:37,418 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:52:37,596 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:52:37,780 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:52:37,961 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:52:38,147 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:52:38,330 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:52:38,727 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:52:38,945 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:52:39,133 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:52:40,665 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:52:40,667 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:52:40,667 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:52:41,001 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:52:41,311 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:52:41,531 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:52:41,707 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:52:41,886 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:52:42,071 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:52:42,255 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:52:42,467 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:52:42,687 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:52:42,876 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:52:42,879 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:52:44,403 - INFO - Starting generation process
+2025-05-06 01:52:44,403 - INFO - Writing input to blackboard
+2025-05-06 01:52:44,422 - INFO - Retrieving RAG results
+2025-05-06 01:52:45,554 - INFO - Running agent pool
+2025-05-06 01:53:41,248 - INFO - Final response generated
+2025-05-06 01:55:55,210 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:56:01,453 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:56:01,456 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:56:01,456 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:56:01,458 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:56:01,776 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:02,274 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:56:02,453 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:56:02,631 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:02,808 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:56:02,994 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:56:03,175 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:56:03,596 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:56:03,829 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:56:04,015 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:56:05,537 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:56:05,539 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:56:05,540 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:56:05,719 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:05,899 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:56:06,082 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:56:06,262 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:06,438 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:56:06,633 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:56:06,817 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:56:07,026 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:56:07,238 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:56:07,420 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:56:07,422 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:56:11,736 - INFO - Starting generation process
+2025-05-06 01:56:11,737 - INFO - Writing input to blackboard
+2025-05-06 01:56:11,758 - INFO - Retrieving RAG results
+2025-05-06 01:56:13,062 - INFO - Running agent pool
+2025-05-06 01:56:13,062 - INFO - Collected entries: []
+2025-05-06 01:56:13,064 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 79, in generate
+    final_response = self.output_agent.generate(self.blackboard, entries)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OutputAgent.generate() takes 2 positional arguments but 3 were given
+2025-05-06 01:56:52,188 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:56:58,199 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:56:58,201 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:56:58,202 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:56:58,204 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:56:58,470 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:58,968 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:56:59,209 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:56:59,394 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:56:59,571 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:56:59,772 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:56:59,954 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:57:00,352 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:57:00,568 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:57:00,760 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:57:02,308 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:57:02,310 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:57:02,311 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:57:02,490 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:57:02,683 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:57:02,999 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:57:03,193 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:57:03,384 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:57:03,566 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:57:03,754 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:57:03,965 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:57:04,176 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:57:04,387 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:57:04,389 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:57:05,176 - INFO - Starting generation process
+2025-05-06 01:57:05,176 - INFO - Writing input to blackboard
+2025-05-06 01:57:05,196 - INFO - Retrieving RAG results
+2025-05-06 01:57:05,196 - INFO - Running agent pool
+2025-05-06 01:57:05,196 - INFO - Collected entries: []
+2025-05-06 01:57:05,197 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 79, in generate
+    final_response = self.output_agent.generate(self.blackboard, entries)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OutputAgent.generate() takes 2 positional arguments but 3 were given
+2025-05-06 01:57:05,197 - INFO - Starting generation process
+2025-05-06 01:57:05,198 - INFO - Writing input to blackboard
+2025-05-06 01:57:05,205 - INFO - Retrieving RAG results
+2025-05-06 01:57:06,353 - INFO - Running agent pool
+2025-05-06 01:57:06,353 - INFO - Collected entries: []
+2025-05-06 01:57:06,353 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 79, in generate
+    final_response = self.output_agent.generate(self.blackboard, entries)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OutputAgent.generate() takes 2 positional arguments but 3 were given
+2025-05-06 01:58:22,404 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 01:58:28,322 - DEBUG - Using proactor: IocpProactor
+2025-05-06 01:58:28,325 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:58:28,325 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:58:28,327 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 01:58:28,600 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:58:28,802 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:58:28,983 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:58:29,158 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:58:29,654 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:58:29,839 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:58:30,021 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:58:30,420 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:58:30,630 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:58:30,812 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:58:32,319 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 01:58:32,321 - INFO - Use pytorch device_name: cpu
+2025-05-06 01:58:32,321 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 01:58:32,497 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:58:32,677 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 01:58:32,856 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 01:58:33,032 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 01:58:33,212 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 01:58:33,400 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 01:58:33,579 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 01:58:33,789 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 01:58:33,995 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 01:58:34,176 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 01:58:34,178 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 01:58:34,957 - INFO - Starting generation process
+2025-05-06 01:58:34,957 - INFO - Writing input to blackboard
+2025-05-06 01:58:34,976 - INFO - Retrieving RAG results
+2025-05-06 01:58:36,146 - INFO - Running agent pool
+2025-05-06 01:58:36,147 - INFO - Collected entries: []
+2025-05-06 01:59:13,718 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 79, in generate
+    final_response = self.output_agent.generate(self.blackboard, entries)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\modules\output_agent.py", line 59, in generate
+    answer = resp.choices[0].message.content.strip()
+             ^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'choices'
+2025-05-06 02:00:05,493 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:00:11,690 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:00:11,692 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:00:11,693 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:00:11,695 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:00:11,961 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:00:12,144 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:00:12,409 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:00:12,593 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:00:12,772 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:00:12,951 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:00:13,135 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:00:13,534 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:00:13,745 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:00:13,936 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:00:15,479 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:00:15,480 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:00:15,481 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:00:15,864 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:00:16,050 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:00:16,233 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:00:16,413 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:00:16,601 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:00:16,783 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:00:16,967 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:00:17,180 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:00:17,401 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:00:17,586 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:00:17,587 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:00:21,757 - INFO - Starting generation process
+2025-05-06 02:00:21,757 - INFO - Writing input to blackboard
+2025-05-06 02:00:21,777 - INFO - Retrieving RAG results
+2025-05-06 02:00:22,921 - INFO - Running agent pool
+2025-05-06 02:00:22,921 - INFO - Collected entries: []
+2025-05-06 02:01:19,273 - INFO - Final response generated
+2025-05-06 02:01:40,825 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:03:23,149 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:03:23,152 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:03:23,152 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:03:23,155 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:03:23,385 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:03:23,885 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:03:24,065 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:03:24,242 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:03:24,418 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:03:24,600 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:03:24,782 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:03:25,199 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:03:25,413 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:03:25,596 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:03:27,131 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:03:27,133 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:03:27,133 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:03:27,311 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:03:27,489 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:03:27,667 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:03:27,943 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:03:28,130 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:03:28,317 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:03:28,495 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:03:28,705 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:03:28,915 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:03:29,097 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:03:29,099 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:03:32,524 - INFO - Starting generation process
+2025-05-06 02:03:32,525 - INFO - Writing input to blackboard
+2025-05-06 02:03:32,544 - INFO - Retrieving RAG results
+2025-05-06 02:03:33,712 - INFO - Running agent pool
+2025-05-06 02:04:04,012 - INFO - Collected entries: [0, 1]
+2025-05-06 02:05:00,674 - INFO - Final response generated
+2025-05-06 02:07:49,360 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:07:55,908 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:07:55,911 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:07:55,911 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:07:55,913 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:07:56,507 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:07:56,687 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:07:56,870 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:07:57,070 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:07:57,260 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:07:57,454 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:07:57,631 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:07:58,045 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:07:58,262 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:07:58,448 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:07:59,160 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:07:59,162 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:07:59,162 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:07:59,341 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:07:59,519 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:07:59,714 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:07:59,891 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:08:00,074 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:08:00,256 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:08:00,436 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:08:00,645 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:08:00,881 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:08:01,072 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:08:01,074 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:08:03,085 - INFO - Starting generation process
+2025-05-06 02:08:03,104 - INFO - Writing input to blackboard
+2025-05-06 02:08:04,252 - INFO - Running agent pool
+2025-05-06 02:08:35,279 - INFO - Collected entries: [0, 1]
+2025-05-06 02:08:36,096 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 02:09:12,409 - INFO - Final response generated
+2025-05-06 02:11:06,104 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:11:12,621 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:11:12,625 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:11:12,625 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:11:12,628 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:11:13,286 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:11:13,982 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:11:14,158 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:11:14,342 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:11:14,517 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:11:14,963 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:11:15,143 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:11:15,556 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:11:15,796 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:11:15,985 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:11:16,779 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:11:16,781 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:11:16,782 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:11:16,971 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:11:17,154 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:11:17,467 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:11:17,668 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:11:17,848 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:11:18,034 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:11:18,216 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:11:18,428 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:11:18,643 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:11:18,827 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:11:18,829 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:11:28,017 - INFO - Starting generation process
+2025-05-06 02:11:28,038 - INFO - Writing input to blackboard
+2025-05-06 02:11:28,038 - INFO - Running agent pool
+2025-05-06 02:11:47,455 - INFO - Collected entries: [0, 1]
+2025-05-06 02:11:48,243 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 02:11:50,825 - INFO - Final response generated
+2025-05-06 02:12:01,067 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:12:43,309 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:12:43,312 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:12:43,312 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:12:43,315 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:12:43,853 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:12:44,349 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:12:44,839 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:12:45,018 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:12:45,523 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:12:45,706 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:12:45,884 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:12:46,272 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:12:46,484 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:12:46,663 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:12:47,390 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:12:47,392 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:12:47,393 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:12:47,571 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:12:47,751 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:12:47,927 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:12:48,102 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:12:48,319 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:12:48,503 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:12:48,686 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:12:48,906 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:12:49,118 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:12:49,304 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:12:49,306 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:12:50,892 - INFO - Starting generation process
+2025-05-06 02:12:50,912 - INFO - Writing input to blackboard
+2025-05-06 02:12:52,072 - INFO - Running agent pool
+2025-05-06 02:13:23,150 - INFO - Collected entries: [0, 1]
+2025-05-06 02:13:24,014 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 02:13:59,920 - INFO - Final response generated
+2025-05-06 02:15:40,486 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:18:27,383 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:18:27,386 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:18:27,387 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:18:27,389 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:18:27,935 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:18:28,113 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:18:28,416 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:18:28,912 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:18:29,093 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:18:29,592 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:18:30,089 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:18:30,494 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:18:30,704 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:18:30,890 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:18:31,615 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:18:31,617 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:18:31,617 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:18:31,794 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:18:32,009 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:18:32,191 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:18:32,370 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:18:32,555 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:18:32,745 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:18:32,924 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:18:33,135 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:18:33,353 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:18:33,538 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:18:33,540 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:18:35,066 - INFO - Starting generation
+2025-05-06 02:21:15,648 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:21:22,194 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:21:22,197 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:21:22,197 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:21:22,199 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:21:22,524 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:21:23,028 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:21:23,207 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:21:23,399 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:21:23,582 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:21:23,768 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:21:23,954 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:21:24,360 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:21:24,578 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:21:24,774 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:21:25,534 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:21:25,536 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:21:25,537 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:21:25,715 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:21:25,901 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:21:26,090 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:21:26,270 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:21:26,451 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:21:26,634 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:21:26,815 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:21:27,074 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:21:27,832 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:21:28,021 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:21:28,023 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:21:33,348 - INFO - Starting generation
+2025-05-06 02:25:24,530 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:25:33,215 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:25:33,219 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:25:33,219 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:25:33,221 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:25:33,796 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:25:34,298 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:25:34,481 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:25:34,659 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:25:34,846 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:25:35,343 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:25:35,525 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:25:35,949 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:25:36,481 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:25:36,665 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:25:37,382 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:25:37,384 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:25:37,384 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:25:37,563 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:25:37,744 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:25:37,929 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:25:38,107 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:25:38,286 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:25:38,472 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:25:38,655 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:25:38,875 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:25:39,091 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:25:39,279 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:25:39,281 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:25:39,282 - INFO - Starting
+2025-05-06 02:26:49,152 - INFO - User Input: What is absurd?
+2025-05-06 02:26:49,152 - INFO - AI Response: of, to
+
+*
+
+*
+
+*
+
+*
+*
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+*
+
+*
+*
+
+*
+
+of*
+
+*
+
+*
+
+*
+of*
+
+*
+
+*
+*
+
+*
+
+*
+
+*
+
+*
+*
+*
+*
+
+*
+
+*
+
+*
+*
+
+*
+*
+*
+
+*
+
+*
+*
+
+*
+*
+    
+
+*
+*
+
+*
+
+*
+*
+
+*
+
+*
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+**
+
+*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+And
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+and
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+So
+
+*
+
+*
+
+Therefore
+
+*
+
+*
+
+*
+
+*
+
+**
+
+Therefore
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+And*
+
+*
+
+*
+
+*
+
+*
+
+And*
+
+*
+
+In*
+
+*
+
+*
+
+*
+
+*
+
+The*
+
+*
+
+And
+
+*
+
+*
+
+And*
+
+*
+
+Of
+
+*
+
+So
+
+*
+
+*
+
+*
+
+It*
+
+The*
+
+The*
+
+*
+
+*
+
+*
+
+There
+
+There
+
+*
+
+It
+
+This
+
+In*
+
+*
+
+*
+
+The*
+
+The*
+
+*
+
+Therefore
+
+*
+
+*
+
+A*
+
+A*
+
+*
+
+With
+
+The
+As*
+
+*
+*
+
+*
+
+*
+In*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+There
+
+In*
+
+So
+
+*
+
+A*
+
+*
+Of
+
+There
+
+The
+
+*
+
+*
+So*
+
+The
+
+The
+
+*
+
+*
+
+*
+
+*
+
+A*
+
+*
+
+The*
+
+*
+
+*
+
+The*
+
+**
+
+In
+
+The
+
+There
+
+A*
+
+*
+
+*
+
+*
+The
+The
+
+This*
+
+There*
+
+Of
+
+Of
+
+The
+
+The
+
+The
+
+The
+
+*
+The
+
+*
+
+The
+
+The
+
+The
+
+*
+
+The
+
+The
+
+There
+
+*
+
+The
+
+*
+
+The
+
+The
+
+The
+
+*
+
+The*
+
+The*
+
+*The
+
+The*
+
+The
+
+The
+
+*The
+
+The*The
+
+The*
+
+*The*
+
+The
+
+*There are
+2025-05-06 02:29:21,514 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 02:29:30,303 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:29:30,305 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:29:30,305 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:29:30,308 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:29:30,889 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:29:31,067 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:29:31,251 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:29:31,430 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:29:31,611 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:29:31,793 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:29:31,976 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:29:32,396 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:29:32,613 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:29:32,828 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:29:33,547 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:29:33,549 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:29:33,549 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:29:34,049 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:29:34,239 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:29:34,420 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:29:34,907 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:29:35,100 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:29:35,286 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:29:35,470 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:29:35,675 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:29:35,884 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:29:36,070 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:29:36,073 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:29:36,075 - INFO - Starting generation process
+2025-05-06 02:29:36,095 - INFO - Writing input to blackboard
+2025-05-06 02:29:37,352 - INFO - Running agent pool
+2025-05-06 02:30:07,651 - INFO - Collected entries: [0, 1]
+2025-05-06 02:30:08,443 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 02:30:43,860 - INFO - Final response generated
+2025-05-06 02:30:43,866 - INFO - User Input: What is Structuralism
+2025-05-06 02:30:43,866 - INFO - AI Response: of.
+**
+
+*
+*
+*
+
+*
+**
+*
+I*
+"Ito
+and
+is
+and*
+the-
+(or*
+the*
+andtheof*
+*
+to-
+*
+*
+*
+and*to*to*a*and
+the*
+*and*and*and
+the*and
+*and
+the*to*and*
+and*and*
+the*
+*and*and*
+and*and*and*and*and*and*
+and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and**and*and*and*and*and**and*and*and*and**to***and**and*and*and*and*and*and**
+
+**and*and*and*and*and*and*
+
+*
+
+*
+and*s***and*and**and**
+
+***and*and*and*
+
+**and*and*
+
+*and*****of*and*
+
+*and**.and*and*for*and*and*
+
+*and*and**
+
+****and*
+
+**and*
+
+*and**and*and**and*and*and*and*and*and*and*and*and*and*
+
+and*and*and*and*and*and*and*and*the*and*and*and*and*and*and*of*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and*and*and*and*and*I*and*and*of*an*and*and*of*and*and*and**and***and*and*and*is*and*and*and*and*and*and*and*how*and*and*and*and*of*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and*and*and*and*and*and*and*and*and*and*and*and****and*
+and*
+2025-05-06 02:38:24,369 - INFO - Starting generation process
+2025-05-06 02:38:24,378 - INFO - Writing input to blackboard
+2025-05-06 02:38:25,483 - INFO - Running agent pool
+2025-05-06 02:38:32,648 - DEBUG - Using proactor: IocpProactor
+2025-05-06 02:38:32,651 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:38:32,651 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:38:32,653 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 02:38:32,904 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:38:33,088 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:38:33,265 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:38:33,768 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:38:33,956 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:38:34,149 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:38:34,325 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:38:34,822 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:38:35,034 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:38:35,221 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:38:35,955 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 02:38:35,957 - INFO - Use pytorch device_name: cpu
+2025-05-06 02:38:35,957 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 02:38:36,140 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:38:36,320 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 02:38:36,495 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 02:38:36,668 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 02:38:36,885 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 02:38:37,111 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 02:38:37,321 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 02:38:37,529 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 02:38:37,743 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 02:38:37,928 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 02:38:37,930 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 02:38:37,931 - INFO - Starting
+2025-05-06 02:39:09,010 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 02:39:44,676 - INFO - User Input: What is Structuralism
+2025-05-06 02:39:44,677 - INFO - AI Response: of.
+**
+
+*
+*
+*
+
+*
+**
+*
+I*
+"Ito
+and
+is
+and*
+the-
+(or*
+the*
+andtheof*
+*
+to-
+*
+*
+*
+and*to*to*a*and
+the*
+*and*and*and
+the*and
+*and
+the*to*and*
+and*and*
+the*
+*and*and*
+and*and*and*and*and*and*
+and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and**and*and*and*and*and**and*and*and*and**to***and**and*and*and*and*and*and**
+
+**and*and*and*and*and*and*
+
+*
+
+*
+and*s***and*and**and**
+
+***and*and*and*
+
+**and*and*
+
+*and*****of*and*
+
+*and**.and*and*for*and*and*
+
+*and*and**
+
+****and*
+
+**and*
+
+*and**and*and**and*and*and*and*and*and*and*and*and*and*
+
+and*and*and*and*and*and*and*and*the*and*and*and*and*and*and*of*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and*and*and*and*and*I*and*and*of*an*and*and*of*and*and*and**and***and*and*and*is*and*and*and*and*and*and*and*how*and*and*and*and*of*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and*and**and*and*and*and*and*and*and*and*and*and*and*and****and*
+and*
+2025-05-06 11:02:09,119 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 11:02:47,969 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:02:47,971 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:02:47,972 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:02:47,995 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:02:48,527 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:02:49,031 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:02:49,223 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:02:49,736 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:02:49,922 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:02:50,112 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:02:50,295 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:02:52,588 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:02:52,820 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:02:53,011 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:02:53,758 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:02:53,761 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:02:53,761 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:02:53,944 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:02:54,127 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:02:54,307 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:02:54,495 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:02:54,983 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:02:55,160 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:02:55,341 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:02:55,557 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:02:55,775 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:02:55,969 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:02:55,971 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:03:12,445 - INFO - Starting
+2025-05-06 11:03:43,072 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 54, in generate
+    return self.output_agent.generate(entries)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: OutputAgent.generate() missing 1 required positional argument: 'entries'
+2025-05-06 11:07:33,518 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 11:07:39,627 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:07:39,630 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:07:39,630 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:07:39,632 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:07:40,224 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:07:40,403 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:07:40,599 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:07:40,778 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:07:40,962 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:07:41,469 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:07:41,651 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:07:42,058 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:07:42,278 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:07:42,465 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:07:43,182 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:07:43,184 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:07:43,184 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:07:43,366 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:07:43,544 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:07:43,724 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:07:43,905 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:07:44,094 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:07:44,296 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:07:44,495 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:07:44,713 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:07:44,982 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:07:45,341 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:07:45,344 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:07:51,854 - INFO - Starting generation process
+2025-05-06 11:07:51,854 - INFO - Writing input to blackboard
+2025-05-06 11:07:51,874 - INFO - Retrieving RAG results
+2025-05-06 11:07:52,101 - INFO - Running agent pool
+2025-05-06 11:08:23,195 - INFO - Collected entries: [0, 1]
+2025-05-06 11:08:23,196 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:08:31,293 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 79, in main
+    response = await slm.generate(user_input)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\distributed_slm.py", line 74, in generate
+    final_response = self.output_agent.generate(self.blackboard, entries)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\murmurnet\modules\output_agent.py", line 62, in generate
+    answer = resp.choices[0].message.content.strip()
+             ^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'choices'
+2025-05-06 11:09:20,184 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 11:09:26,733 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:09:26,736 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:09:26,736 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:09:26,738 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:09:27,275 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:09:27,467 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:09:27,705 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:09:27,891 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:09:28,073 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:09:28,261 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:09:28,445 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:09:29,169 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:09:29,387 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:09:29,575 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:09:30,333 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:09:30,335 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:09:30,336 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:09:30,613 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:09:30,794 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:09:30,975 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:09:31,350 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:09:31,535 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:09:31,724 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:09:31,903 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:09:32,121 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:09:32,377 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:09:32,571 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:09:32,573 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:09:37,309 - INFO - Starting generation process
+2025-05-06 11:09:37,309 - INFO - Writing input to blackboard
+2025-05-06 11:09:37,331 - INFO - Retrieving RAG results
+2025-05-06 11:09:37,660 - INFO - Running agent pool
+2025-05-06 11:10:08,212 - INFO - Collected entries: [0, 1]
+2025-05-06 11:10:08,212 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:10:15,790 - INFO - Final response generated
+2025-05-06 11:10:15,797 - INFO - User Input: What is absurd?
+2025-05-06 11:10:15,797 - INFO - AI Response: Absurdismは、**宇宙が理にかなっているかという認識が欠如している世界**において、意味がないと考える哲学理論です。
+
+これは、合理的な人間が、無意味な世界との対立に直面し、その対立を解決しようと試みることなく、苦悩する状況を指します。また、人間の意図と結果の間にずれが生じ、普遍的な価値や意味を求めることを試みることなく、主観的な評価と客観的な価値の間に矛盾が生じることも、このAbsurdismの重要な要素です。
+
+**重要なポイント:**
+
+*   **意味の欠如:** 宇宙が理にかなっていると信じられない世界。
+*   **矛盾:** 人間は意味を求めるが、その努力は無駄であると見なされる。
+*   **苦悩:** この矛盾から生じる苦悩、そして意味を見つけようと試みるという闘い。
+*   **普遍性:** Absurdismは、個人の状況に限定されるものではなく、普遍的な哲学的テーマである。
+2025-05-06 11:14:11,034 - INFO - Starting generation process
+2025-05-06 11:14:11,035 - INFO - Writing input to blackboard
+2025-05-06 11:14:11,046 - INFO - Retrieving RAG results
+2025-05-06 11:14:11,062 - INFO - Running agent pool
+2025-05-06 11:14:41,414 - INFO - Collected entries: [0, 1]
+2025-05-06 11:14:41,414 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:15:33,965 - INFO - Final response generated
+2025-05-06 11:15:33,976 - INFO - User Input: AIは教育をどのように変えると思う？
+2025-05-06 11:15:33,977 - INFO - AI Response: ## AIが教育をどのように変えるか？
+
+AIは教育に革命的な変革をもたらす可能性を秘めており、その影響は多岐にわたる。現状では、まだ発展途上であり、完全に普及したわけではないものの、以下のような側面からAIが教育をどのように変える可能性があると考える。
+
+**1. 個別学習の実現と効果的なフィードバック:**
+
+* **アダプティブラーニング:** AIは、生徒の理解度、学習進捗、強み・弱みを分析し、最適な学習内容、ペース、教材を自動的に調整するアダプティブラーニングシステムを構築する。これにより、生徒は自分のペースで学習を進め、苦手分野に集中できる環境が提供される。
+* **パーソナル学習コーチ:** AIチューターは、生徒の学習状況をモニタリングし、個別指導や学習計画を提案する。生徒は、AIコーチが提供するフィードバックやアドバイスを通じて、学習意欲を高め、効果的に学習を進めることができる。
+* **リアルタイムフィードバック:** AIは、生徒の解答や課題の作成状況をリアルタイムで分析し、即座にフィードバックを提供することで、学習効果を最大化する。
+
+**2. 教師の負担軽減と業務効率化:**
+
+* **採点・評価の自動化:** AIは、テストや課題の採点、記述式の評価、レポート作成など、教師の事務作業を大幅に削減する。これにより、教師は生徒一人ひとりに寄り添い、個別指導や生徒とのコミュニケーションに時間をかけることができる。
+* **教材作成支援:** AIは、既存の教材を分析し、最新の情報や多様な学習ニーズに対応した教材を生成する。教師はAIツールを活用して、教材作成時間を短縮し、より創造的な教育活動に集中できる。
+* **授業計画の最適化:** AIは、生徒の学習データや教師のスキル、教室の状況などを分析し、最適な授業計画を提案する。これにより、教師は効果的な授業を設計し、生徒の学習効果を最大化することができる。
+
+**3. 教育コンテンツの拡充と多様化:**
+
+* **AIを活用した教材生成:** AIは、様々なジャンルのテキスト、画像、音声などを生成し、教育コンテンツを拡充する。これにより、生徒は多様な視点から学習できる環境が提供される。
+* **バーチャルリアリティ (VR) / 拡張現実 (AR) の活用:** AIとVR/AR技術を組み合わせることで、生徒は現実世界を体験できる学習環境を提供し、没入感の高い学習体験を実現する。
+* **言語学習支援:** AIは、生徒が言語学習を支援する際に、AIはどのように作用するのか？
+
+**4. 
+**
+
+**
+
+* **AIが**
+
+**
+
+*
+
+*
+
+*
+**学習を
+*
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+*
+
+**
+
+*
+
+*
+**
+
+**
+
+*
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+*
+**
+
+**
+
+**
+
+**
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+**
+
+*
+
+**
+
+**
+
+*
+
+**
+
+**
+
+**
+
+**
+
+*
+
+*
+
+**
+
+**
+
+**
+
+**
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+*
+*
+
+**
+
+*
+*
+
+**
+**
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+**
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+2025-05-06 11:16:38,186 - INFO - Starting generation process
+2025-05-06 11:16:38,186 - INFO - Writing input to blackboard
+2025-05-06 11:16:38,198 - INFO - Retrieving RAG results
+2025-05-06 11:16:38,526 - INFO - Running agent pool
+2025-05-06 11:17:10,102 - INFO - Collected entries: [0, 1]
+2025-05-06 11:17:10,102 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:18:00,893 - INFO - Final response generated
+2025-05-06 11:18:00,906 - INFO - User Input: What impact will AI have on society?
+2025-05-06 11:18:00,906 - INFO - AI Response: ## AI の社会への影響 - 複数のエージェントの意見を参考に
+
+AI は社会に多大な影響を与える可能性を秘めており、その影響は非常に複雑で多岐にわたる。以下に、いくつかのエージェントの意見を参考に、主要な影響分野をまとめます。
+
+**1. 経済への影響:**
+
+* **エージェントA:** AI は自動化を促進し、生産性を向上させ、新たなビジネスモデルを生み出す可能性があります。これにより、経済成長を加速させ、雇用機会が増加する可能性があります。
+* **エージェントB:** しかし、AI による自動化は失業や格差を拡大させる可能性があります。特に、単純労働やルーチンワークに従事する人々にとって深刻な影響を与えるでしょう。また、AI によって生成されるコンテンツの普及は、著作権の問題や偽情報拡散のリスクを増大させます。
+* **エージェントC:** AI は新たな産業を生み出す一方で、既存の産業構造を破壊する可能性もあります。特に、製造業や運輸業など、再教育やスキルアップが必要な産業への影響は大きいです。
+
+**2. 社会への影響:**
+
+* **エージェントA:** AI は医療診断の精度向上、災害対策の迅速化、教育の個別化など、社会課題の解決に役立つ可能性があります。
+* **エージェントB:** しかし、AI が判断を下すことによって、バイアスや差別が生じるリスクがあります。特に、AI が学習データに偏りがあると、その結果として不公平な判断を下す可能性があります。
+* **エージェントC:** AI は社会の民主主義に脅威を与える可能性も指摘されています。AI が選挙結果を操作したり、社会運動を抑圧したりする可能性も考えられます。
+
+**3. 人間関係への影響:**
+
+* **エージェントD:** AI は人間とのコミュニケーションを変化させ、新しい形の社会関係を築く可能性があります。しかし、AI によって生成されたコンテンツの真偽性や、AI が人間の感情を理解できない場合、人間関係は崩れる可能性があります。
+* **AI**
+* **AI**
+* **
+* **
+*
+*
+* AI
+*
+
+**
+
+* 
+*
+*
+
+*
+
+*
+
+*
+
+**
+
+**
+*
+
+*
+
+*
+
+**
+
+*
+*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+*
+
+*
+*
+
+**
+
+*
+
+*
+*
+
+*
+*
+*
+*
+*
+
+**
+
+*
+AI
+*
+
+*
+
+**
+*
+*
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+*
+**
+**
+
+*
+
+**
+*
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+AI**
+**
+
+**
+*
+**
+
+**
+
+**
+
+**
+*
+*
+
+**
+**
+
+*
+
+**
+
+**
+
+AI
+**
+
+**
+*
+
+**
+**
+AI
+AI
+*
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+*
+AI
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+*
+**
+**
+
+**
+
+**
+*
+
+**
+
+**
+**
+
+**
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+*
+
+**
+
+**
+
+**
+**
+**
+
+**
+
+**
+```
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+*
+
+**
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+*
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+```
+**
+
+**
+**
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+```
+
+**
+
+**
+```
+
+**
+
+**
+**
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+****
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+******
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+******
+
+****
+
+**
+
+****
+
+**
+
+**
+
+**
+
+**
+
+**
+
+****
+
+************
+
+**
+
+****
+
+******
+
+******
+
+******
+
+********
+2025-05-06 11:19:19,193 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 11:19:42,404 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:19:42,407 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:19:42,407 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:19:42,410 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:19:42,664 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:19:42,846 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:19:43,031 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:19:43,213 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:19:43,398 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:19:43,583 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:19:43,780 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:19:44,257 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:19:44,475 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:19:44,664 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:19:45,423 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:19:45,425 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:19:45,425 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:19:45,604 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:19:45,784 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:19:45,966 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:19:46,194 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:19:46,396 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:19:46,579 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:19:46,762 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:19:46,973 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:19:47,195 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:19:47,387 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:19:47,389 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:19:59,981 - INFO - Starting generation process
+2025-05-06 11:19:59,981 - INFO - Writing input to blackboard
+2025-05-06 11:20:00,005 - INFO - Retrieving RAG results
+2025-05-06 11:20:00,157 - INFO - Running agent pool
+2025-05-06 11:20:30,568 - INFO - Collected entries: [0, 1]
+2025-05-06 11:20:30,569 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:21:01,704 - INFO - Final response generated
+2025-05-06 11:21:01,709 - INFO - User Input: AIが社会に与えるインパクトとは何でしょうあk
+2025-05-06 11:21:01,709 - INFO - AI Response: None
+2025-05-06 11:24:12,502 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
+2025-05-06 11:24:18,742 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:24:18,744 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:24:18,744 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:24:18,747 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:24:19,091 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:24:19,273 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:24:19,799 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:24:19,982 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:24:20,162 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:24:20,382 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:24:20,564 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:24:20,959 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:24:21,173 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:24:21,419 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:24:22,133 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:24:22,135 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:24:22,135 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:24:22,314 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:24:22,524 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:24:22,827 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:24:23,006 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:24:23,186 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:24:23,373 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:24:23,569 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:24:23,778 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:24:24,013 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:24:24,265 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:24:24,267 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:24:32,265 - INFO - Starting generation process
+2025-05-06 11:24:32,265 - INFO - Writing input to blackboard
+2025-05-06 11:24:32,287 - INFO - Retrieving RAG results
+2025-05-06 11:24:32,322 - INFO - Running agent pool
+2025-05-06 11:25:02,465 - INFO - Collected entries: [0, 1]
+2025-05-06 11:25:02,466 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:25:33,460 - INFO - Final response generated
+2025-05-06 11:25:33,467 - INFO - User Input: AIが社会に与えるインパクトとは
+2025-05-06 11:25:33,467 - INFO - AI Response: ## AIが社会に与えるインパクト：エージェントの視点から
+
+AI技術の発展は、社会に多岐にわたるインパクトをもたらしつつあります。しかし、その影響はまだ不確実であり、良い面と悪い面の両方を持つ複雑な状況です。以下に、主要なエージェントの意見を踏まえ、AIが社会に与える影響を多角的に考察し、具体的な事例と課題を提示します。
+
+**1. 経済への影響**
+
+* **経済学者（例：Martin Shepherd）:** 「AIは生産性向上と新たなビジネスモデルを生み出す可能性を秘めており、経済成長を加速させる。」
+    * **影響:** 労働力不足の解消、効率的な生産、新たな産業創出、自動化によるコスト削減など。
+    * **課題:** 雇用喪失のリスク、格差の拡大（スキル格差、デジタルデバイド）など。
+
+* **ビジネスリーダー（例：Kai-Fu Lee）:** 「AIは企業が競争優位性を確立し、顧客体験を向上させるための重要なツールとなる。」
+    * **影響:** 顧客体験の高度化、マーケティング最適化、サプライチェーンの効率化、データ分析による意思決定の迅速化など。
+    * **課題:** データセキュリティリスク、AIバイアスによる差別、倫理的な問題（プライバシー侵害など）への対応。
+
+**2. 社会への影響**
+
+* **医療従事者（例：Dr. David Woods）:** 「AIは診断精度向上、個別化医療、医薬品開発のスピードアップに貢献し、医療の質を向上させる。」
+    * **影響:** 早期発見、最適な治療法の提案、患者ケアの改善など。
+    * **課題:** 医療情報の信頼性確保、AIによる誤診のリスク、医療従事者の役割変化など。
+
+* **教育者（例：Dr. Sarah Chen）:** 「AIは個別学習の実現、教員の負担軽減、教育機会の拡大に貢献する。」
+    * **影響:** 個別最適化された学習内容、オンライン教育の普及、教員の負担軽減など。
+    * **課題:** デジタルデバイドによる教育格差の拡大、AIによる学習内容の偏り、教師の役割の変化など。
+
+* **市民団体（例：Emily Carter）:** 「AIは市民の権利保護、行政サービスの効率化、社会課題解決に貢献する可能性を秘めている。」
+    * **影響:** 犯罪予測、災害予測、公共サービスの最適化、市民参加の促進など。
+    * **課題:** 誤った情報伝達、バイアスリートのAIの利用、プライバシー侵害、監視とプライバシーを侵害する可能性。
+
+* **AIが社会に与える影響**
+
+**
+
+*
+
+*
+
+**
+
+* **、**
+
+**
+
+**
+
+**
+
+**
+
+*
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+**
+
+*
+
+**
+
+**
+
+*
+
+**
+
+*
+
+**
+
+*
+
+**
+
+**
+
+*
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+**
+
+*
+
+*
+
+**
+
+*
+
+**
+
+*
+
+*
+
+**
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+**
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+2025-05-06 11:26:31,257 - INFO - Starting generation process
+2025-05-06 11:26:31,257 - INFO - Writing input to blackboard
+2025-05-06 11:26:31,264 - INFO - Retrieving RAG results
+2025-05-06 11:26:31,278 - INFO - Running agent pool
+2025-05-06 11:26:40,640 - DEBUG - Using proactor: IocpProactor
+2025-05-06 11:26:40,642 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:26:40,642 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:26:40,644 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-06 11:26:40,920 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:26:41,108 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:26:41,672 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:26:41,852 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:26:42,051 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:26:42,236 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:26:42,416 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:26:42,806 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:26:43,027 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:26:43,224 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:26:43,941 - INFO - Loaded ZIM: C:\\Users\\園木優陽\\AppData\\Roaming\\kiwix-desktop\\wikipedia_en_top_nopic_2025-03.zim
+2025-05-06 11:26:43,943 - INFO - Use pytorch device_name: cpu
+2025-05-06 11:26:43,944 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-06 11:26:44,129 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:26:44,319 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-06 11:26:44,520 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-06 11:26:44,712 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-06 11:26:44,895 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-06 11:26:45,078 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-06 11:26:45,262 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-06 11:26:45,474 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-06 11:26:45,690 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6739
+2025-05-06 11:26:45,869 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6739
+2025-05-06 11:26:45,872 - INFO - Embedding model: all-MiniLM-L6-v2
+2025-05-06 11:29:32,475 - INFO - Starting generation process
+2025-05-06 11:29:32,475 - INFO - Writing input to blackboard
+2025-05-06 11:29:32,497 - INFO - Retrieving RAG results
+2025-05-06 11:29:32,792 - INFO - Running agent pool
+2025-05-06 11:30:03,717 - INFO - Collected entries: [0, 1]
+2025-05-06 11:30:03,717 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:30:38,380 - INFO - Final response generated
+2025-05-06 11:30:38,388 - INFO - User Input: What impact will AI have on society?
+2025-05-06 11:30:38,388 - INFO - AI Response: AI の社会への影響は非常に広範囲に及び、複雑で多岐にわたります。現状では、いくつかの主要な分野で大きな影響を与え始めており、今後さらに加速していくと予想されます。以下に、AI が社会に与える影響をいくつかのカテゴリーに分けて解説します。
+
+**1. 経済への影響:**
+
+* **自動化と雇用の喪失:** AI の導入は、特に単純作業やルーチンワークを自動化する可能性があり、多くの職種における雇用喪失を引き起こす可能性があります。しかし、同時に新しい職種や産業も創出される可能性もあります。
+* **生産性の向上:** AI は、業務効率を大幅に向上させ、生産性を高める可能性があります。これにより、経済成長を促進し、新たなビジネスチャンスを生み出すでしょう。
+* **新たな産業の創出:** AI の開発と応用は、これまで存在しなかった新しい産業やビジネスモデルを生み出す可能性があります。
+* **格差の拡大:** AI の導入は、スキルセットやアクセスによって格差を拡大する可能性があります。富裕層が AI を活用しやすくなり、貧困層が恩恵を受けにくい状況が懸念されます。
+
+**2. 政治への影響:**
+
+* **監視とプライバシー:** AI を活用した監視技術の発展は、個人のプライバシーを侵害し、自由を制限する可能性があります。
+* **政治的影響力:** AI は、選挙や政策決定に影響を与える可能性があります。偽情報やプロパガンダの拡散など、社会の信頼を揺るがすリスクも伴います。
+* **政府の意思決定:** AI は、政府の意思決定プロセスを支援し、より効率的な政策立案を可能にする可能性があります。しかし、AI の判断が誤っている可能性も考慮する必要があります。
+
+**3. 社会への影響:**
+
+* **医療:** AI は、病気の診断、治療法の開発、創薬などを効率化し、医療の質を向上させる可能性があります。
+* **教育:** AI は、個々の学習ニーズに合わせた個別指導や学習を可能にし、教育を加速する。
+* 
+*
+
+* **AI**
+*
+*
+
+*
+
+*
+
+*
+
+*
+
+*
+
+**AI
+
+**
+
+AI
+
+*
+
+*
+**
+AI
+
+*
+
+*
+
+*
+*
+*
+
+**
+
+*
+
+*
+*
+*
+
+*
+
+*
+
+**
+
+*
+*
+
+AI
+*
+
+*
+
+**
+
+**
+
+*
+
+*
+
+**
+
+*
+
+**
+AI
+**
+*
+
+*
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+AI
+
+**
+
+**
+
+AI
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+AI
+**
+
+**
+
+**
+
+**
+
+**
+**
+*
+*
+
+**
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+AI
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+AI
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+**
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+
+**
+**
+**
+
+**
+**
+**
+
+**
+**
+**
+```
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+
+**
+**
+```
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+**
+**
+
+**
+**
+**
+**
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+```
+**
+
+**
+**
+
+**
+**
+
+**
+```
+
+**
+
+**
+
+**
+
+**
+```
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+**
+
+**
+**
+**
+**
+
+**
+
+**
+
+**
+
+**
+```
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+
+**
+2025-05-06 11:32:27,055 - INFO - Starting generation process
+2025-05-06 11:32:27,056 - INFO - Writing input to blackboard
+2025-05-06 11:32:27,066 - INFO - Retrieving RAG results
+2025-05-06 11:32:27,320 - INFO - Running agent pool
+2025-05-06 11:33:00,237 - INFO - Collected entries: [0, 1]
+2025-05-06 11:33:00,237 - DEBUG - `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-06 11:33:12,908 - INFO - Final response generated
+2025-05-06 11:33:12,914 - INFO - User Input: What is Structuralism?
+2025-05-06 11:33:12,914 - INFO - AI Response: Structuralism is a field of study that analyzes the underlying structures of language and communication. Specifically, it’s concerned with how meaning is created and how it’s conveyed through symbols and patterns. It's a complex and often debated field, but here’s a breakdown of what it is and its key ideas based on the provided text:
+
+**Core Idea:**
+
+Structuralism proposes that meaning isn’t inherent in objects themselves, but arises from the relationships between elements within a system. It’s about understanding *how* things are organized and connected, rather than *what* they are.
+
+**Key Principles & Concepts (as gleaned from the text):**
+
+* **Narrative Structure:** The text highlights the importance of narrative structure \u2013 a story’s way of being told. It considers how the elements of a story (narrator, protagonist, audience) interact.
+* **Dramatic Structure (Dramaturgical Structure):**  This is a specific type of narrative structure that focuses on the "center" of the story. The text describes it as a synergy among the narrator, protagonist, and audience.
+* **Regional and Temporal Variation:** The text acknowledges that dramatic structures differ across different cultures and historical periods.  The Kwik Kwak structure, for example, is a specific example, involving a narrator, protagonist, and audience.
+
+**Essentially, Structuralism seeks to uncover the underlying patterns and rules that govern how meaning is constructed.** It's a methodology that aims to break down complex communication into its basic components and analyze how they relate to each other.
+
+**Important Note:** The text provides a relatively basic overview.  More in-depth knowledge would require further study of the specific theoretical frameworks that underpin structuralism.
+
+Would you like me to elaborate on any specific aspect of Structuralism, or to discuss the Kwik Kwak structure?
+2025-05-06 11:36:23,814 - ERROR - エラー発生
+Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\Console\console_app.py", line 75, in main
+    user_input = input("あなた> ").strip()
+                 ^^^^^^^^^^^^^^^^^
+EOFError
