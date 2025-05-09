@@ -18,6 +18,8 @@ class DistributedSLM:
         """
         self.config = config or {}
         self.num_agents = self.config.get('num_agents', 2)
+        self.iterations = self.config.get('iterations', 1)  # 反復回数
+        self.use_summary = self.config.get('use_summary', True)  # 要約を使うかどうか
         self.prompt_config = self.load_prompt_config()
         self.input_reception = InputReception(self.config)
         self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
