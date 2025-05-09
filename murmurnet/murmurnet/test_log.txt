@@ -1,0 +1,4 @@
+2025-05-05 23:50:27,359 [INFO] Starting generation process
+2025-05-05 23:50:27,359 [INFO] Writing input to blackboard
+2025-05-05 23:50:27,359 [INFO] Running agent pool
+2025-05-05 23:50:57,866 [INFO] Final response generated
