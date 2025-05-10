@@ -8,6 +8,7 @@ MurmurNet テストスクリプト
 - 統合テスト
 - 性能測定
 - 機能テスト（反復、要約、並列）
+- 黒板アーキテクチャと会話記憶の統合テスト
 
 作者: Yuhi Sonoki
 """
@@ -33,13 +34,15 @@ logging.basicConfig(
 
 # モジュールパスの設定
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from murmurnet.distributed_slm import DistributedSLM
-from murmurnet.modules.blackboard import Blackboard
-from murmurnet.modules.input_reception import InputReception
-from murmurnet.modules.agent_pool import AgentPoolManager
-from murmurnet.modules.rag_retriever import RAGRetriever
-from murmurnet.modules.output_agent import OutputAgent
-from murmurnet.modules.summary_engine import SummaryEngine
+# インポートパスを修正
+from MurmurNet.distributed_slm import DistributedSLM
+from MurmurNet.modules.blackboard import Blackboard
+from MurmurNet.modules.input_reception import InputReception
+from MurmurNet.modules.agent_pool import AgentPoolManager
+from MurmurNet.modules.rag_retriever import RAGRetriever
+from MurmurNet.modules.output_agent import OutputAgent
+from MurmurNet.modules.summary_engine import SummaryEngine
+from MurmurNet.modules.conversation_memory import ConversationMemory
 
 # 標準設定（異なる環境でも動作するように絶対パス）
 MODELS_PATH = r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\"
@@ -275,7 +278,7 @@ async def test_rag_zim_mode():
         # モードの確認
         print(f"実際の動作モード: {rag.mode}")
         
-        if rag.mode == "dummy":
+        if (rag.mode == "dummy"):
             print("警告: ZIMモードではなくdummyモードで動作しています。以下の理由が考えられます:")
             print("- ZIMファイルが存在しない")
             print("- libzimがインストールされていない")
@@ -305,6 +308,195 @@ async def test_rag_zim_mode():
         traceback.print_exc()
         return False
 
+# ========== 新機能テスト ==========
+
+async def test_answer_quality():
+    """回答の適切さ機能テスト"""
+    print_header("質問適切性テスト")
+    
+    config = DEFAULT_CONFIG.copy()
+    config["iterations"] = 1
+    config["num_agents"] = 2
+    
+    slm = get_slm_instance(config)
+    
+    # 質問の適切性をテストする質問リスト
+    test_questions = [
+        "AIは教育をどのように変えると思う？",  # 実行タスクの例
+        "地球温暖化の主な原因は何ですか？",     # 明確な事実質問
+        "量子コンピュータの将来性について",     # 技術予測質問
+    ]
+    
+    for i, question in enumerate(test_questions):
+        print(f"\n質問 {i+1}: {question}")
+        print("-" * 40)
+        
+        start_time = time.time()
+        response = await slm.generate(question)
+        gen_time = time.time() - start_time
+        
+        print(f"応答時間: {gen_time:.2f}秒")
+        print(f"応答: \n{response}")
+        print("-" * 40)
+    
+    return True
+
+async def test_conversation_memory():
+    """会話記憶機能テスト"""
+    print_header("会話履歴記憶テスト")
+    
+    config = DEFAULT_CONFIG.copy()
+    config["iterations"] = 1
+    config["num_agents"] = 2
+    config["use_memory"] = True  # 会話履歴機能を有効化
+    
+    # 新しいインスタンスで記憶をクリーンな状態から始める
+    slm = get_slm_instance(config)
+    
+    # 記憶をリセット（直接conversation_memoryを使用）
+    if hasattr(slm, 'conversation_memory'):
+        slm.conversation_memory.clear_memory()
+        print("会話履歴をリセットしました")
+    
+    # 会話の流れをテストする質問シーケンス
+    conversation = [
+        "こんにちは、私の名前は園木です。",
+        "私の趣味について知りたいですか？",
+        "私はプログラミングとピアノが好きです。",
+        "私の名前は何でしたか？",  # 以前の会話を覚えているかテスト
+    ]
+    
+    for i, message in enumerate(conversation):
+        print(f"\n会話ターン {i+1}: {message}")
+        print("-" * 40)
+        
+        response = await slm.generate(message)
+        print(f"応答: {response}")
+        
+        # 会話コンテキストの状態を表示
+        if i > 0 and 'conversation_context' in slm.blackboard.memory:
+            context = slm.blackboard.read('conversation_context')
+            print(f"会話コンテキスト: {context}")
+    
+    return True
+
+async def test_role_assignment():
+    """役割振り分けモジュールテスト"""
+    print_header("役割振り分けモジュールテスト")
+    
+    config = DEFAULT_CONFIG.copy()
+    config["iterations"] = 1
+    config["num_agents"] = 3  # より多くのエージェントで多様な役割を確認
+    
+    slm = get_slm_instance(config)
+    
+    # 異なるタイプの質問でテスト
+    test_questions = [
+        {"text": "AIと人間の協調と競争について議論してください", "type": "discussion"},
+        {"text": "新しいモバイルアプリのビジネスプランを考えてください", "type": "planning"},
+        {"text": "量子力学の基本原理を簡単に説明してください", "type": "informational"},
+        {"text": "今日の気分はどうですか？", "type": "conversational"},
+    ]
+    
+    for i, question_data in enumerate(test_questions):
+        question = question_data["text"]
+        expected_type = question_data["type"]
+        
+        print(f"\n質問 {i+1}: {question}")
+        print(f"期待される質問タイプ: {expected_type}")
+        print("-" * 40)
+        
+        # 質問タイプと役割の判定
+        normalized_question = {"normalized": question}
+        slm.blackboard.write('input', normalized_question)
+        slm.agent_pool.update_roles_based_on_question(question)
+        
+        # 実際に判定された質問タイプを表示
+        actual_type = slm.blackboard.read('question_type')
+        print(f"判定された質問タイプ: {actual_type}")
+        
+        # 選択されたエージェント役割を表示
+        print("選択されたエージェント役割:")
+        for j in range(slm.num_agents):
+            role_idx = j % len(slm.agent_pool.agent_roles)
+            role = slm.agent_pool.agent_roles[role_idx]
+            print(f"  エージェント{j+1}: {role['role']}")
+        
+        # 応答生成
+        response = await slm.generate(question)
+        print(f"応答: {response[:150]}...")  # 長い場合は省略
+    
+    return True
+
+async def test_blackboard_conversation_memory():
+    """黒板と統合した会話記憶テスト"""
+    print_header("黒板と統合した会話記憶テスト")
+    
+    # 設定
+    config = DEFAULT_CONFIG.copy()
+    config["use_memory"] = True
+    
+    # 新しい黒板インスタンスを作成
+    blackboard = Blackboard(config)
+    
+    # 会話記憶インスタンスを黒板と統合して作成
+    conversation_memory = ConversationMemory(config, blackboard=blackboard)
+    
+    print("会話記憶モジュールを黒板と統合しました")
+    
+    # テスト用の会話データ
+    test_conversations = [
+        # (ユーザー入力, システム応答)
+        ("こんにちは、私の名前は太郎です。", "太郎さん、こんにちは！お元気ですか？"),
+        ("東京に住んでいます。", "東京は素晴らしい都市ですね。何か東京について質問はありますか？"),
+        ("趣味はプログラミングです。", "プログラミングは素晴らしい趣味ですね。どんな言語を使いますか？"),
+        ("Pythonが好きです。", "Pythonは汎用性が高く素晴らしい言語ですね！何か作っているものはありますか？")
+    ]
+    
+    # 会話を順番に追加
+    print("\n会話の追加:")
+    for i, (user_input, system_response) in enumerate(test_conversations):
+        print(f"\n会話 {i+1}:")
+        print(f"ユーザー: {user_input}")
+        print(f"システム: {system_response}")
+        
+        # 会話を記憶に追加
+        conversation_memory.add_conversation_entry(user_input, system_response)
+        
+        # 黒板に保存された内容を確認
+        print("\n黒板の状態確認:")
+        if blackboard.read("conversation_history"):
+            print(f"- 履歴エントリ数: {len(blackboard.read('conversation_history'))}")
+        if blackboard.read("conversation_context"):
+            context = blackboard.read("conversation_context")
+            print(f"- コンテキスト: {context[:100]}...")
+        if blackboard.read("conversation_key_facts"):
+            facts = blackboard.read("conversation_key_facts")
+            print("- 抽出された重要な情報:")
+            for category, items in facts.items():
+                if items:
+                    print(f"  {category}: {', '.join(items)}")
+    
+    # コンテキスト取得テスト
+    context = conversation_memory.get_conversation_context()
+    print("\n最終的な会話コンテキスト:")
+    print(f"{context[:200]}...")
+    
+    # 重要情報の取得テスト
+    key_facts = conversation_memory.get_key_facts()
+    print("\n抽出された重要情報:")
+    for category, items in key_facts.items():
+        if items:
+            print(f"{category}: {', '.join(items)}")
+    
+    # 新しいインスタンスを作成して読み込みテスト
+    print("\n新インスタンスで黒板からの読み込みテスト:")
+    new_memory = ConversationMemory(config, blackboard=blackboard)
+    print(f"- 履歴エントリ数: {len(new_memory.conversation_history)}")
+    print(f"- 名前の記憶: {new_memory.key_facts.get('names', [])}")
+    
+    return True
+
 # ========== メイン実行部 ==========
 
 def print_header(title):
@@ -318,6 +510,22 @@ async def main():
     print_header("MurmurNet テストスクリプト")
     
     try:
+        # 黒板と会話記憶の統合テスト (新規追加)
+        await test_blackboard_conversation_memory()
+        
+        # 新機能テスト（追加）
+        print_header("新実装機能テスト")
+        
+        # 1. 質問適切性テスト
+        await test_answer_quality()
+        
+        # 2. 会話記憶テスト
+        await test_conversation_memory()
+        
+        # 3. 役割振り分けテスト
+        await test_role_assignment()
+        
+        # 既存テスト
         # RAG ZIMモードのテスト（追加）
         print_header("RAG ZIMモードテスト")
         await test_rag_zim_mode()
@@ -344,6 +552,7 @@ async def main():
         config["iterations"] = 1  # 反復回数を減らす
         config["use_summary"] = True
         config["num_agents"] = 2  # エージェント数削減
+        config["use_memory"] = True  # 会話履歴を有効化
         
         # 既存インスタンスを更新
         slm = get_slm_instance(config)
@@ -360,7 +569,7 @@ async def main():
         
         # リソース解放
         global _slm_instance
-        if _slm_instance is not None:
+        if (_slm_instance is not None):
             del _slm_instance
             _slm_instance = None
             gc.collect()

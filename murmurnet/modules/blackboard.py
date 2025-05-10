@@ -25,6 +25,7 @@ class Blackboard:
         self.memory: Dict[str, Any] = {}
         self.history: List[Dict[str, Any]] = []
         self.debug = config.get('debug', False)
+        self.persistent_keys = ['conversation_context']  # 保持するキー
 
     def write(self, key: str, value: Any) -> Dict[str, Any]:
         """
@@ -70,6 +71,27 @@ class Blackboard:
         黒板のすべての現在値を取得
         """
         return self.memory.copy()
+
+    def clear_current_turn(self) -> None:
+        """
+        新しいターンのために黒板をクリアするが、特定のキーの値は保持する
+        persistent_keysに指定されたキーの値は保持される
+        """
+        # 保持するべき値を一時的に保存
+        preserved_values = {}
+        for key in self.persistent_keys:
+            if key in self.memory:
+                preserved_values[key] = self.memory[key]
+        
+        # 黒板をクリア
+        self.memory = {}
+        
+        # 保持するべき値を復元
+        for key, value in preserved_values.items():
+            self.memory[key] = value
+            
+        if self.debug:
+            print(f"黒板クリア: 保持キー {len(preserved_values)}個")
         
     def get_history(self, key: Optional[str] = None) -> List[Dict[str, Any]]:
         """

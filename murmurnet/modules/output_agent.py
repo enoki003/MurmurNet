@@ -93,20 +93,35 @@ class OutputAgent:
                     text = entry.get('text', '')[:200]  # テキスト制限
                     agent_outputs.append(f"エージェント {agent_id+1}: {text}")
             
-            # 4) システムプロンプト作成
+            # 4) システムプロンプト作成 - 改善点：より具体的な指示
             if lang == 'ja':
-                sys_prompt = "あなたは日本語話者向けの多言語アシスタントです。入力された情報を元に、300文字以内で簡潔に回答してください。"
+                sys_prompt = (
+                    "あなたは日本語話者向けの多言語アシスタントです。以下の点に注意して回答してください：\n"
+                    "1. 質問に直接答えること。質問の主題から外れないこと。\n"
+                    "2. 具体的で明確な情報を提供すること。\n"
+                    "3. 回答は300文字以内で簡潔にまとめること。\n"
+                    "4. 質問がない場合は対話を促す回答をすること。"
+                )
             else:
-                sys_prompt = "You are a general-purpose AI assistant. Answer concisely in English, maximum 50 words."
+                sys_prompt = (
+                    "You are a general-purpose AI assistant. Please follow these guidelines:\n"
+                    "1. Answer directly to the question. Stay on topic.\n"
+                    "2. Provide specific and clear information.\n"
+                    "3. Be concise, maximum 50 words.\n"
+                    "4. If there's no question, engage the user in conversation."
+                )
             
-            # 5) プロンプト内容作成 - 制限を加える
-            prompt_content = f"問い: {user_input}\n\n"
+            # 5) プロンプト内容作成 - 改善点：質問の要点を強調
+            # 質問の解析と重要キーワード抽出
+            question_emphasis = f"ユーザーの質問要点: '{user_input}'\n質問の核心に答えることが最も重要です。\n\n"
+            
+            prompt_content = question_emphasis
             
             if rag:
                 prompt_content += f"参考情報: {rag}\n\n"
             
             # 入力量が多すぎる場合は選択
-            total_length = 0
+            total_length = len(prompt_content)
             max_prompt_length = 1000  # プロンプトの最大長さ
             
             # 要約情報（優先）
@@ -128,7 +143,23 @@ class OutputAgent:
                 if total_length + len(agent_text) <= max_prompt_length:
                     prompt_content += agent_text
             
-            prompt_content += "上記の情報を総合的に考慮して、簡潔に回答してください。"
+            # 明確な指示を追加
+            if lang == 'ja':
+                prompt_content += (
+                    "上記の情報を総合的に考慮して以下の点に注意して回答してください：\n"
+                    "1. 質問「" + user_input + "」に対する具体的な回答を提供する\n"
+                    "2. 質問の主題から外れない\n"
+                    "3. 情報が不足している場合はその旨を述べる\n"
+                    "4. 簡潔に回答する"
+                )
+            else:
+                prompt_content += (
+                    "Consider all the information above and follow these instructions:\n"
+                    "1. Provide a specific answer to the question: \"" + user_input + "\"\n"
+                    "2. Stay on topic\n"
+                    "3. Acknowledge if information is insufficient\n"
+                    "4. Be concise"
+                )
             
             # 6) プロンプト設定とAPI呼び出し
             messages = [

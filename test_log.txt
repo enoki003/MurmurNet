@@ -1,0 +1,27 @@
+2025-05-10 17:11:21,411 [INFO] Use pytorch device_name: cpu
+2025-05-10 17:11:21,411 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-10 17:11:27,135 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-10 17:11:39,172 [INFO] Starting generation process. History: False
+2025-05-10 17:16:33,907 [INFO] Use pytorch device_name: cpu
+2025-05-10 17:16:33,907 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-10 17:16:39,541 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-10 17:16:41,108 [INFO] Starting generation process. History: False
+2025-05-10 17:16:41,134 [INFO] Starting iteration 0
+2025-05-10 17:17:18,309 [DEBUG] Created summary for iteration 0
+2025-05-10 17:17:18,310 [DEBUG] `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-10 17:17:52,316 [INFO] Generation process finished.
+2025-05-10 17:22:05,760 [INFO] Use pytorch device_name: cpu
+2025-05-10 17:22:05,761 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-10 17:22:10,673 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-10 17:22:13,819 [INFO] Starting generation process. History: False
+2025-05-10 17:22:13,841 [INFO] Starting iteration 0
+2025-05-10 17:22:50,844 [DEBUG] Created summary for iteration 0
+2025-05-10 17:22:50,844 [DEBUG] `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-10 17:23:22,925 [INFO] Generation process finished.
+2025-05-10 17:24:48,138 [INFO] Starting generation process. History: True
+2025-05-10 17:24:48,151 [INFO] Processing conversation history.
+2025-05-10 17:24:48,151 [INFO] No significant history or existing summary found to create new summary.
+2025-05-10 17:24:48,151 [INFO] Starting iteration 0
+2025-05-10 17:25:24,998 [DEBUG] Created summary for iteration 0
+2025-05-10 17:25:24,998 [DEBUG] `role='system'` messages are not allowed on Google's Gemma models.
+2025-05-10 17:25:42,563 [INFO] Generation process finished.

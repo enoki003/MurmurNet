@@ -8,7 +8,7 @@ MurmurNet コンソールアプリケーション
 
 作者: Yuhi Sonoki
 """
-
+# C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
 import sys
 import os
 import argparse
@@ -20,10 +20,10 @@ import logging
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 murmurnet_dir = project_root / "MurmurNet"
-sys.path.append(str(murmurnet_dir))
+sys.path.append(str(project_root))  # プロジェクトルートをパスに追加
 
-# ここでmurmurnetモジュールをインポート
-from murmurnet.distributed_slm import DistributedSLM
+# ここでモジュールをインポート
+from MurmurNet.distributed_slm import DistributedSLM
 
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
@@ -39,6 +39,11 @@ parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy',
 parser.add_argument('--zim-path', type=str, 
                     default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
                     help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
+# 並列処理の安全性に関するオプション
+parser.add_argument('--safe-parallel', action='store_true', 
+                    help='安全な並列処理モード（GGMLエラー回避のためのグローバルロックを使用）')
+parser.add_argument('--max-workers', type=int, default=0, 
+                    help='並列処理時の最大ワーカー数（0: 自動決定）')
 args, _ = parser.parse_known_args()
 
 log_level = logging.DEBUG if args.debug else logging.INFO
@@ -100,8 +105,11 @@ async def chat_loop():
     """会話ループのメイン関数"""
     # 設定
     config = {
-        "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
-        "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
+        "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
+        # "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
+        # "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
+
         "num_agents": args.agents,
         "iterations": args.iter,
         "use_summary": not args.no_summary,
@@ -112,6 +120,10 @@ async def chat_loop():
         "rag_score_threshold": 0.5,
         "rag_top_k": 3,
         "embedding_model": "all-MiniLM-L6-v2",
+        # 並列処理の安全性向上オプション
+        "safe_parallel": args.safe_parallel,
+        "max_workers": args.max_workers if args.max_workers > 0 else None,
+        "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
     }
 
     # ZIMモードの場合、パスを追加
@@ -128,7 +140,7 @@ async def chat_loop():
     slm = DistributedSLM(config)
     
     # RAGモードのチェック
-    from murmurnet.modules.rag_retriever import RAGRetriever
+    from MurmurNet.modules.rag_retriever import RAGRetriever
     rag = RAGRetriever(config)
     if args.rag_mode == "zim" and rag.mode == "dummy":
         print("警告: ZIMモードを指定しましたが、dummyモードになっています")
@@ -142,6 +154,10 @@ async def chat_loop():
     
     if args.parallel:
         print("[設定] 並列処理: 有効")
+        if args.safe_parallel:
+            print("[設定] 安全な並列処理モード: 有効（GGMLエラー回避用）")
+        if args.max_workers > 0:
+            print(f"[設定] 最大並列ワーカー数: {args.max_workers}")
     if not args.no_summary:
         print("[設定] 要約機能: 有効")
     print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
