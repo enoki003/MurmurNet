@@ -225,29 +225,55 @@ class AgentPoolManager:
         """
         try:
             # 入力文が短すぎる場合は一般会話とみなす
-            if len(question) < 10:
+            if len(question) < 5:
                 return "conversational"
+                
+            # 挨拶や単純な問いかけは会話型として分類
+            simple_greetings = ["こんにちは", "おはよう", "こんばんは", "hello", "hi", "hey", "よろしく", "お願いします"]
+            for greeting in simple_greetings:
+                if greeting in question.lower():
+                    return "conversational"
+                    
+            # 特定のキーワードによる事前分類
+            philosophical_keywords = ["哲学", "存在", "意識", "不条理", "アイデンティティ", "倫理", "道徳", "真理", "存在論"]
+            for keyword in philosophical_keywords:
+                if keyword in question:
+                    return "discussion"
+                    
+            planning_keywords = ["計画", "アイデア", "未来", "予測", "どうやって", "どうすれば", "どのように", "方法"]
+            for keyword in planning_keywords:
+                if keyword in question:
+                    return "planning"
+                    
+            info_keywords = ["とは", "意味", "定義", "説明", "概念", "歴史", "何ですか", "何ですか？", "何ですか?", "何ですか。"]
+            for keyword in info_keywords:
+                if keyword in question:
+                    return "informational"
             
             # LLMを使用して質問タイプを分類
             prompt = f"""
-以下の質問文を分析し、最も合致するタイプを1つだけ選んでください:
-1. 議論型(discussion): 多角的な見方、批判的思考、価値観や意見が問われる質問
-2. 計画・構想型(planning): アイデア、計画、戦略、将来の可能性に関する質問
-3. 情報提供型(informational): 事実、定義、解説を求める質問
-4. 一般会話型(conversational): 雑談、挨拶、個人的な意見や好みを尋ねる質問
+あなたは質問分類AIです。以下の質問を分析し、最も合致するタイプを1つだけ選んでください。
+
+質問タイプの定義:
+- 議論型(discussion): 主観的な見解、価値判断、哲学的考察、倫理的議論、多角的な視点が必要な質問
+- 計画・構想型(planning): 未来志向や実用的なアイデア、行動計画、改善策、方法論に関する質問
+- 情報提供型(informational): 客観的な事実、定義、解説、情報収集が主な目的の質問
+- 一般会話型(conversational): 挨拶、雑談、個人的な意見、好みを尋ねる質問
 
 質問文: {question}
 
-選択結果 (discussion/planning/informational/conversational):
+質問タイプを以下のいずれかの単語で回答してください: discussion、planning、informational、conversational
+回答:
 """
 
             # 温度を低く設定して決定論的な分類を促進
-            response = self.llm.create_chat_completion(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=20,
-                temperature=0.2,
-                stop=["\n", " "]
-            )
+            with _global_llama_lock:  # グローバルロックで保護
+                response = self.llm.create_chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=20,
+                    temperature=0.1,
+                    stop=["\n", " ", "。", "."]
+                )
             
             if isinstance(response, dict):
                 classification = response['choices'][0]['message']['content'].strip().lower()
@@ -264,7 +290,15 @@ class AgentPoolManager:
             elif "conversational" in classification:
                 result = "conversational"
             else:
-                result = "default"
+                # キーワードに応じたフォールバック
+                if any(keyword in question for keyword in philosophical_keywords):
+                    result = "discussion"
+                elif any(keyword in question for keyword in planning_keywords):
+                    result = "planning"
+                elif any(keyword in question for keyword in info_keywords):
+                    result = "informational"
+                else:
+                    result = "default"
                 
             if self.debug:
                 print(f"質問分類: {result} (元出力: {classification})")
@@ -274,7 +308,20 @@ class AgentPoolManager:
         except Exception as e:
             if self.debug:
                 print(f"質問分類エラー: {str(e)}")
-            return "default"  # エラー時はデフォルト分類を返す
+                import traceback
+                traceback.print_exc()
+            
+            # エラー時でもキーワードベースの分類を試みる
+            if any(keyword in question for keyword in ["哲学", "存在", "意識", "不条理", "道徳"]):
+                return "discussion"
+            elif "計画" in question or "方法" in question or "どのように" in question:
+                return "planning"
+            elif "とは" in question or "何ですか" in question:
+                return "informational"
+            elif len(question) < 10:
+                return "conversational"
+                
+            return "default"  # それでも分類できない場合はデフォルト
     
     def update_roles_based_on_question(self, question: str) -> None:
         """
@@ -450,7 +497,7 @@ class AgentPoolManager:
             if isinstance(response, dict):
                 output = response["choices"][0]["message"]["content"].strip()
             else:
-                output = response.choices[0].message.content.strip()
+                output.choices[0].message.content.strip()
                 
             # 出力を制限
             output = output[:300]

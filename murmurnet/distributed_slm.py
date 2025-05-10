@@ -78,6 +78,14 @@ class DistributedSLM:
         """単一の反復サイクルを実行（内部メソッド）"""
         self.logger.info(f"Starting iteration {iteration}")
         
+        # 質問に基づいて役割を更新
+        input_data = self.blackboard.read('input')
+        if input_data:
+            question = input_data.get('normalized') if isinstance(input_data, dict) else str(input_data)
+            # 役割の更新を明示的に実行
+            self.agent_pool.update_roles_based_on_question(question)
+            self.logger.debug(f"Updated agent roles based on question type")
+        
         # 1. エージェント実行（並列または逐次）
         if self.use_parallel:
             await self._run_agents_parallel()
