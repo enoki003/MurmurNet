@@ -169,3 +169,4 @@ MITライセンスの下で公開されています。詳細は[LICENSE](LICENSE
 - [libzim](https://github.com/openzim/libzim)および[Kiwix](https://www.kiwix.org/)プロジェクト
 
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/enoki003/MurmurNet)
