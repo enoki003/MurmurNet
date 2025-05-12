@@ -68,13 +68,21 @@ _slm_instance = None
 def get_slm_instance(config=None):
     """再利用可能なSLMインスタンスを取得"""
     global _slm_instance
-    if _slm_instance is None or config is not None:
+    if (_slm_instance is None) or (config is not None):
         if _slm_instance is not None:
             # メモリクリア
             del _slm_instance
             gc.collect()
         _slm_instance = DistributedSLM(config or DEFAULT_CONFIG)
     return _slm_instance
+
+# ========== ユーティリティ関数 ==========
+
+def print_header(title: str):
+    """見やすいヘッダーを表示"""
+    print("\n" + "=" * 60)
+    print(f"{title}")
+    print("=" * 60 + "\n")
 
 # ========== モジュール単体テスト ==========
 
@@ -497,88 +505,223 @@ async def test_blackboard_conversation_memory():
     
     return True
 
-# ========== メイン実行部 ==========
+# ========== Boids型自己増殖エージェントプールテスト ==========
 
-def print_header(title):
-    """セクションヘッダの表示"""
-    print("\n" + "="*50)
-    print(f"  {title}")
-    print("="*50)
+async def test_boids_agent_pool():
+    """Boids型自己増殖エージェントプールのテスト"""
+    print_header("Boids型自己増殖エージェントプールテスト")
+    
+    # 設定
+    config = DEFAULT_CONFIG.copy()
+    config["use_self_replication"] = True
+    config["min_agents"] = 2
+    config["max_agents"] = 8
+    config["initial_agents"] = 3
+    config["default_agent_lifespan"] = 5
+    config["threshold_remove"] = -3.0
+    config["threshold_reproduce"] = 5.0
+    config["vector_dim"] = 64  # 演算負荷軽減のため低次元に設定
+    config["debug"] = True
+    config["weight_cohesion"] = 0.3
+    config["weight_separation"] = 0.2
+    config["weight_alignment"] = 0.4
+    config["weight_innovation"] = 0.1
+    
+    # 疑似LLM用のモックオブジェクト
+    class MockLLM:
+        async def generate(self, prompt):
+            return f"これはテスト用の応答です: {prompt[:30]}..."
+    
+    # 疑似意見空間マネージャ用のモックオブジェクト
+    class MockOpinionSpaceManager:
+        def __init__(self):
+            self.vectors = {}
+            self.history = {}
+            self.centroid = None
+            self.prev_centroid = None
+        
+        def add_vector(self, agent_id, vector, metadata=None):
+            self.vectors[agent_id] = vector
+            if agent_id not in self.history:
+                self.history[agent_id] = []
+            self.history[agent_id].append((vector, metadata))
+        
+        def get_latest_vectors(self):
+            return self.vectors
+        
+        def calculate_distance_metrics(self):
+            # ダミーの平均距離と最大距離を返す
+            return 0.3, 0.7
+        
+        def calculate_centroid_movement(self):
+            # ダミーの中心移動距離を返す
+            return 0.05
+        
+        def has_redundant_vectors(self, threshold):
+            # 50%の確率で冗長性ありと判定
+            return random.random() > 0.5
+        
+        def calculate_similarity(self, vec1, vec2):
+            # ダミーの類似度（0.5～1.0）を返す
+            return 0.5 + random.random() * 0.5
+    
+    try:
+        # AgentPoolManagerの初期化
+        mock_llm = MockLLM()
+        blackboard = Blackboard(config)
+        opinion_space = MockOpinionSpaceManager()
+        
+        print("AgentPoolManager初期化中...")
+        pool_manager = AgentPoolManager(config, mock_llm, blackboard, opinion_space)
+        
+        # 初期エージェント情報
+        print("\n初期エージェント情報:")
+        if hasattr(pool_manager, 'agents'):
+            # agents属性の型チェック
+            if isinstance(pool_manager.agents, dict):
+                for agent_id, agent_info in pool_manager.agents.items():
+                    print(f"エージェント {agent_id}: 役割={agent_info['role']}")
+            elif isinstance(pool_manager.agents, list):
+                for i, agent_info in enumerate(pool_manager.agents):
+                    print(f"エージェント {i}: 役割={agent_info if isinstance(agent_info, str) else agent_info.get('role', 'unknown')}")
+        
+        # 議論ラウンドをシミュレート
+        print("\n議論シミュレーション開始")
+        test_query = "AIの倫理的課題について議論してください"
+        
+        print(f"クエリ: {test_query}")
+        result = await pool_manager.run_discussion_rounds(test_query, max_turns=3)
+        
+        # 結果表示
+        print("\n議論結果:")
+        print(f"総ターン数: {result['turns']}")
+        print(f"エージェント数: {result['agents']}")
+        print(f"応答: {result['answer'][:150]}...")
+        
+        # 会話履歴を表示
+        print("\n会話履歴:")
+        for i, message in enumerate(result['conversation']):
+            print(f"{i}: {message[:50]}...")
+        
+        return True
+    
+    except Exception as e:
+        print(f"Boidsテスト中にエラーが発生しました: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-async def main():
+# ========== テスト選択用関数 ==========
+
+def print_test_menu():
+    """利用可能なテストメニューを表示"""
+    print_header("MurmurNet テストメニュー")
+    
+    tests = [
+        ("1", "Boids型自己増殖エージェントプール", "test_boids_agent_pool"),
+        ("2", "モジュール単体テスト", "run_unit_tests"),
+        ("3", "統合テスト", "test_integration"),
+        ("4", "反復と要約機能", "test_iterative_summary"),
+        ("5", "並列処理機能", "test_parallel_processing"),
+        ("6", "RAG ZIMモード", "test_rag_zim_mode"),
+        ("7", "回答の適切さ", "test_answer_quality"),
+        ("8", "会話記憶機能", "test_conversation_memory"),
+        ("9", "役割振り分け", "test_role_assignment"),
+        ("0", "黒板と会話記憶の統合", "test_blackboard_conversation_memory"),
+        ("a", "すべてのテストを実行", "run_all_tests")
+    ]
+    
+    for test_id, test_name, _ in tests:
+        print(f"{test_id}: {test_name}")
+    
+    print("q: 終了")
+    return tests
+
+async def run_selected_test(selection: str, tests_dict: Dict[str, str]):
+    """選択されたテストを実行する"""
+    if selection not in tests_dict:
+        print(f"無効な選択です: {selection}")
+        return
+    
+    test_name = tests_dict[selection]
+    
+    # 実行するテスト関数の参照を取得
+    if test_name == "run_unit_tests":
+        print_header("モジュール単体テスト")
+        unittest.main(argv=['first-arg-is-ignored'], exit=False)
+    elif test_name == "run_all_tests":
+        await main(run_all=True)
+    else:
+        # グローバルスコープから関数を取得して実行
+        test_func = globals()[test_name]
+        await test_func()
+
+async def main(run_all=False):
     """テストスクリプトのメイン関数"""
     print_header("MurmurNet テストスクリプト")
     
-    try:
-        # 黒板と会話記憶の統合テスト (新規追加)
-        await test_blackboard_conversation_memory()
+    # グローバル変数の宣言を先に行う
+    global _slm_instance
+    
+    if run_all:
+        # すべてのテストを順番に実行
+        try:
+            tests_to_run = [
+                test_boids_agent_pool,
+                test_integration,
+                test_iterative_summary,
+                test_parallel_processing,
+                test_rag_zim_mode,
+                test_answer_quality,
+                test_conversation_memory,
+                test_role_assignment,
+                test_blackboard_conversation_memory
+            ]
+            
+            for test_func in tests_to_run:
+                await test_func()
+                
+            # 最後に単体テスト
+            print_header("モジュール単体テスト")
+            unittest.main(argv=['first-arg-is-ignored'], exit=False)
+            
+        except Exception as e:
+            print(f"テスト実行中にエラーが発生しました: {e}")
+            import traceback
+            traceback.print_exc()
+            
+        finally:
+            # リソース解放
+            if (_slm_instance is not None):
+                del _slm_instance
+                _slm_instance = None
+                gc.collect()
+    else:
+        # テストメニューを表示
+        tests = print_test_menu()
         
-        # 新機能テスト（追加）
-        print_header("新実装機能テスト")
+        # テストID→テスト関数名の辞書を作成
+        tests_dict = {test_id: func_name for test_id, _, func_name in tests}
         
-        # 1. 質問適切性テスト
-        await test_answer_quality()
-        
-        # 2. 会話記憶テスト
-        await test_conversation_memory()
-        
-        # 3. 役割振り分けテスト
-        await test_role_assignment()
-        
-        # 既存テスト
-        # RAG ZIMモードのテスト（追加）
-        print_header("RAG ZIMモードテスト")
-        await test_rag_zim_mode()
-        
-        # 順序を変更：統合テスト→機能テスト→単体テストの順で
-        
-        # 統合テスト 
-        print_header("統合テスト")
-        success = await test_integration()
-        if success:
-            print("✓ 統合テスト成功")
-        else:
-            print("✗ 統合テスト失敗")
-        
-        # 反復と要約のテスト
-        await test_iterative_summary()
-        
-        # 並列処理テスト
-        await test_parallel_processing()
-        
-        # 単一クエリテスト（最終チェック）
-        print_header("単一クエリテスト (最終)")
-        config = DEFAULT_CONFIG.copy()
-        config["iterations"] = 1  # 反復回数を減らす
-        config["use_summary"] = True
-        config["num_agents"] = 2  # エージェント数削減
-        config["use_memory"] = True  # 会話履歴を有効化
-        
-        # 既存インスタンスを更新
-        slm = get_slm_instance(config)
-        
-        query = "人工知能と人間の関係はどのように発展するでしょうか？"
-        print(f"入力: {query}")
-        
-        response = await slm.generate(query)
-        print(f"出力: {response}")
-        
-        # 最後に単体テスト（LLMを使わない軽量テスト）
-        print_header("モジュール単体テスト")
-        unittest.main(argv=['first-arg-is-ignored'], exit=False)
-        
-        # リソース解放
-        global _slm_instance
-        if (_slm_instance is not None):
-            del _slm_instance
-            _slm_instance = None
-            gc.collect()
-        
-        print("\nテスト完了")
-    except Exception as e:
-        print(f"テスト実行中にエラーが発生しました: {e}")
-        import traceback
-        traceback.print_exc()
+        try:
+            while True:
+                selection = input("\nテスト番号を入力してください (q: 終了): ")
+                if selection.lower() == 'q':
+                    break
+                    
+                await run_selected_test(selection, tests_dict)
+                
+        except KeyboardInterrupt:
+            print("\nテストを中断しました")
+        finally:
+            # リソース解放
+            if (_slm_instance is not None):
+                del _slm_instance
+                _slm_instance = None
+                gc.collect()
+            
+            print("\nテスト完了")
 
 if __name__ == "__main__":
+    import random
     asyncio.run(main())

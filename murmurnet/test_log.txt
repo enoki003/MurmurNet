@@ -714,3 +714,628 @@
 2025-05-10 23:45:30,540 [DEBUG] Updated conversation memory
 2025-05-10 23:45:30,545 [INFO] Use pytorch device_name: cpu
 2025-05-10 23:45:30,545 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 00:16:45,707 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 00:18:02,389 [INFO] Use pytorch device_name: cpu
+2025-05-12 00:18:02,389 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 00:18:09,622 [INFO] 統合テスト開始
+2025-05-12 00:18:11,868 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 00:18:11,873 [INFO] 初期化時間: 2.25秒
+2025-05-12 00:18:11,873 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 00:18:11,873 [INFO] Starting generation process
+2025-05-12 00:18:11,894 [INFO] Use pytorch device_name: cpu
+2025-05-12 00:18:11,894 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 00:18:14,611 [DEBUG] Added conversation context: 7 chars
+2025-05-12 00:18:14,613 [INFO] Starting iteration 0
+2025-05-12 07:36:41,816 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 07:41:49,812 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 08:31:50,281 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 08:51:38,795 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 08:52:04,999 [INFO] Use pytorch device_name: cpu
+2025-05-12 08:52:05,000 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 08:52:13,973 [INFO] 統合テスト開始
+2025-05-12 08:52:16,195 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 08:52:16,199 [INFO] 初期化時間: 2.22秒
+2025-05-12 08:52:16,200 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 08:52:16,200 [INFO] Starting generation process
+2025-05-12 08:52:16,206 [INFO] Use pytorch device_name: cpu
+2025-05-12 08:52:16,206 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 08:52:18,626 [DEBUG] Added conversation context: 7 chars
+2025-05-12 08:52:18,629 [INFO] Starting iteration 0
+2025-05-12 12:52:50,020 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 12:52:53,475 [INFO] 統合テスト開始
+2025-05-12 12:52:55,663 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 12:52:55,668 [INFO] 初期化時間: 2.19秒
+2025-05-12 12:52:55,668 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 12:52:55,668 [INFO] Starting generation process
+2025-05-12 12:52:55,674 [INFO] Use pytorch device_name: cpu
+2025-05-12 12:52:55,674 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 12:52:57,910 [DEBUG] Added conversation context: 7 chars
+2025-05-12 12:52:57,913 [INFO] Starting iteration 0
+2025-05-12 12:52:57,916 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:16:26,679 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:16:28,886 [INFO] 統合テスト開始
+2025-05-12 13:16:31,104 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 13:16:31,110 [INFO] 初期化時間: 2.22秒
+2025-05-12 13:16:31,111 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 13:16:31,111 [INFO] Starting generation process
+2025-05-12 13:16:31,117 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:16:31,117 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:16:33,223 [DEBUG] Added conversation context: 7 chars
+2025-05-12 13:16:33,226 [INFO] Starting iteration 0
+2025-05-12 13:16:33,229 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:16:44,682 [DEBUG] Updated conversation memory
+2025-05-12 13:16:44,685 [INFO] 生成時間: 13.57秒
+2025-05-12 13:16:44,685 [INFO] 応答: AIは教育を多岐にわたる方法で変革し、以下のような形で変化しています。
+
+* **個別最適化された学習:** AIは学習者の強みと弱みを分析し、それに合わせた学習プランや教材を生成することで、生徒一人...
+2025-05-12 13:16:44,685 [INFO] 黒板エントリ数: 6
+2025-05-12 13:16:44,685 [INFO] 統合テスト終了
+2025-05-12 13:16:47,341 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 13:16:47,344 [INFO] Starting generation process
+2025-05-12 13:16:47,348 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:16:47,348 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:16:49,441 [DEBUG] Added conversation context: 7 chars
+2025-05-12 13:16:49,444 [INFO] Starting iteration 0
+2025-05-12 13:16:49,447 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:16:57,850 [DEBUG] Updated conversation memory
+2025-05-12 13:17:00,503 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 13:17:00,506 [INFO] Starting generation process
+2025-05-12 13:17:00,510 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:17:00,510 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:17:02,547 [DEBUG] Added conversation context: 7 chars
+2025-05-12 13:17:02,550 [INFO] Starting iteration 0
+2025-05-12 13:17:02,552 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:15,458 [DEBUG] Updated conversation memory
+2025-05-12 13:17:15,460 [INFO] Starting generation process
+2025-05-12 13:17:15,473 [DEBUG] Added conversation context: 650 chars
+2025-05-12 13:17:15,476 [INFO] Starting iteration 0
+2025-05-12 13:17:15,480 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:15,483 [INFO] Running agents in parallel
+2025-05-12 13:17:15,487 [ERROR] Agent 0 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 13:17:15,495 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 13:17:15,499 [ERROR] Agent 1 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 13:17:15,502 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 13:17:16,219 [DEBUG] Created summary for iteration 0
+2025-05-12 13:17:17,968 [DEBUG] Updated conversation memory
+2025-05-12 13:17:18,004 [INFO] Loaded ZIM: C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+2025-05-12 13:17:18,007 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:17:18,007 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:17:20,015 [INFO] Embedding model: all-MiniLM-L6-v2
+2025-05-12 13:17:24,510 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 13:17:24,513 [INFO] Starting generation process
+2025-05-12 13:17:24,518 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:17:24,518 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:17:26,553 [DEBUG] Added conversation context: 7 chars
+2025-05-12 13:17:26,556 [INFO] Starting iteration 0
+2025-05-12 13:17:26,559 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:34,556 [DEBUG] Updated conversation memory
+2025-05-12 13:17:34,560 [INFO] Starting generation process
+2025-05-12 13:17:34,574 [DEBUG] Added conversation context: 454 chars
+2025-05-12 13:17:34,577 [INFO] Starting iteration 0
+2025-05-12 13:17:34,580 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:36,678 [DEBUG] Updated conversation memory
+2025-05-12 13:17:36,681 [INFO] Starting generation process
+2025-05-12 13:17:36,695 [DEBUG] Added conversation context: 573 chars
+2025-05-12 13:17:36,699 [INFO] Starting iteration 0
+2025-05-12 13:17:36,701 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:44,538 [DEBUG] Updated conversation memory
+2025-05-12 13:17:47,116 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 13:17:47,119 [INFO] Starting generation process
+2025-05-12 13:17:47,124 [INFO] Use pytorch device_name: cpu
+2025-05-12 13:17:47,124 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 13:17:49,707 [DEBUG] Added conversation context: 7 chars
+2025-05-12 13:17:49,710 [INFO] Starting iteration 0
+2025-05-12 13:17:49,713 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:50,564 [DEBUG] Updated conversation memory
+2025-05-12 13:17:50,567 [INFO] Starting generation process
+2025-05-12 13:17:50,586 [DEBUG] Added conversation context: 88 chars
+2025-05-12 13:17:50,589 [INFO] Starting iteration 0
+2025-05-12 13:17:50,591 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:51,497 [DEBUG] Updated conversation memory
+2025-05-12 13:17:51,501 [INFO] Starting generation process
+2025-05-12 13:17:51,515 [DEBUG] Added conversation context: 176 chars
+2025-05-12 13:17:51,518 [INFO] Starting iteration 0
+2025-05-12 13:17:51,521 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:52,262 [DEBUG] Updated conversation memory
+2025-05-12 13:17:52,265 [INFO] Starting generation process
+2025-05-12 13:17:52,279 [DEBUG] Added conversation context: 232 chars
+2025-05-12 13:17:52,281 [INFO] Starting iteration 0
+2025-05-12 13:17:52,284 [DEBUG] Updated agent roles based on question type
+2025-05-12 13:17:52,897 [DEBUG] Updated conversation memory
+2025-05-12 13:17:55,474 [INFO] Initialized with 3 agents, 1 iterations
+2025-05-12 15:42:07,731 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:42:09,963 [INFO] 統合テスト開始
+2025-05-12 15:42:12,068 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 15:42:12,068 [INFO] 初期化時間: 2.10秒
+2025-05-12 15:42:12,069 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 15:42:12,069 [INFO] Starting generation process
+2025-05-12 15:42:12,073 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:42:12,073 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:42:14,465 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:42:14,466 [INFO] Starting iteration 0
+2025-05-12 15:42:14,466 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:42:24,259 [DEBUG] Updated conversation memory
+2025-05-12 15:42:24,259 [INFO] 生成時間: 12.19秒
+2025-05-12 15:42:24,259 [INFO] 応答: AIは教育を多岐にわたる方法で変革し、以下のような形で変化しています。
+
+* **個別最適化された学習:** AIは学習者の強みと弱みを分析し、それに合わせた学習プランや教材を生成することで、生徒一人...
+2025-05-12 15:42:24,259 [INFO] 黒板エントリ数: 6
+2025-05-12 15:42:24,260 [INFO] 統合テスト終了
+2025-05-12 15:42:26,811 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 15:42:26,812 [INFO] Starting generation process
+2025-05-12 15:42:26,814 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:42:26,814 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:42:29,251 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:42:29,251 [INFO] Starting iteration 0
+2025-05-12 15:42:29,252 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:42:37,052 [DEBUG] Updated conversation memory
+2025-05-12 15:42:39,619 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 15:42:39,620 [INFO] Starting generation process
+2025-05-12 15:42:39,623 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:42:39,623 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:42:42,148 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:42:42,148 [INFO] Starting iteration 0
+2025-05-12 15:42:42,149 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:42:54,411 [DEBUG] Updated conversation memory
+2025-05-12 15:42:54,412 [INFO] Starting generation process
+2025-05-12 15:42:54,422 [DEBUG] Added conversation context: 650 chars
+2025-05-12 15:42:54,422 [INFO] Starting iteration 0
+2025-05-12 15:42:54,423 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:42:54,423 [INFO] Running agents in parallel
+2025-05-12 15:42:54,424 [ERROR] Agent 0 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 15:42:54,426 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 15:42:54,427 [ERROR] Agent 1 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 15:42:54,428 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 15:42:55,093 [DEBUG] Created summary for iteration 0
+2025-05-12 15:42:56,792 [DEBUG] Updated conversation memory
+2025-05-12 15:42:56,798 [INFO] Loaded ZIM: C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+2025-05-12 15:42:56,801 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:42:56,801 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:42:59,814 [INFO] Embedding model: all-MiniLM-L6-v2
+2025-05-12 15:43:03,967 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 15:43:03,967 [INFO] Starting generation process
+2025-05-12 15:43:03,969 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:43:03,970 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:43:06,050 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:43:06,051 [INFO] Starting iteration 0
+2025-05-12 15:43:06,051 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:15,442 [DEBUG] Updated conversation memory
+2025-05-12 15:43:15,443 [INFO] Starting generation process
+2025-05-12 15:43:15,454 [DEBUG] Added conversation context: 454 chars
+2025-05-12 15:43:15,455 [INFO] Starting iteration 0
+2025-05-12 15:43:15,455 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:17,568 [DEBUG] Updated conversation memory
+2025-05-12 15:43:17,568 [INFO] Starting generation process
+2025-05-12 15:43:17,582 [DEBUG] Added conversation context: 573 chars
+2025-05-12 15:43:17,583 [INFO] Starting iteration 0
+2025-05-12 15:43:17,583 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:25,609 [DEBUG] Updated conversation memory
+2025-05-12 15:43:28,217 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 15:43:28,218 [INFO] Starting generation process
+2025-05-12 15:43:28,220 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:43:28,220 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:43:30,138 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:43:30,139 [INFO] Starting iteration 0
+2025-05-12 15:43:30,139 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:31,042 [DEBUG] Updated conversation memory
+2025-05-12 15:43:31,042 [INFO] Starting generation process
+2025-05-12 15:43:31,053 [DEBUG] Added conversation context: 88 chars
+2025-05-12 15:43:31,053 [INFO] Starting iteration 0
+2025-05-12 15:43:31,053 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:31,961 [DEBUG] Updated conversation memory
+2025-05-12 15:43:31,961 [INFO] Starting generation process
+2025-05-12 15:43:31,974 [DEBUG] Added conversation context: 176 chars
+2025-05-12 15:43:31,974 [INFO] Starting iteration 0
+2025-05-12 15:43:31,974 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:32,803 [DEBUG] Updated conversation memory
+2025-05-12 15:43:32,804 [INFO] Starting generation process
+2025-05-12 15:43:32,818 [DEBUG] Added conversation context: 232 chars
+2025-05-12 15:43:32,818 [INFO] Starting iteration 0
+2025-05-12 15:43:32,819 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:33,462 [DEBUG] Updated conversation memory
+2025-05-12 15:43:36,090 [INFO] Initialized with 3 agents, 1 iterations
+2025-05-12 15:43:36,091 [INFO] Starting generation process
+2025-05-12 15:43:36,093 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:43:36,093 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 15:43:38,035 [DEBUG] Added conversation context: 7 chars
+2025-05-12 15:43:38,035 [INFO] Starting iteration 0
+2025-05-12 15:43:38,036 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:51,408 [DEBUG] Updated conversation memory
+2025-05-12 15:43:51,409 [INFO] Starting generation process
+2025-05-12 15:43:51,420 [DEBUG] Added conversation context: 762 chars
+2025-05-12 15:43:51,420 [INFO] Starting iteration 0
+2025-05-12 15:43:51,421 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:43:59,709 [DEBUG] Updated conversation memory
+2025-05-12 15:43:59,711 [INFO] Starting generation process
+2025-05-12 15:43:59,725 [DEBUG] Added conversation context: 1270 chars
+2025-05-12 15:43:59,725 [INFO] Starting iteration 0
+2025-05-12 15:43:59,726 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:44:05,292 [DEBUG] Updated conversation memory
+2025-05-12 15:44:05,293 [INFO] Starting generation process
+2025-05-12 15:44:05,307 [DEBUG] Added conversation context: 1569 chars
+2025-05-12 15:44:05,307 [INFO] Starting iteration 0
+2025-05-12 15:44:05,308 [DEBUG] Updated agent roles based on question type
+2025-05-12 15:44:06,051 [DEBUG] Updated conversation memory
+2025-05-12 15:44:07,682 [INFO] Use pytorch device_name: cpu
+2025-05-12 15:44:07,682 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:12:51,467 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:12:54,756 [INFO] 統合テスト開始
+2025-05-12 18:12:57,048 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 18:12:57,048 [INFO] 初期化時間: 2.29秒
+2025-05-12 18:12:57,049 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 18:12:57,049 [INFO] Starting generation process
+2025-05-12 18:12:57,052 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:12:57,052 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:12:59,047 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:12:59,047 [INFO] Starting iteration 0
+2025-05-12 18:12:59,048 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:13:09,022 [DEBUG] Updated conversation memory
+2025-05-12 18:13:09,022 [INFO] 生成時間: 11.97秒
+2025-05-12 18:13:09,023 [INFO] 応答: AIは教育を多岐にわたる方法で変革し、以下のような形で変化しています。
+
+* **個別最適化された学習:** AIは学習者の強みと弱みを分析し、それに合わせた学習プランや教材を生成することで、生徒一人...
+2025-05-12 18:13:09,023 [INFO] 黒板エントリ数: 6
+2025-05-12 18:13:09,023 [INFO] 統合テスト終了
+2025-05-12 18:13:11,690 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 18:13:11,691 [INFO] Starting generation process
+2025-05-12 18:13:11,693 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:13:11,693 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:13:13,700 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:13:13,700 [INFO] Starting iteration 0
+2025-05-12 18:13:13,700 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:13:22,278 [DEBUG] Updated conversation memory
+2025-05-12 18:13:24,907 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 18:13:24,908 [INFO] Starting generation process
+2025-05-12 18:13:24,910 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:13:24,910 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:13:26,905 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:13:26,905 [INFO] Starting iteration 0
+2025-05-12 18:13:26,906 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:13:39,259 [DEBUG] Updated conversation memory
+2025-05-12 18:13:39,260 [INFO] Starting generation process
+2025-05-12 18:13:39,272 [DEBUG] Added conversation context: 650 chars
+2025-05-12 18:13:39,273 [INFO] Starting iteration 0
+2025-05-12 18:13:39,273 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:13:39,273 [INFO] Running agents in parallel
+2025-05-12 18:13:39,274 [ERROR] Agent 0 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 18:13:39,276 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 18:13:39,278 [ERROR] Agent 1 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 18:13:39,279 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 18:13:39,897 [DEBUG] Created summary for iteration 0
+2025-05-12 18:13:41,512 [DEBUG] Updated conversation memory
+2025-05-12 18:13:41,520 [INFO] Loaded ZIM: C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+2025-05-12 18:13:41,524 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:13:41,525 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:13:43,442 [INFO] Embedding model: all-MiniLM-L6-v2
+2025-05-12 18:13:47,640 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 18:13:47,640 [INFO] Starting generation process
+2025-05-12 18:13:47,642 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:13:47,642 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:13:49,567 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:13:49,567 [INFO] Starting iteration 0
+2025-05-12 18:13:49,567 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:13:57,942 [DEBUG] Updated conversation memory
+2025-05-12 18:13:57,943 [INFO] Starting generation process
+2025-05-12 18:13:57,955 [DEBUG] Added conversation context: 454 chars
+2025-05-12 18:13:57,956 [INFO] Starting iteration 0
+2025-05-12 18:13:57,956 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:00,022 [DEBUG] Updated conversation memory
+2025-05-12 18:14:00,023 [INFO] Starting generation process
+2025-05-12 18:14:00,037 [DEBUG] Added conversation context: 573 chars
+2025-05-12 18:14:00,037 [INFO] Starting iteration 0
+2025-05-12 18:14:00,038 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:08,094 [DEBUG] Updated conversation memory
+2025-05-12 18:14:10,682 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 18:14:10,682 [INFO] Starting generation process
+2025-05-12 18:14:10,684 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:14:10,684 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:14:12,616 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:14:12,616 [INFO] Starting iteration 0
+2025-05-12 18:14:12,617 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:13,514 [DEBUG] Updated conversation memory
+2025-05-12 18:14:13,514 [INFO] Starting generation process
+2025-05-12 18:14:13,525 [DEBUG] Added conversation context: 88 chars
+2025-05-12 18:14:13,525 [INFO] Starting iteration 0
+2025-05-12 18:14:13,525 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:14,460 [DEBUG] Updated conversation memory
+2025-05-12 18:14:14,461 [INFO] Starting generation process
+2025-05-12 18:14:14,474 [DEBUG] Added conversation context: 176 chars
+2025-05-12 18:14:14,474 [INFO] Starting iteration 0
+2025-05-12 18:14:14,475 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:15,498 [DEBUG] Updated conversation memory
+2025-05-12 18:14:15,499 [INFO] Starting generation process
+2025-05-12 18:14:15,513 [DEBUG] Added conversation context: 232 chars
+2025-05-12 18:14:15,513 [INFO] Starting iteration 0
+2025-05-12 18:14:15,514 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:16,126 [DEBUG] Updated conversation memory
+2025-05-12 18:14:18,737 [INFO] Initialized with 3 agents, 1 iterations
+2025-05-12 18:14:18,738 [INFO] Starting generation process
+2025-05-12 18:14:18,740 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:14:18,740 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 18:14:20,672 [DEBUG] Added conversation context: 7 chars
+2025-05-12 18:14:20,672 [INFO] Starting iteration 0
+2025-05-12 18:14:20,672 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:33,692 [DEBUG] Updated conversation memory
+2025-05-12 18:14:33,693 [INFO] Starting generation process
+2025-05-12 18:14:33,705 [DEBUG] Added conversation context: 762 chars
+2025-05-12 18:14:33,706 [INFO] Starting iteration 0
+2025-05-12 18:14:33,706 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:41,715 [DEBUG] Updated conversation memory
+2025-05-12 18:14:41,716 [INFO] Starting generation process
+2025-05-12 18:14:41,731 [DEBUG] Added conversation context: 1270 chars
+2025-05-12 18:14:41,732 [INFO] Starting iteration 0
+2025-05-12 18:14:41,732 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:46,855 [DEBUG] Updated conversation memory
+2025-05-12 18:14:46,856 [INFO] Starting generation process
+2025-05-12 18:14:46,866 [DEBUG] Added conversation context: 1569 chars
+2025-05-12 18:14:46,866 [INFO] Starting iteration 0
+2025-05-12 18:14:46,866 [DEBUG] Updated agent roles based on question type
+2025-05-12 18:14:47,590 [DEBUG] Updated conversation memory
+2025-05-12 18:14:49,508 [INFO] Use pytorch device_name: cpu
+2025-05-12 18:14:49,508 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:12:19,675 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:12:22,947 [INFO] 統合テスト開始
+2025-05-12 19:12:25,173 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:12:25,173 [INFO] 初期化時間: 2.23秒
+2025-05-12 19:12:25,174 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 19:12:25,174 [INFO] Starting generation process
+2025-05-12 19:12:25,177 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:12:25,177 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:12:27,353 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:12:27,354 [INFO] Starting iteration 0
+2025-05-12 19:12:27,354 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:12:36,392 [DEBUG] Updated conversation memory
+2025-05-12 19:12:36,392 [INFO] 生成時間: 11.22秒
+2025-05-12 19:12:36,392 [INFO] 応答: AIは教育を多岐にわたる方法で変革し、以下のような形で変化しています。
+
+* **個別最適化された学習:** AIは学習者の強みと弱みを分析し、それに合わせた学習プランや教材を生成することで、生徒一人...
+2025-05-12 19:12:36,392 [INFO] 黒板エントリ数: 6
+2025-05-12 19:12:36,393 [INFO] 統合テスト終了
+2025-05-12 19:12:38,952 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:12:38,952 [INFO] Starting generation process
+2025-05-12 19:12:38,954 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:12:38,955 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:12:40,876 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:12:40,876 [INFO] Starting iteration 0
+2025-05-12 19:12:40,877 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:12:48,099 [DEBUG] Updated conversation memory
+2025-05-12 19:12:50,588 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:12:50,589 [INFO] Starting generation process
+2025-05-12 19:12:50,591 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:12:50,591 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:12:52,599 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:12:52,599 [INFO] Starting iteration 0
+2025-05-12 19:12:52,599 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:03,902 [DEBUG] Updated conversation memory
+2025-05-12 19:13:03,903 [INFO] Starting generation process
+2025-05-12 19:13:03,914 [DEBUG] Added conversation context: 650 chars
+2025-05-12 19:13:03,914 [INFO] Starting iteration 0
+2025-05-12 19:13:03,915 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:03,915 [INFO] Running agents in parallel
+2025-05-12 19:13:03,916 [ERROR] Agent 0 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 19:13:03,917 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 19:13:03,918 [ERROR] Agent 1 execution failed: 'AgentPoolManager' object has no attribute '_agent_task'
+2025-05-12 19:13:03,919 [DEBUG] Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 153, in run_agent_task
+    return self.agent_pool._agent_task(agent_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AgentPoolManager' object has no attribute '_agent_task'
+
+2025-05-12 19:13:04,562 [DEBUG] Created summary for iteration 0
+2025-05-12 19:13:06,106 [DEBUG] Updated conversation memory
+2025-05-12 19:13:06,110 [INFO] Loaded ZIM: C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+2025-05-12 19:13:06,112 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:13:06,113 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:13:08,570 [INFO] Embedding model: all-MiniLM-L6-v2
+2025-05-12 19:13:12,610 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:13:12,611 [INFO] Starting generation process
+2025-05-12 19:13:12,613 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:13:12,613 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:13:15,280 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:13:15,280 [INFO] Starting iteration 0
+2025-05-12 19:13:15,281 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:22,770 [DEBUG] Updated conversation memory
+2025-05-12 19:13:22,771 [INFO] Starting generation process
+2025-05-12 19:13:22,781 [DEBUG] Added conversation context: 454 chars
+2025-05-12 19:13:22,781 [INFO] Starting iteration 0
+2025-05-12 19:13:22,781 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:24,630 [DEBUG] Updated conversation memory
+2025-05-12 19:13:24,630 [INFO] Starting generation process
+2025-05-12 19:13:24,642 [DEBUG] Added conversation context: 573 chars
+2025-05-12 19:13:24,643 [INFO] Starting iteration 0
+2025-05-12 19:13:24,643 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:31,915 [DEBUG] Updated conversation memory
+2025-05-12 19:13:34,434 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:13:34,435 [INFO] Starting generation process
+2025-05-12 19:13:34,437 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:13:34,437 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:13:36,697 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:13:36,697 [INFO] Starting iteration 0
+2025-05-12 19:13:36,698 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:37,513 [DEBUG] Updated conversation memory
+2025-05-12 19:13:37,513 [INFO] Starting generation process
+2025-05-12 19:13:37,523 [DEBUG] Added conversation context: 88 chars
+2025-05-12 19:13:37,524 [INFO] Starting iteration 0
+2025-05-12 19:13:37,524 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:38,357 [DEBUG] Updated conversation memory
+2025-05-12 19:13:38,358 [INFO] Starting generation process
+2025-05-12 19:13:38,369 [DEBUG] Added conversation context: 176 chars
+2025-05-12 19:13:38,370 [INFO] Starting iteration 0
+2025-05-12 19:13:38,370 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:39,075 [DEBUG] Updated conversation memory
+2025-05-12 19:13:39,076 [INFO] Starting generation process
+2025-05-12 19:13:39,086 [DEBUG] Added conversation context: 232 chars
+2025-05-12 19:13:39,087 [INFO] Starting iteration 0
+2025-05-12 19:13:39,087 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:39,669 [DEBUG] Updated conversation memory
+2025-05-12 19:13:42,178 [INFO] Initialized with 3 agents, 1 iterations
+2025-05-12 19:13:42,179 [INFO] Starting generation process
+2025-05-12 19:13:42,181 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:13:42,181 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:13:44,169 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:13:44,169 [INFO] Starting iteration 0
+2025-05-12 19:13:44,170 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:13:55,965 [DEBUG] Updated conversation memory
+2025-05-12 19:13:55,967 [INFO] Starting generation process
+2025-05-12 19:13:55,975 [DEBUG] Added conversation context: 762 chars
+2025-05-12 19:13:55,976 [INFO] Starting iteration 0
+2025-05-12 19:13:55,976 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:14:03,316 [DEBUG] Updated conversation memory
+2025-05-12 19:14:03,317 [INFO] Starting generation process
+2025-05-12 19:14:03,328 [DEBUG] Added conversation context: 1270 chars
+2025-05-12 19:14:03,329 [INFO] Starting iteration 0
+2025-05-12 19:14:03,329 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:14:08,057 [DEBUG] Updated conversation memory
+2025-05-12 19:14:08,058 [INFO] Starting generation process
+2025-05-12 19:14:08,069 [DEBUG] Added conversation context: 1569 chars
+2025-05-12 19:14:08,070 [INFO] Starting iteration 0
+2025-05-12 19:14:08,070 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:14:08,732 [DEBUG] Updated conversation memory
+2025-05-12 19:14:10,478 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:14:10,478 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:40:03,454 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:40:06,569 [INFO] 統合テスト開始
+2025-05-12 19:40:08,928 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:40:08,928 [INFO] 初期化時間: 2.36秒
+2025-05-12 19:40:08,928 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-12 19:40:08,928 [INFO] Starting generation process
+2025-05-12 19:40:08,932 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:40:08,932 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:40:11,058 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:40:11,058 [INFO] Starting iteration 0
+2025-05-12 19:40:11,059 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:40:24,052 [DEBUG] Updated conversation memory
+2025-05-12 19:40:24,052 [INFO] 生成時間: 15.12秒
+2025-05-12 19:40:24,052 [INFO] 応答: AIは教育を多岐にわたる方法で変革し、以下のような形で変化しています。
+
+* **個別最適化された学習:** AIは学習者の強みと弱みを分析し、それに合わせた学習プランや教材を生成することで、生徒一人...
+2025-05-12 19:40:24,052 [INFO] 黒板エントリ数: 6
+2025-05-12 19:40:24,053 [INFO] 統合テスト終了
+2025-05-12 19:40:27,501 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:40:27,501 [INFO] Starting generation process
+2025-05-12 19:40:27,505 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:40:27,505 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:40:29,468 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:40:29,468 [INFO] Starting iteration 0
+2025-05-12 19:40:29,468 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:40:38,614 [DEBUG] Updated conversation memory
+2025-05-12 19:40:41,421 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:40:41,421 [INFO] Starting generation process
+2025-05-12 19:40:41,424 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:40:41,424 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:40:43,439 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:40:43,440 [INFO] Starting iteration 0
+2025-05-12 19:40:43,440 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:40:57,251 [DEBUG] Updated conversation memory
+2025-05-12 19:40:57,252 [INFO] Starting generation process
+2025-05-12 19:40:57,266 [DEBUG] Added conversation context: 650 chars
+2025-05-12 19:40:57,267 [INFO] Starting iteration 0
+2025-05-12 19:40:57,267 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:40:57,267 [INFO] Running agents in parallel
+2025-05-12 19:40:58,018 [DEBUG] Created summary for iteration 0
+2025-05-12 19:40:59,999 [DEBUG] Updated conversation memory
+2025-05-12 19:41:00,007 [INFO] Loaded ZIM: C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+2025-05-12 19:41:00,010 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:41:00,010 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:41:02,491 [INFO] Embedding model: all-MiniLM-L6-v2
+2025-05-12 19:41:07,028 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:41:07,028 [INFO] Starting generation process
+2025-05-12 19:41:07,031 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:41:07,031 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:41:09,029 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:41:09,029 [INFO] Starting iteration 0
+2025-05-12 19:41:09,029 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:18,100 [DEBUG] Updated conversation memory
+2025-05-12 19:41:18,101 [INFO] Starting generation process
+2025-05-12 19:41:18,112 [DEBUG] Added conversation context: 454 chars
+2025-05-12 19:41:18,112 [INFO] Starting iteration 0
+2025-05-12 19:41:18,113 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:20,341 [DEBUG] Updated conversation memory
+2025-05-12 19:41:20,342 [INFO] Starting generation process
+2025-05-12 19:41:20,355 [DEBUG] Added conversation context: 573 chars
+2025-05-12 19:41:20,356 [INFO] Starting iteration 0
+2025-05-12 19:41:20,356 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:29,426 [DEBUG] Updated conversation memory
+2025-05-12 19:41:32,170 [INFO] Initialized with 2 agents, 1 iterations
+2025-05-12 19:41:32,171 [INFO] Starting generation process
+2025-05-12 19:41:32,173 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:41:32,173 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:41:34,380 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:41:34,380 [INFO] Starting iteration 0
+2025-05-12 19:41:34,380 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:35,339 [DEBUG] Updated conversation memory
+2025-05-12 19:41:35,340 [INFO] Starting generation process
+2025-05-12 19:41:35,349 [DEBUG] Added conversation context: 88 chars
+2025-05-12 19:41:35,350 [INFO] Starting iteration 0
+2025-05-12 19:41:35,350 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:36,335 [DEBUG] Updated conversation memory
+2025-05-12 19:41:36,336 [INFO] Starting generation process
+2025-05-12 19:41:36,348 [DEBUG] Added conversation context: 176 chars
+2025-05-12 19:41:36,349 [INFO] Starting iteration 0
+2025-05-12 19:41:36,349 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:37,229 [DEBUG] Updated conversation memory
+2025-05-12 19:41:37,229 [INFO] Starting generation process
+2025-05-12 19:41:37,242 [DEBUG] Added conversation context: 232 chars
+2025-05-12 19:41:37,243 [INFO] Starting iteration 0
+2025-05-12 19:41:37,243 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:37,929 [DEBUG] Updated conversation memory
+2025-05-12 19:41:40,701 [INFO] Initialized with 3 agents, 1 iterations
+2025-05-12 19:41:40,701 [INFO] Starting generation process
+2025-05-12 19:41:40,703 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:41:40,703 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-12 19:41:43,963 [DEBUG] Added conversation context: 7 chars
+2025-05-12 19:41:43,964 [INFO] Starting iteration 0
+2025-05-12 19:41:43,964 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:41:58,217 [DEBUG] Updated conversation memory
+2025-05-12 19:41:58,218 [INFO] Starting generation process
+2025-05-12 19:41:58,230 [DEBUG] Added conversation context: 762 chars
+2025-05-12 19:41:58,230 [INFO] Starting iteration 0
+2025-05-12 19:41:58,231 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:42:07,127 [DEBUG] Updated conversation memory
+2025-05-12 19:42:07,128 [INFO] Starting generation process
+2025-05-12 19:42:07,141 [DEBUG] Added conversation context: 1270 chars
+2025-05-12 19:42:07,141 [INFO] Starting iteration 0
+2025-05-12 19:42:07,142 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:42:13,095 [DEBUG] Updated conversation memory
+2025-05-12 19:42:13,096 [INFO] Starting generation process
+2025-05-12 19:42:13,108 [DEBUG] Added conversation context: 1569 chars
+2025-05-12 19:42:13,108 [INFO] Starting iteration 0
+2025-05-12 19:42:13,109 [DEBUG] Updated agent roles based on question type
+2025-05-12 19:42:13,907 [DEBUG] Updated conversation memory
+2025-05-12 19:42:16,058 [INFO] Use pytorch device_name: cpu
+2025-05-12 19:42:16,058 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2

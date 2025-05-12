@@ -44,6 +44,21 @@ parser.add_argument('--safe-parallel', action='store_true',
                     help='安全な並列処理モード（GGMLエラー回避のためのグローバルロックを使用）')
 parser.add_argument('--max-workers', type=int, default=0, 
                     help='並列処理時の最大ワーカー数（0: 自動決定）')
+# Boids型自己増殖エージェント機能
+parser.add_argument('--boids', action='store_true', 
+                    help='Boids型自己増殖エージェント機能を有効化（実験的）')
+parser.add_argument('--max-agents', type=int, default=5, 
+                    help='Boids型自己増殖時の最大エージェント数（デフォルト: 5）')
+parser.add_argument('--min-agents', type=int, default=2, 
+                    help='Boids型自己増殖時の最小エージェント数（デフォルト: 2）')
+# 表示形式オプション
+parser.add_argument('--compact', action='store_true', 
+                    help='コンパクト表示モード（詳細情報を非表示）')
+parser.add_argument('--no-time', action='store_true', 
+                    help='実行時間を表示しない')
+# 会話記憶オプション
+parser.add_argument('--no-memory', action='store_true', 
+                    help='会話記憶機能を無効化')
 args, _ = parser.parse_known_args()
 
 log_level = logging.DEBUG if args.debug else logging.INFO
@@ -91,15 +106,52 @@ def print_debug(slm):
             if summary:
                 print(f"  反復{i+1}の要約: {summary[:100]}...")
     
-    print("\n[DEBUG] エージェント出力:")
-    for i in range(slm.num_agents):
-        output = slm.blackboard.read(f'agent_{i}_output')
-        if output:
-            # 長い出力は省略表示
-            if len(output) > 100:
-                output = output[:100] + "..."
-            print(f"  エージェント{i+1}: {output}")
-    print()
+    # 通常のエージェント出力
+    if not args.boids:
+        print("\n[DEBUG] エージェント出力:")
+        for i in range(slm.num_agents):
+            output = slm.blackboard.read(f'agent_{i}_output')
+            if output:
+                # 長い出力は省略表示
+                if len(output) > 100:
+                    output = output[:100] + "..."
+                print(f"  エージェント{i+1}: {output}")
+    # Boids型自己増殖エージェントの場合
+    else:
+        print("\n[DEBUG] Boids型自己増殖エージェント情報:")
+        boids_info = slm.blackboard.read('boids_info')
+        if boids_info:
+            print(f"  アクティブなエージェント数: {len(boids_info.get('active_agents', []))}")
+            diagnoses = boids_info.get('diagnoses', [])
+            if diagnoses:
+                print("  診断結果:")
+                for diag in diagnoses:
+                    print(f"    反復{diag.get('iteration', '?')}: {diag.get('action', 'なし')} ({diag.get('reason', '')})")
+
+def print_system_info():
+    """システム情報を表示"""
+    import platform
+    print(f"システム情報: {platform.system()} {platform.release()} ({platform.architecture()[0]})")
+    
+    # PyTorch情報
+    try:
+        import torch
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"PyTorch: {torch.__version__}, デバイス: {device}")
+        if device.type == "cuda":
+            print(f"CUDA: {torch.version.cuda}, デバイス数: {torch.cuda.device_count()}")
+            for i in range(torch.cuda.device_count()):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+    except ImportError:
+        print("PyTorch: インストールされていません")
+    
+    # 使用可能なRAMの表示
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        print(f"メモリ: {vm.available / (1024**3):.1f} GB / {vm.total / (1024**3):.1f} GB (空き: {vm.percent}%)")
+    except ImportError:
+        print("psutilがインストールされていないため、メモリ情報を取得できません")
 
 async def chat_loop():
     """会話ループのメイン関数"""
@@ -124,6 +176,12 @@ async def chat_loop():
         "safe_parallel": args.safe_parallel,
         "max_workers": args.max_workers if args.max_workers > 0 else None,
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
+        # Boids型自己増殖エージェント設定
+        "use_boids": args.boids,
+        "max_agents": args.max_agents,
+        "min_agents": args.min_agents,
+        # 会話記憶設定
+        "use_memory": not args.no_memory,
     }
 
     # ZIMモードの場合、パスを追加
@@ -136,21 +194,36 @@ async def chat_loop():
         else:
             print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
     
+    # システム情報表示
+    if not args.compact:
+        print_system_info()
+    
     # SLMインスタンス作成
-    slm = DistributedSLM(config)
+    try:
+        slm = DistributedSLM(config)
+    except Exception as e:
+        print(f"エラー: SLMインスタンスの作成に失敗しました: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return
     
     # RAGモードのチェック
-    from MurmurNet.modules.rag_retriever import RAGRetriever
-    rag = RAGRetriever(config)
-    if args.rag_mode == "zim" and rag.mode == "dummy":
-        print("警告: ZIMモードを指定しましたが、dummyモードになっています")
-        print("以下の理由が考えられます:")
-        print("- libzimライブラリがインストールされていない")
-        print("- ZIMファイルのパスが間違っている")
-        print("- ZIMファイルが壊れている")
+    try:
+        from MurmurNet.modules.rag_retriever import RAGRetriever
+        rag = RAGRetriever(config)
+        if args.rag_mode == "zim" and rag.mode == "dummy":
+            print("警告: ZIMモードを指定しましたが、dummyモードになっています")
+            print("以下の理由が考えられます:")
+            print("- libzimライブラリがインストールされていない")
+            print("- ZIMファイルのパスが間違っている")
+            print("- ZIMファイルが壊れている")
+    except Exception as e:
+        print(f"警告: RAGモードの確認に失敗しました: {e}")
     
     print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
     print("終了するには 'quit' または 'exit' を入力してください")
+    print("メモリをクリアするには 'clear' または 'reset' を入力してください")
     
     if args.parallel:
         print("[設定] 並列処理: 有効")
@@ -161,6 +234,10 @@ async def chat_loop():
     if not args.no_summary:
         print("[設定] 要約機能: 有効")
     print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
+    if args.boids:
+        print(f"[設定] Boids型自己増殖エージェント: 有効 (最小{args.min_agents}、最大{args.max_agents})")
+    if not args.no_memory:
+        print("[設定] 会話記憶機能: 有効")
     if args.rag_mode == "zim":
         print(f"[設定] ZIMファイル: {args.zim_path}")
     
@@ -170,11 +247,23 @@ async def chat_loop():
         try:
             # ユーザー入力
             user_input = input("\nあなた> ")
-            if user_input.lower() in ["quit", "exit", "終了"]:
+            user_input = user_input.strip()
+            
+            # 終了コマンド
+            if user_input.lower() in ["quit", "exit", "終了", "q"]:
                 break
             
             # 空入力はスキップ
-            if not user_input.strip():
+            if not user_input:
+                continue
+                
+            # メモリクリアコマンド
+            if user_input.lower() in ["clear", "reset", "クリア", "リセット"]:
+                try:
+                    slm.reset_memory()
+                    print("会話記憶をクリアしました")
+                except Exception as e:
+                    print(f"メモリクリア中にエラーが発生しました: {e}")
                 continue
             
             # 履歴に追加
@@ -183,20 +272,31 @@ async def chat_loop():
             # 生成開始
             print("AI> ", end="", flush=True)
             
-            start_time = asyncio.get_event_loop().time()
-            response = await slm.generate(user_input)
-            elapsed = asyncio.get_event_loop().time() - start_time
+            try:
+                start_time = asyncio.get_event_loop().time()
+                response = await slm.generate(user_input)
+                elapsed = asyncio.get_event_loop().time() - start_time
             
-            # 応答表示
-            print(f"{response}")
-            
-            # デバッグ情報表示
-            if args.debug:
-                print_debug(slm)
-                print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
-            
-            # 履歴に追加
-            history.append({"role": "assistant", "content": response})
+                # 応答表示
+                print(f"{response}")
+                
+                # 実行時間表示
+                if not args.no_time and not args.compact:
+                    print(f"\n[実行時間: {elapsed:.2f}秒]")
+                
+                # デバッグ情報表示
+                if args.debug:
+                    print_debug(slm)
+                    print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
+                
+                # 履歴に追加
+                history.append({"role": "assistant", "content": response})
+                
+            except Exception as e:
+                print(f"\n応答生成中にエラーが発生しました: {e}")
+                if args.debug:
+                    import traceback
+                    traceback.print_exc()
             
         except KeyboardInterrupt:
             print("\n中断されました。終了するには 'exit' を入力してください。")
@@ -207,4 +307,12 @@ async def chat_loop():
                 traceback.print_exc()
 
 if __name__ == "__main__":
-    asyncio.run(chat_loop())
+    try:
+        asyncio.run(chat_loop())
+    except KeyboardInterrupt:
+        print("\nプログラムを終了します。")
+    except Exception as e:
+        print(f"予期せぬエラーが発生しました: {e}")
+        if "--debug" in sys.argv:
+            import traceback
+            traceback.print_exc()
