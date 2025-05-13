@@ -1,3 +1,284 @@
 2025-05-08 09:32:18,735 - DEBUG - Using proactor: IocpProactor
 2025-05-08 09:39:39,029 - DEBUG - Using proactor: IocpProactor
 2025-05-08 09:42:50,990 - DEBUG - Using proactor: IocpProactor
+2025-05-13 00:37:51,167 - DEBUG - Using proactor: IocpProactor
+2025-05-13 00:37:51,170 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 00:37:51,172 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-13 00:37:51,708 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:37:51,894 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 00:37:52,086 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 00:37:52,268 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:37:52,450 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 00:37:52,638 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 00:37:53,055 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 00:37:53,606 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 00:37:53,829 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6812
+2025-05-13 00:37:54,017 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6812
+2025-05-13 00:37:54,021 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 00:37:54,210 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:37:54,398 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 00:37:54,581 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 00:37:54,764 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:37:55,015 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 00:37:55,201 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 00:37:55,619 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 00:37:55,833 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 00:37:56,115 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6812
+2025-05-13 00:37:56,302 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6812
+2025-05-13 00:37:58,443 - INFO - Initialized with 2 agents, 2 iterations
+2025-05-13 00:37:58,443 - INFO - Boids型自己増殖エージェント機能を有効化しました
+2025-05-13 00:38:08,211 - INFO - Starting generation process
+2025-05-13 00:38:08,214 - INFO - Use pytorch device_name: cpu
+2025-05-13 00:38:08,215 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 00:38:08,394 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:38:08,578 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 00:38:08,759 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 00:38:08,946 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 00:38:09,125 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 00:38:09,313 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 00:38:09,498 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 00:38:09,713 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 00:38:10,005 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6812
+2025-05-13 00:38:10,194 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6812
+2025-05-13 00:38:10,219 - DEBUG - Added conversation context: 7 chars
+2025-05-13 00:38:10,219 - INFO - Starting iteration 0
+2025-05-13 00:38:10,220 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:38:10,220 - INFO - Running agents in parallel
+2025-05-13 00:38:10,220 - INFO - Starting generation process
+2025-05-13 00:38:10,236 - DEBUG - Added conversation context: 7 chars
+2025-05-13 00:38:10,237 - INFO - Starting iteration 0
+2025-05-13 00:38:10,237 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:38:10,237 - INFO - Running agents in parallel
+2025-05-13 00:38:10,872 - DEBUG - Created summary for iteration 0
+2025-05-13 00:38:10,899 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:10,900 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:10,900 - INFO - Starting iteration 1
+2025-05-13 00:38:10,900 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:38:10,901 - INFO - Running agents in parallel
+2025-05-13 00:38:11,352 - DEBUG - Created summary for iteration 1
+2025-05-13 00:38:11,374 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:11,374 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:11,374 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:38:15,313 - DEBUG - Updated conversation memory
+2025-05-13 00:38:15,314 - INFO - Starting generation process
+2025-05-13 00:38:15,336 - DEBUG - Added conversation context: 270 chars
+2025-05-13 00:38:15,336 - INFO - Starting iteration 0
+2025-05-13 00:38:15,336 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:38:15,337 - INFO - Running agents in parallel
+2025-05-13 00:38:15,769 - DEBUG - Created summary for iteration 0
+2025-05-13 00:38:15,793 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:15,793 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:15,794 - INFO - Starting iteration 1
+2025-05-13 00:38:15,794 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:38:15,794 - INFO - Running agents in parallel
+2025-05-13 00:38:16,311 - DEBUG - Created summary for iteration 1
+2025-05-13 00:38:16,333 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:16,333 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:16,334 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:38:20,378 - DEBUG - Updated conversation memory
+2025-05-13 00:38:21,845 - DEBUG - Created summary for iteration 0
+2025-05-13 00:38:21,902 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:21,903 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:21,903 - INFO - Starting iteration 1
+2025-05-13 00:38:21,903 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:38:21,903 - INFO - Running agents in parallel
+2025-05-13 00:38:21,903 - INFO - Starting generation process
+2025-05-13 00:38:21,944 - DEBUG - Added conversation context: 541 chars
+2025-05-13 00:38:21,944 - INFO - Starting iteration 0
+2025-05-13 00:38:21,945 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:38:21,945 - INFO - Running agents in parallel
+2025-05-13 00:38:22,447 - DEBUG - Created summary for iteration 0
+2025-05-13 00:38:22,470 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:22,471 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:22,471 - INFO - Starting iteration 1
+2025-05-13 00:38:22,471 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:38:22,471 - INFO - Running agents in parallel
+2025-05-13 00:38:22,760 - DEBUG - Created summary for iteration 1
+2025-05-13 00:38:22,783 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:22,784 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:22,784 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:38:27,314 - DEBUG - Updated conversation memory
+2025-05-13 00:38:27,314 - INFO - Starting generation process
+2025-05-13 00:38:27,351 - DEBUG - Added conversation context: 970 chars
+2025-05-13 00:38:27,351 - INFO - Starting iteration 0
+2025-05-13 00:38:27,351 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:38:27,352 - INFO - Running agents in parallel
+2025-05-13 00:38:27,778 - DEBUG - Created summary for iteration 0
+2025-05-13 00:38:27,798 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:27,798 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:27,799 - INFO - Starting iteration 1
+2025-05-13 00:38:27,799 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:38:27,800 - INFO - Running agents in parallel
+2025-05-13 00:38:28,157 - DEBUG - Created summary for iteration 1
+2025-05-13 00:38:28,179 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:28,179 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:28,179 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:38:31,480 - DEBUG - Updated conversation memory
+2025-05-13 00:38:32,766 - DEBUG - Created summary for iteration 1
+2025-05-13 00:38:32,815 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:38:32,816 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:38:32,816 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:38:36,645 - DEBUG - Updated conversation memory
+2025-05-13 00:42:30,877 - INFO - Starting generation process
+2025-05-13 00:42:30,893 - DEBUG - Added conversation context: 954 chars
+2025-05-13 00:42:30,893 - INFO - Starting iteration 0
+2025-05-13 00:42:30,893 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:42:30,894 - INFO - Running agents in parallel
+2025-05-13 00:42:30,894 - INFO - Starting generation process
+2025-05-13 00:42:30,932 - DEBUG - Added conversation context: 954 chars
+2025-05-13 00:42:30,932 - INFO - Starting iteration 0
+2025-05-13 00:42:30,932 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:42:30,933 - INFO - Running agents in parallel
+2025-05-13 00:42:31,656 - DEBUG - Created summary for iteration 0
+2025-05-13 00:42:31,682 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:31,682 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:31,682 - INFO - Starting iteration 1
+2025-05-13 00:42:31,683 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:42:31,683 - INFO - Running agents in parallel
+2025-05-13 00:42:32,101 - DEBUG - Created summary for iteration 1
+2025-05-13 00:42:32,129 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:32,130 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:32,130 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:42:35,808 - DEBUG - Updated conversation memory
+2025-05-13 00:42:35,808 - INFO - Starting generation process
+2025-05-13 00:42:35,852 - DEBUG - Added conversation context: 987 chars
+2025-05-13 00:42:35,852 - INFO - Starting iteration 0
+2025-05-13 00:42:35,853 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:42:35,853 - INFO - Running agents in parallel
+2025-05-13 00:42:36,366 - DEBUG - Created summary for iteration 0
+2025-05-13 00:42:36,388 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:36,388 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:36,389 - INFO - Starting iteration 1
+2025-05-13 00:42:36,389 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:42:36,390 - INFO - Running agents in parallel
+2025-05-13 00:42:37,112 - DEBUG - Created summary for iteration 1
+2025-05-13 00:42:37,136 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:37,137 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:37,137 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:42:41,126 - DEBUG - Updated conversation memory
+2025-05-13 00:42:42,849 - DEBUG - Created summary for iteration 0
+2025-05-13 00:42:42,977 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:42,978 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:42,978 - INFO - Starting iteration 1
+2025-05-13 00:42:42,979 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:42:42,979 - INFO - Running agents in parallel
+2025-05-13 00:42:42,980 - INFO - Starting generation process
+2025-05-13 00:42:43,054 - DEBUG - Added conversation context: 1008 chars
+2025-05-13 00:42:43,055 - INFO - Starting iteration 0
+2025-05-13 00:42:43,055 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:42:43,055 - INFO - Running agents in parallel
+2025-05-13 00:42:43,519 - DEBUG - Created summary for iteration 0
+2025-05-13 00:42:43,561 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:43,561 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:43,561 - INFO - Starting iteration 1
+2025-05-13 00:42:43,562 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:42:43,562 - INFO - Running agents in parallel
+2025-05-13 00:42:44,385 - DEBUG - Created summary for iteration 1
+2025-05-13 00:42:44,408 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:44,409 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:44,409 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:42:48,183 - DEBUG - Updated conversation memory
+2025-05-13 00:42:48,184 - INFO - Starting generation process
+2025-05-13 00:42:48,221 - DEBUG - Added conversation context: 1008 chars
+2025-05-13 00:42:48,221 - INFO - Starting iteration 0
+2025-05-13 00:42:48,222 - DEBUG - Updated agent roles based on question type
+2025-05-13 00:42:48,222 - INFO - Running agents in parallel
+2025-05-13 00:42:48,808 - DEBUG - Created summary for iteration 0
+2025-05-13 00:42:48,831 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:48,832 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:48,832 - INFO - Starting iteration 1
+2025-05-13 00:42:48,832 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 00:42:48,833 - INFO - Running agents in parallel
+2025-05-13 00:42:49,318 - DEBUG - Created summary for iteration 1
+2025-05-13 00:42:49,355 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:49,356 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:49,356 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:42:54,586 - DEBUG - Updated conversation memory
+2025-05-13 00:42:55,924 - DEBUG - Created summary for iteration 1
+2025-05-13 00:42:55,984 - DEBUG - 2個の意見ベクトルを追加
+2025-05-13 00:42:55,984 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 00:42:55,984 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 00:43:00,634 - DEBUG - Updated conversation memory
+2025-05-13 23:02:03,633 - DEBUG - Using proactor: IocpProactor
+2025-05-13 23:02:03,637 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 23:02:03,667 - DEBUG - Starting new HTTPS connection (1): huggingface.co:443
+2025-05-13 23:02:03,965 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:04,158 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 23:02:04,342 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 23:02:04,542 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:04,722 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 23:02:04,910 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 23:02:05,121 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 23:02:07,781 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 23:02:08,018 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6809
+2025-05-13 23:02:08,225 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6809
+2025-05-13 23:02:08,229 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 23:02:08,415 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:08,685 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 23:02:08,865 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 23:02:09,042 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:09,233 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 23:02:09,476 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 23:02:09,691 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 23:02:09,900 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 23:02:10,117 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6809
+2025-05-13 23:02:10,299 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6809
+2025-05-13 23:02:12,770 - INFO - Initialized with 2 agents, 2 iterations
+2025-05-13 23:02:12,770 - INFO - Boids型自己増殖エージェント機能を有効化しました
+2025-05-13 23:02:12,773 - INFO - バッチ処理機能を初期化しました
+2025-05-13 23:02:21,936 - INFO - Starting generation process
+2025-05-13 23:02:21,940 - INFO - Use pytorch device_name: cpu
+2025-05-13 23:02:21,940 - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-13 23:02:23,176 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:23,357 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json HTTP/11" 200 0
+2025-05-13 23:02:23,534 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md HTTP/11" 200 0
+2025-05-13 23:02:23,707 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json HTTP/11" 200 0
+2025-05-13 23:02:23,901 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json HTTP/11" 200 0
+2025-05-13 23:02:24,092 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json HTTP/11" 404 0
+2025-05-13 23:02:24,272 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json HTTP/11" 200 0
+2025-05-13 23:02:24,479 - DEBUG - https://huggingface.co:443 "HEAD /sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json HTTP/11" 200 0
+2025-05-13 23:02:24,694 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2/revision/main HTTP/11" 200 6809
+2025-05-13 23:02:24,887 - DEBUG - https://huggingface.co:443 "GET /api/models/sentence-transformers/all-MiniLM-L6-v2 HTTP/11" 200 6809
+2025-05-13 23:02:25,012 - DEBUG - Added conversation context: 7 chars
+2025-05-13 23:02:25,012 - INFO - Starting iteration 0
+2025-05-13 23:02:25,012 - DEBUG - Updated agent roles based on question type
+2025-05-13 23:02:25,013 - ERROR - エージェント agent_0 の実行に失敗: AgentPoolManager._generate_agent_response() got an unexpected keyword argument 'max_retries'
+2025-05-13 23:02:25,013 - ERROR - エージェント agent_1 の実行に失敗: AgentPoolManager._generate_agent_response() got an unexpected keyword argument 'max_retries'
+2025-05-13 23:02:25,013 - ERROR - 並列実行エラー: 'Blackboard' object has no attribute 'has'
+2025-05-13 23:02:25,014 - DEBUG - Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 723, in _run_agents_parallel
+    if not self.blackboard.has(f"{agent_id}_output"):
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Blackboard' object has no attribute 'has'
+
+2025-05-13 23:02:26,666 - DEBUG - Created summary for iteration 0
+2025-05-13 23:02:26,666 - ERROR - ベクトル化エラー: '_thread._local' object has no attribute '_vectorizing_agents'
+2025-05-13 23:02:26,667 - DEBUG - Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 443, in _vectorize_agent_outputs
+    if agent_id_str in threading.local()._vectorizing_agents:
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: '_thread._local' object has no attribute '_vectorizing_agents'
+
+2025-05-13 23:02:26,667 - DEBUG - Iteration 0 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 23:02:26,668 - INFO - Starting iteration 1
+2025-05-13 23:02:26,669 - DEBUG - BOIDSルール適用: 2エージェントを更新
+2025-05-13 23:02:26,669 - ERROR - エージェント agent_0 の実行に失敗: AgentPoolManager._generate_agent_response() got an unexpected keyword argument 'max_retries'
+2025-05-13 23:02:26,669 - ERROR - エージェント agent_1 の実行に失敗: AgentPoolManager._generate_agent_response() got an unexpected keyword argument 'max_retries'
+2025-05-13 23:02:26,669 - ERROR - 並列実行エラー: 'Blackboard' object has no attribute 'has'
+2025-05-13 23:02:26,670 - DEBUG - Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 723, in _run_agents_parallel
+    if not self.blackboard.has(f"{agent_id}_output"):
+           ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Blackboard' object has no attribute 'has'
+
+2025-05-13 23:02:27,226 - DEBUG - Created summary for iteration 1
+2025-05-13 23:02:27,226 - ERROR - ベクトル化エラー: '_thread._local' object has no attribute '_vectorizing_agents'
+2025-05-13 23:02:27,227 - DEBUG - Traceback (most recent call last):
+  File "C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\MurmurNet\distributed_slm.py", line 443, in _vectorize_agent_outputs
+    if agent_id_str in threading.local()._vectorizing_agents:
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: '_thread._local' object has no attribute '_vectorizing_agents'
+
+2025-05-13 23:02:27,227 - DEBUG - Iteration 1 diagnosis: add_innovation - 議論が停滞しています
+2025-05-13 23:02:27,228 - DEBUG - Collected Boids information: 2 active agents
+2025-05-13 23:02:30,190 - DEBUG - Updated conversation memory

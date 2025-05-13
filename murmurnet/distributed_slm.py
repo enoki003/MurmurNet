@@ -17,6 +17,7 @@ import asyncio
 import re
 import time
 import numpy as np
+from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 from MurmurNet.modules.input_reception import InputReception
 from MurmurNet.modules.blackboard import Blackboard
@@ -118,6 +119,9 @@ class DistributedSLM:
         if self.use_boids:
             self.logger.info("Boids型自己増殖エージェント機能を有効化しました")
             
+        # バッチ処理のセットアップ
+        self._setup_batch_processor()
+            
     def _initialize_boids_agents(self):
         """Boids型自己増殖エージェントの初期化（内部メソッド）"""
         if not self.use_boids or not hasattr(self.agent_pool, 'agent_factory'):
@@ -172,7 +176,7 @@ class DistributedSLM:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
+        self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO if not self.config.get('debug') else logging.DEBUG)
 
     async def _run_iteration(self, iteration: int) -> None:
@@ -404,8 +408,8 @@ class DistributedSLM:
         import threading
         
         # スレッドローカルストレージが初期化されていなければ初期化
-        if not hasattr(threading.current_thread(), '_vectorizing_agents'):
-            threading.current_thread()._vectorizing_agents = set()
+        if not hasattr(threading.local(), '_vectorizing_agents'):
+            threading.local()._vectorizing_agents = set()
             
         try:
             from MurmurNet.modules.opinion_vectorizer import OpinionVectorizer
@@ -422,6 +426,11 @@ class DistributedSLM:
             else:
                 vectorizer = self.vectorizer
                 
+            # バッチ処理用の配列
+            batch_texts = []
+            batch_metadata = []
+            agent_ids = []
+                
             for entry in agent_entries:
                 agent_id = entry.get('agent')
                 text = entry.get('text', '')
@@ -431,29 +440,29 @@ class DistributedSLM:
                     
                 # 再帰呼び出し検出 - 同じエージェントIDを処理中ならスキップ
                 agent_id_str = f"agent_{agent_id}"
-                if agent_id_str in threading.current_thread()._vectorizing_agents:
+                if agent_id_str in threading.local()._vectorizing_agents:
                     if self.config.get('debug', False):
-                        print(f"再帰呼び出し検出: ベクトル化をスキップ agent_id={agent_id_str}")
+                        self.logger.debug(f"再帰呼び出し検出: ベクトル化をスキップ agent_id={agent_id_str}")
                     continue
                 
                 # 処理中マークを設定
-                threading.current_thread()._vectorizing_agents.add(agent_id_str)
+                threading.local()._vectorizing_agents.add(agent_id_str)
                 
                 try:
-                    # テキストをベクトル化
-                    if hasattr(vectorizer, 'vectorize_text'):
-                        vector = vectorizer.vectorize_text(text)
-                    elif hasattr(vectorizer, 'vectorize'):
-                        vector = vectorizer.vectorize(text)
+                    # テキストをバッチに追加
+                    if isinstance(text, dict) and 'text' in text:
+                        batch_texts.append(text['text'])
+                    elif isinstance(text, str):
+                        batch_texts.append(text)
                     else:
                         if self.config.get('debug', False):
-                            self.logger.warning("適切なベクトル化メソッドがありません")
+                            self.logger.warning(f"警告: 出力テキストが文字列でもなく辞書でもありません: {type(text)}")
                         continue
-                    
-                    # 意見空間に追加
+                        
+                    # メタデータを構築
                     metadata = {
                         'agent_id': agent_id_str,
-                        'text': text[:100] if len(text) > 100 else text,
+                        'text': text[:100] if isinstance(text, str) and len(text) > 100 else str(text)[:100],
                         'iteration': iteration,
                         'timestamp': time.time()
                     }
@@ -467,20 +476,48 @@ class DistributedSLM:
                         agent = self.agent_pool.agents[agent_id]
                         if isinstance(agent, dict):
                             metadata['role'] = agent.get('role', 'Unknown')
-                    
-                    # 意見空間に追加（直接add_vectorメソッドを使う）
-                    if hasattr(self.opinion_space, 'add_vector'):
-                        self.opinion_space.add_vector(agent_id_str, vector, metadata)
-                    # 互換性のためadd_opinionメソッドも試す
-                    elif hasattr(self.opinion_space, 'add_opinion'):
-                        self.opinion_space.add_opinion(text, metadata)
+                            
+                    batch_metadata.append(metadata)
+                    agent_ids.append(agent_id_str)
                 
                 finally:
                     # 処理終了時に必ずマークを削除
-                    threading.current_thread()._vectorizing_agents.discard(agent_id_str)
+                    threading.local()._vectorizing_agents.discard(agent_id_str)
+            
+            # バッチ処理でベクトル化を実行
+            if batch_texts and hasattr(vectorizer, 'vectorize_batch'):
+                vectors = vectorizer.vectorize_batch(batch_texts)
                 
-            if self.config.get('debug', False) and agent_entries:
-                self.logger.debug(f"{len(agent_entries)}個の意見ベクトルを追加")
+                # 意見空間に追加
+                for i, vector in enumerate(vectors):
+                    if vector is not None and i < len(batch_metadata):
+                        if hasattr(self.opinion_space, 'add_vector'):
+                            self.opinion_space.add_vector(agent_ids[i], vector, batch_metadata[i])
+                        elif hasattr(self.opinion_space, 'add_opinion_vector'):
+                            self.opinion_space.add_opinion_vector(vector, batch_metadata[i])
+            
+            # バッチ処理がサポートされていない場合は1つずつ処理
+            elif batch_texts:
+                for i, text in enumerate(batch_texts):
+                    if i >= len(batch_metadata):
+                        continue
+                        
+                    # テキストをベクトル化
+                    vector = None
+                    if hasattr(vectorizer, 'vectorize_text'):
+                        vector = vectorizer.vectorize_text(text)
+                    elif hasattr(vectorizer, 'vectorize'):
+                        vector = vectorizer.vectorize(text)
+                    
+                    if vector is not None:
+                        # 意見空間に追加
+                        if hasattr(self.opinion_space, 'add_vector'):
+                            self.opinion_space.add_vector(agent_ids[i], vector, batch_metadata[i])
+                        elif hasattr(self.opinion_space, 'add_opinion_vector'):
+                            self.opinion_space.add_opinion_vector(vector, batch_metadata[i])
+                
+            if self.config.get('debug', False) and batch_texts:
+                self.logger.debug(f"{len(batch_texts)}個の意見ベクトルを追加")
                 
         except Exception as e:
             if self.config.get('debug', False):
@@ -489,8 +526,8 @@ class DistributedSLM:
                 self.logger.debug(traceback.format_exc())
         finally:
             # 念のため、スレッドローカル変数をクリア
-            if hasattr(threading.current_thread(), '_vectorizing_agents'):
-                threading.current_thread()._vectorizing_agents.clear()
+            if hasattr(threading.local(), '_vectorizing_agents'):
+                threading.local()._vectorizing_agents.clear()
     
     def _evaluate_agent_contributions(self, agent_entries: list) -> None:
         """
@@ -626,82 +663,174 @@ class DistributedSLM:
             return {}
     
     async def _run_agents_parallel(self) -> None:
-        """エージェントを並列実行（内部メソッド）"""
-        self.logger.info("Running agents in parallel")
-        
-        # run_agents関数に適切に渡す
+        """エージェントを並列実行する（内部メソッド）"""
+        # ThreadPoolExecutorでエージェントを並列実行
         try:
-            # まず、エージェントを並列実行
-            results = await self.agent_pool.run_agents(self.blackboard)
+            import asyncio
+            from concurrent.futures import ThreadPoolExecutor
             
-            # 応答を黒板に書き込み
-            if results:
-                for i, result in enumerate(results):
-                    if isinstance(result, dict):
-                        # 結果が辞書の場合
-                        agent_id = result.get('agent_id', i)
-                        role = result.get('role', f'エージェント{i}')
-                        text = result.get('text', '')
-                        self.blackboard.write(f'agent_{i}_output', text)
-                        self.blackboard.write(f'agent_{i}_role', role)
-                    elif result:
-                        # 結果が文字列などの場合
-                        self.blackboard.write(f'agent_{i}_output', str(result))
-            else:
-                # 結果がなかった場合のフォールバック処理
-                # Boids型自己増殖エージェント機能を使用している場合の処理を修正
-                num_agents = self.num_agents
-                if self.use_boids and hasattr(self.agent_pool, 'agents'):
-                    # AgentPoolクラスのagents属性から直接取得
-                    if isinstance(self.agent_pool.agents, dict):
-                        num_agents = len(self.agent_pool.agents)
-                    elif isinstance(self.agent_pool.agents, list):
-                        num_agents = len(self.agent_pool.agents)
-                
-                for i in range(num_agents):
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-                    
-        except Exception as e:
-            self.logger.error(f"Parallel execution error: {str(e)}")
-            import traceback
-            self.logger.debug(traceback.format_exc())
-            
-            # エラーが発生した場合は個別に実行を試みる
-            # Boids型自己増殖エージェント機能を使用している場合の処理を修正
+            # エージェント数を取得
             num_agents = self.num_agents
             if self.use_boids and hasattr(self.agent_pool, 'agents'):
-                # AgentPoolクラスのagents属性から直接取得
                 if isinstance(self.agent_pool.agents, dict):
                     num_agents = len(self.agent_pool.agents)
                 elif isinstance(self.agent_pool.agents, list):
                     num_agents = len(self.agent_pool.agents)
-                    
+            
+            # 各エージェントのタスクを生成
+            tasks = []
+            # 黒板から入力とコンテキストを取得
+            input_data = self.blackboard.read('input')
+            conversation_context = self.blackboard.read('conversation_context') or ""
+            
+            # 並列実行のための非同期タスクを作成
             for i in range(num_agents):
-                try:
-                    # 個別に応答生成を試みる
-                    input_data = self.blackboard.read('input')
-                    input_text = input_data.get('normalized') if isinstance(input_data, dict) else str(input_data)
-                    system_prompt = self.blackboard.read('system_prompt') or ""
-                    conversation_context = self.blackboard.read('conversation_context') or ""
-                    
-                    # エージェントIDを文字列にして、AgentPoolManagerのAPIを直接使用
+                # 各エージェントに個別のタスク作成
+                agent_id = f"agent_{i}"
+                task = asyncio.create_task(
+                    self._run_single_agent(agent_id, input_data, conversation_context)
+                )
+                tasks.append(task)
+            
+            # 並列実行
+            if tasks:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # 結果の処理（エラー処理を含む）
+                for i, result in enumerate(results):
                     agent_id = f"agent_{i}"
-                    response = await self.agent_pool._generate_agent_response(
-                        agent_id, input_text, system_prompt, conversation_context
-                    )
                     
-                    if response:
-                        if isinstance(response, dict):
-                            self.blackboard.write(f'agent_{i}_output', response.get('text', ''))
-                            self.blackboard.write(f'agent_{i}_role', response.get('role', f'エージェント{i}'))
-                        else:
-                            self.blackboard.write(f'agent_{i}_output', str(response))
-                    else:
-                        self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                    # 例外の場合はフォールバック応答を使用
+                    if isinstance(result, Exception):
+                        self.logger.error(f"エージェント {agent_id} の実行に失敗: {str(result)}")
                         
-                except Exception as inner_e:
-                    self.logger.error(f"Agent {i} fallback execution failed: {str(inner_e)}")
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}の実行に失敗しました: {str(inner_e)[:50]}")
+                        # エラー時のフォールバック応答（メタ発言をしない自然な応答）
+                        import random
+                        fallback_responses = [
+                            "現在の話題については様々な視点から検討する必要があります。次に、具体的な事例について考察を深めてみましょう。",
+                            "このテーマについては複数の要素が関連しています。さらに掘り下げるために、実際の応用例について議論を展開してはいかがでしょうか。",
+                            "この問題には多くの側面があります。次のステップとして、長期的な影響についての検討を加えてみましょう。"
+                        ]
+                        fallback_output = random.choice(fallback_responses)
+                        
+                        # 黒板に書き込む
+                        self.blackboard.write(f"{agent_id}_output", fallback_output)
+                        self.blackboard.write(f"{agent_id}_error", str(result))
+                
+                # 制限時間を超えたタスクを処理
+                for i in range(num_agents):
+                    agent_id = f"agent_{i}"
+                    # hasメソッドの存在を確認してから呼び出す
+                    if hasattr(self.blackboard, 'has'):
+                        is_output_missing = not self.blackboard.has(f"{agent_id}_output")
+                    else:
+                        # hasメソッドがない場合はdictとして直接確認
+                        is_output_missing = f"{agent_id}_output" not in self.blackboard.memory
+                        
+                    if is_output_missing:
+                        import random
+                        timeout_responses = [
+                            "この議論では複数の観点が重要です。次に、別の角度から考察を加えることで理解が深まるでしょう。",
+                            "このテーマについては多様な意見があります。続いて、具体的な事例を検討して議論を発展させましょう。",
+                            "この問題の本質を捉えるには様々な視点が必要です。さらに、実践的な応用について考えてみましょう。"
+                        ]
+                        timeout_output = random.choice(timeout_responses)
+                        self.blackboard.write(f"{agent_id}_output", timeout_output)
+                        self.blackboard.write(f"{agent_id}_status", "timeout")
+            
+        except Exception as e:
+            self.logger.error(f"並列実行エラー: {str(e)}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
+        
+    async def _run_single_agent(self, agent_id: str, input_data: Any, conversation_context: str) -> str:
+        """
+        単一のエージェントを実行する（内部メソッド）
+        
+        引数:
+            agent_id: エージェントID
+            input_data: 入力データ
+            conversation_context: 会話コンテキスト
+            
+        戻り値:
+            str: エージェント応答
+        """
+        try:
+            # 入力テキストを取得
+            input_text = ""
+            if isinstance(input_data, dict) and 'normalized' in input_data:
+                input_text = input_data['normalized']
+            elif isinstance(input_data, str):
+                input_text = input_data
+            else:
+                input_text = str(input_data)
+            
+            # エージェントプールからエージェント応答を生成
+            if hasattr(self.agent_pool, '_generate_agent_response'):
+                # 最大2回のリトライで応答生成
+                response = await self.agent_pool._generate_agent_response(agent_id, [input_text, conversation_context], max_retries=2)
+            else:
+                # AgentPoolManagerのrun_agents_parallelメソッドを使用
+                # ダミー出力（エージェントプールが応答生成機能を持たない場合）
+                role = f"アシスタント{agent_id.replace('agent_', '')}"
+                response = f"この問題については様々な視点から検討する必要があります。次に具体的な応用例を考えてみましょう。"
+            
+            # 「反復処理を続行しますか？」などのメタ発言を除去
+            continuation_patterns = [
+                r"反復処理を続行します(か|か？|か\?)?", 
+                r"処理を続行します(か|か？|か\?)?",
+                r"続行します(か|か？|か\?)?",
+                r"続けます(か|か？|か\?)?"
+            ]
+            import re
+            for pattern in continuation_patterns:
+                response = re.sub(pattern, "", response)
+            
+            # メタ発言のチェック
+            meta_phrases = [
+                "他のエージェント", "応答できません", "回答できません", 
+                "AIとして", "アシスタントとして", "私はAIです", 
+                "申し訳ありません", "エラー", "考え中",
+                "すみません", "対応できかねます"
+            ]
+            
+            contains_meta = any(phrase in response.lower() for phrase in meta_phrases)
+            
+            # メタ発言が含まれる場合は修正
+            if contains_meta:
+                # メタ発言を含む場合は代替応答を用意
+                import random
+                alternate_responses = [
+                    "この議論では多角的な視点が重要です。次に、具体的な応用例について検討してみましょう。",
+                    "このテーマについては様々な側面から考察する必要があります。さらに、実践的な観点を加えてみてはどうでしょうか。"
+                ]
+                response = random.choice(alternate_responses)
+            
+            # 次の話題誘導が含まれているか確認
+            next_topic_phrases = [
+                "さらに", "次の視点", "考えるべき点", "別の角度", "新たな質問", 
+                "議論を発展", "検討すべき"
+            ]
+            has_next_topic = any(phrase in response for phrase in next_topic_phrases)
+            
+            # 次の話題誘導がない場合は追加
+            if not has_next_topic and len(response) > 20:
+                # 話題誘導を追加
+                next_topics = [
+                    "\n\nさらに考察すべき点として、この問題の実用的な側面についても検討する価値があるでしょう。",
+                    "\n\n次の視点として、この議論が持つ長期的な影響について考えてみてはいかがでしょうか。",
+                    "\n\n議論を発展させるために、具体的な事例を通して理解を深めてみましょう。"
+                ]
+                import random
+                response += random.choice(next_topics)
+            
+            # 黒板に書き込む
+            self.blackboard.write(f"{agent_id}_output", response)
+            return response
+            
+        except Exception as e:
+            # エラーを上位に伝播させる（_run_agents_parallelで処理）
+            raise e
     
     def _is_memory_related_question(self, text: str) -> bool:
         """
@@ -949,3 +1078,371 @@ class DistributedSLM:
         except Exception as e:
             self.logger.error(f"Failed to save log: {str(e)}")
             return ""
+
+    # バッチ処理関連の追加
+    def _setup_batch_processor(self):
+        """バッチ処理のためのモデル呼び出しプールを設定（内部メソッド）"""
+        self._batch_processor = {
+            'queue': [],
+            'results': {},
+            'is_processing': False,
+            'model': None,  # 遅延初期化用
+            'executor': ThreadPoolExecutor(max_workers=3),  # 並列度を増やす
+            'batch_size': self.config.get('batch_size', 5),  # バッチサイズを設定可能に
+            'max_wait_time': self.config.get('batch_max_wait', 0.2)  # 最大待機時間（秒）
+        }
+        
+        # モデル呼び出しカウンタ
+        if not hasattr(self, '_model_call_stats'):
+            self._model_call_stats = {
+                'total_calls': 0,
+                'batched_calls': 0,
+                'characters_processed': 0,
+                'total_tokens': 0,
+                'processing_time': 0.0
+            }
+            
+        if self.config.get('debug']:
+            self.logger.info("バッチ処理機能を初期化しました")
+    
+    async def _process_batch(self):
+        """キューに溜まったプロンプトをバッチ処理する非同期メソッド（内部メソッド）"""
+        # スレッドセーフな再帰呼び出しチェック
+        import threading
+        thread_local = threading.local()
+        
+        # 再帰呼び出しの深さを追跡
+        if not hasattr(thread_local, 'processing_depth'):
+            thread_local.processing_depth = 0
+        
+        # 再帰呼び出し検出
+        thread_local.processing_depth += 1
+        if thread_local.processing_depth > 2:  # 再帰深度の上限
+            if self.config.get('debug'):
+                self.logger.warning("再帰呼び出し検出: バッチ処理を中断します")
+            thread_local.processing_depth -= 1
+            self._batch_processor['is_processing'] = False
+            return
+        
+        # 既に処理中なら待機して再試行
+        if self._batch_processor['is_processing'] and thread_local.processing_depth <= 2:
+            await asyncio.sleep(0.1)
+            thread_local.processing_depth -= 1
+            return await self._process_batch()
+            
+        # 処理中フラグを設定
+        self._batch_processor['is_processing'] = True
+        
+        try:
+            # バッチ処理のサイズ
+            max_batch_size = self._batch_processor.get('batch_size', 5)
+            
+            # キューから取得（アトミック操作）
+            with threading.RLock():
+                queue_length = len(self._batch_processor['queue'])
+                batch_size = min(max_batch_size, queue_length)
+                
+                if batch_size == 0:
+                    # キューが空の場合は終了
+                    self._batch_processor['is_processing'] = False
+                    thread_local.processing_depth -= 1
+                    return
+                    
+                # バッチ内のプロンプトを取得
+                batch_items = self._batch_processor['queue'][:batch_size]
+                self._batch_processor['queue'] = self._batch_processor['queue'][batch_size:]
+                
+            start_time = time.time()
+                
+            if self.config.get('debug']:
+                self.logger.debug(f"バッチ処理開始: {batch_size}個のプロンプト, キュー残り: {len(self._batch_processor['queue'])}")
+            
+            # ループで1つずつ処理
+            from concurrent.futures import as_completed
+            
+            # 並列処理用のタスク準備
+            futures = []
+            
+            # モデル取得 - 効率化のためのバッチ共有モデル
+            try:
+                model = self._get_batch_processor_model()
+            except Exception as e:
+                self.logger.error(f"バッチ処理モデル初期化エラー: {str(e)}")
+                # エラーの場合は各プロンプトに対してエラーを返す
+                for item in batch_items:
+                    future_obj = item['future']
+                    if not future_obj.done():
+                        future_obj.set_exception(e)
+                
+                self._batch_processor['is_processing'] = False
+                thread_local.processing_depth -= 1
+                return
+            
+            # 処理関数
+            def process_prompt(item):
+                prompt_dict = item['prompt']
+                
+                # スレッド安全なパラメータコピー
+                params_copy = prompt_dict.get('params', {}).copy() if prompt_dict.get('params') else {}
+                
+                try:
+                    # メッセージの準備
+                    messages = []
+                    
+                    # システムプロンプト（オプション）
+                    if prompt_dict.get('system'):
+                        messages.append({"role": "system", "content": prompt_dict.get('system', '')})
+                    
+                    # ユーザープロンプト（必須）
+                    messages.append({"role": "user", "content": prompt_dict.get('user', '')})
+                    
+                    # 統計情報の更新
+                    if hasattr(self, '_model_call_stats'):
+                        self._model_call_stats['total_calls'] += 1
+                        self._model_call_stats['batched_calls'] += 1
+                        chars = len(prompt_dict.get('system', '')) + len(prompt_dict.get('user', ''))
+                        self._model_call_stats['characters_processed'] += chars
+                    
+                    # デフォルトパラメータ
+                    default_params = {
+                        'max_tokens': min(512, params_copy.get('max_tokens', 512)), # 大きすぎる値を防ぐ
+                        'temperature': min(max(0.0, params_copy.get('temperature', 0.7)), 1.0), # 範囲制限
+                        'top_p': min(max(0.0, params_copy.get('top_p', 0.9)), 1.0), # 範囲制限
+                    }
+                    
+                    # ユーザー指定パラメータで上書き (安全に処理)
+                    user_params = {}
+                    if params_copy:
+                        # 許可されたパラメータのみ使用
+                        allowed_params = {'max_tokens', 'temperature', 'top_p', 'stop', 'frequency_penalty', 'presence_penalty'}
+                        for k, v in params_copy.items():
+                            if k in allowed_params:
+                                user_params[k] = v
+                    
+                    # パラメータをマージ
+                    call_params = {**default_params, **user_params}
+                    
+                    # エラー処理を強化したモデル呼び出し
+                    try:
+                        # 呼び出し時間計測
+                        call_start = time.time()
+                        
+                        response = model.create_chat_completion(
+                            messages=messages,
+                            **call_params
+                        )
+                        
+                        call_duration = time.time() - call_start
+                        
+                        # 応答形式チェック
+                        # レスポンスの形式によって適切にアクセス
+                        if isinstance(response, dict):
+                            content = response['choices'][0]['message']['content'].strip()
+                        else:
+                            content = response.choices[0].message.content.strip()
+                        
+                        # 成功時の処理
+                        return {
+                            "item": item, 
+                            "response": response, 
+                            "content": content,
+                            "error": None,
+                            "duration": call_duration
+                        }
+                    except Exception as model_err:
+                        # モデル呼び出しエラーをハンドリング
+                        return {
+                            "item": item, 
+                            "response": None, 
+                            "content": f"モデル呼び出しエラー: {str(model_err)[:100]}...",
+                            "error": model_err,
+                            "duration": time.time() - call_start if 'call_start' in locals() else 0
+                        }
+                    
+                except Exception as e:
+                    # その他のエラー
+                    return {
+                        "item": item, 
+                        "response": None,
+                        "content": None,
+                        "error": e,
+                        "duration": 0
+                    }
+            
+            # バッチ内のプロンプトを並列処理
+            for item in batch_items:
+                futures.append(self._batch_processor['executor'].submit(process_prompt, item))
+                
+            # 結果を順次処理
+            success_count = 0
+            error_count = 0
+            total_duration = 0
+            
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    item = result["item"]
+                    response = result["response"]
+                    error = result["error"]
+                    duration = result.get("duration", 0)
+                    total_duration += duration
+                    
+                    # Future取得（非同期処理用）
+                    future_obj = item['future']
+                    
+                    if error:
+                        # エラーの場合はエラー情報を設定
+                        error_count += 1
+                        if not future_obj.done():
+                            future_obj.set_exception(error)
+                    else:
+                        # 結果をFutureにセット
+                        success_count += 1
+                        if not future_obj.done():
+                            future_obj.set_result(response)
+                except Exception as handler_error:
+                    # フューチャー処理中のエラー
+                    error_count += 1
+                    self.logger.error(f"バッチ結果処理エラー: {str(handler_error)}")
+            
+            # 処理時間の統計を取る
+            processing_time = time.time() - start_time
+            if hasattr(self, '_model_call_stats'):
+                self._model_call_stats['processing_time'] += processing_time
+                
+            if self.config.get('debug'] and batch_size > 0:
+                avg_time = processing_time / batch_size
+                avg_model_time = total_duration / batch_size if batch_size > 0 else 0
+                efficiency = avg_model_time / avg_time if avg_time > 0 else 0
+                self.logger.debug(
+                    f"バッチ処理完了: {batch_size}個中 成功={success_count}, 失敗={error_count}, "
+                    f"平均処理時間={avg_time:.3f}秒/プロンプト, "
+                    f"平均モデル時間={avg_model_time:.3f}秒, "
+                    f"効率={efficiency:.2%}"
+                )
+            
+            # 残りのキューがあれば処理を続行
+            with threading.RLock():
+                remaining = len(self._batch_processor['queue'])
+                
+            if remaining > 0:
+                # 非同期タスクとして継続
+                self._batch_processor['is_processing'] = False  # 一旦リセット
+                asyncio.create_task(self._process_batch())
+            else:
+                self._batch_processor['is_processing'] = False
+                
+        except Exception as e:
+            # 全体エラー処理
+            self.logger.error(f"バッチ処理中に予期せぬエラーが発生: {str(e)}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
+            
+            self._batch_processor['is_processing'] = False
+            
+            # すべての未処理Futureにエラーを通知
+            for item in batch_items:
+                future = item['future']
+                if not future.done():
+                    future.set_exception(e)
+        
+        # 再帰深度をデクリメント
+        thread_local.processing_depth -= 1
+
+    def _get_batch_processor_model(self):
+        """バッチ処理用のモデルを取得または初期化（内部メソッド）"""
+        # すでにモデルがあれば再利用
+        if self._batch_processor.get('model'):
+            return self._batch_processor['model']
+            
+        # モデルを初期化
+        from llama_cpp import Llama
+        
+        # モデルパス取得 (デフォルトは親ディレクトリの下のmodels)
+        model_path = self.config.get('model_path')
+        if not model_path:
+            model_path = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf'))
+            
+        # テンプレート取得
+        chat_template = self.config.get('chat_template')
+        template_content = None
+        if chat_template and os.path.exists(chat_template):
+            try:
+                with open(chat_template, 'r', encoding='utf-8') as f:
+                    template_content = f.read()
+            except Exception as e:
+                if self.config.get('debug']:
+                    self.logger.warning(f"テンプレートロードエラー: {e}")
+        
+        # モデル設定
+        model_kwargs = {
+            'model_path': model_path,
+            'n_ctx': self.config.get('n_ctx', 2048),
+            'n_threads': self.config.get('n_threads', 4),
+            'use_mmap': True,
+            'use_mlock': False,
+            'n_gpu_layers': 0,
+            'seed': 42,
+            'chat_format': "gemma",
+            'verbose': False
+        }
+        
+        # テンプレートがあれば追加
+        if template_content:
+            model_kwargs['chat_template'] = template_content
+            
+        try:
+            # モデル作成
+            model = Llama(**model_kwargs)
+            self._batch_processor['model'] = model
+            
+            if self.config.get('debug']:
+                self.logger.info(f"バッチ処理用モデルを初期化しました: {os.path.basename(model_path)}")
+                
+            return model
+        except Exception as e:
+            self.logger.error(f"バッチ処理用モデル初期化エラー: {str(e)}")
+            raise
+    
+    async def add_to_batch(self, prompt_dict):
+        """
+        バッチ処理キューにプロンプトを追加し、結果を待機する非同期メソッド
+        
+        引数:
+            prompt_dict: プロンプト情報の辞書
+                {
+                    'id': 一意のID,
+                    'system': システムプロンプト,
+                    'user': ユーザープロンプト,
+                    'params': モデル呼び出しパラメータ
+                }
+                
+        戻り値:
+            モデル呼び出し結果
+        """
+        # バッチプロセッサが初期化されていなければ初期化
+        if not hasattr(self, '_batch_processor'):
+            self._setup_batch_processor()
+            
+        # 結果用のFutureを作成
+        result_future = asyncio.Future()
+        
+        # キューに追加
+        self._batch_processor['queue'].append({
+            'prompt': prompt_dict,
+            'future': result_future,
+            'timestamp': time.time()
+        })
+        
+        # バッチ処理が実行中でなければ実行を開始
+        if not self._batch_processor['is_processing']:
+            # まずは少し待つ（他のプロンプトが追加されるのを待つ）
+            max_wait = self._batch_processor.get('max_wait_time', 0.2)
+            await asyncio.sleep(max_wait)
+            
+            # 処理を開始
+            asyncio.create_task(self._process_batch())
+            
+        # 結果を待機して返す
+        return await result_future

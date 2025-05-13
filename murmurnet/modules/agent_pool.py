@@ -882,23 +882,27 @@ class AgentPoolManager:
             # 1. エージェント発言収集（並列または逐次）
             outputs = await self._collect_agent_responses(conversation_history)
             
-            # 会話履歴に追加
+            # 会話履歴に追加（失敗したエージェントの応答は除外）
+            valid_outputs = []
             for agent_id, output_text in outputs:
-                conversation_history.append(f"{self.agents[agent_id]['role']}: {output_text}")
-                
-                # 黒板があれば書き込み
-                if self.blackboard:
-                    self.blackboard.write('agent_message', {
-                        'type': 'agent',
-                        'agent_id': agent_id,
-                        'role': self.agents[agent_id]['role'],
-                        'text': output_text,
-                        'turn': self.current_turn
-                    })
+                # 応答が有効かチェック（Noneや空文字は失敗とみなす）
+                if output_text is not None and output_text.strip() != "":
+                    conversation_history.append(f"{self.agents[agent_id]['role']}: {output_text}")
+                    valid_outputs.append((agent_id, output_text))
+                    
+                    # 黒板があれば書き込み
+                    if self.blackboard:
+                        self.blackboard.write('agent_message', {
+                            'type': 'agent',
+                            'agent_id': agent_id,
+                            'role': self.agents[agent_id]['role'],
+                            'text': output_text,
+                            'turn': self.current_turn
+                        })
             
-            # 2. 発言のベクトル化
+            # 2. 発言のベクトル化（有効な応答のみ）
             if self.use_self_replication and self.vectorizer and self.opinion_space:
-                for agent_id, output_text in outputs:
+                for agent_id, output_text in valid_outputs:
                     try:
                         # 出力がテキストかどうかを確認し、辞書なら適切なフィールドを抽出
                         text_to_vectorize = output_text
@@ -1004,47 +1008,172 @@ class AgentPoolManager:
         
         return outputs
         
-    async def _generate_agent_response(self, agent_id: str, conversation_history: List[str]) -> str:
+    async def _generate_agent_response(self, agent_id: str, conversation_history: List[str], max_retries: int = 2) -> str:
         """
-        指定されたエージェントの応答を生成
+        特定のエージェントからの応答を生成する
         
         引数:
             agent_id: エージェントID
             conversation_history: 会話履歴
+            max_retries: 最大リトライ回数
             
         戻り値:
             str: 生成された応答テキスト
         """
+        if agent_id not in self.agents:
+            if self.debug:
+                print(f"警告: 存在しないエージェントID ({agent_id}) の応答を要求されました")
+            return None
+            
         agent_info = self.agents[agent_id]
-        
-        # システムプロンプト取得
-        system_prompt = agent_info.get('system_prompt', '')
-        if not system_prompt:
-            system_prompt = self._get_default_system_prompt(agent_info['role'])
-        
-        # プロンプト構築
-        prompt = system_prompt
-        if prompt:
-            prompt += "\n\n"
-        prompt += "以下はこれまでの会話です:\n\n"
-        prompt += "\n".join(conversation_history)
-        prompt += f"\n\n{agent_info['role']}として発言してください。"
+        role = agent_info.get('role', 'アドバイザー')
         
         try:
-            # LLMで応答生成
-            response = await self.llm.generate(prompt)
-            
-            # 応答を短く調整（設定があれば）
-            max_length = self.config.get('max_response_length', 500)
-            if max_length and len(response) > max_length:
-                response = response[:max_length] + "..."
+            # エージェントプロンプト作成 (メタ発言禁止と次の話題誘導の強化)
+            prompt_elements = [
+                f"あなたは {role} です。他のエージェントと共同で議論に参加しています。",
+                "現在進行中の議論に参加し、専門的かつ有益な視点を提供してください。",
+                f"会話履歴: {conversation_history[-min(5, len(conversation_history)):]}", # 直近5発言まで
                 
-            return response
+                # メタ発言禁止の強化指示
+                "【厳守すべき禁止事項】",
+                "・他のエージェントについて言及することは絶対に禁止です（「他のエージェント」「〇〇さん」などへの言及は避ける）",
+                "・「～さんが応答できなかった」「エラーが発生した」などのメタ発言は厳禁です",
+                "・システム内部や会話の進行状況についての発言は避けてください",
+                "・エラーメッセージや「考え中」などの処理中の状態を示す表現は使わないでください",
+                "・「私はAIアシスタントです」「私はLLMです」などの自己言及も避けてください",
+                "・「申し訳ありません」「すみません」などの謝罪表現も避けてください",
+                "・「続行しますか？」「次へ進みますか？」などの質問も避けてください",
+                "・議論の内容そのものだけに焦点を当ててください",
+                
+                # 次の話題誘導を必須タスクに設定（強化指示）
+                "【必ず実行すべき必須タスク】",
+                "1. ユーザーの質問/議論に対する具体的かつ有用な回答を提供する",
+                "2. 必ず議論を発展させる新しい切り口や質問を1つ以上提案してください（※これは必ず含めてください）",
+                "3. 発言は簡潔に300字以内でまとめ、新たな視点を入れつつ回答を深める",
+                "4. 結論だけでなく、理由や根拠も簡潔に示してください",
+                "5. 回答の最後には必ず次に議論すべき視点や疑問点を示して発言を終えてください",
+                
+                f"現在の担当役割: {role}",
+                f"以上の制約に従い、{role}として回答してください:"
+            ]
+
+            user_prompt = "\n".join(prompt_elements)
+            
+            # エージェント応答生成
+            for attempt in range(max_retries):
+                if self.debug and attempt > 0:
+                    print(f"{role} リトライ #{attempt+1}")
+                    
+                try:
+                    # モデルから応答テキスト生成
+                    if hasattr(self, 'model_clients') and self.model_clients and agent_id in self.model_clients:
+                        model_client = self.model_clients[agent_id]
+                        response = await model_client.generate(user_prompt, 
+                                                            max_tokens=self.config.get('max_tokens', 200),
+                                                            temperature=agent_info.get('temperature', 0.7),
+                                                            stop_sequences=["\n\n", "##", "エージェント:"])
+                    elif hasattr(self, 'llm') and self.llm:
+                        # LLMインスタンスを使って応答生成
+                        response = await self.llm.generate(user_prompt,
+                                                        max_tokens=self.config.get('max_tokens', 200),
+                                                        temperature=agent_info.get('temperature', 0.7),
+                                                        stop_sequences=["\n\n", "##", "エージェント:"])
+                    else:
+                        # デフォルトあるいはモック応答
+                        response = f"{role}としての考え: この議論について、重要な視点は...。さらに考えるべき点として..."
+                        time.sleep(0.5)  # モック応答の場合は少し待つ
+                        
+                    # 応答後処理
+                    if response and isinstance(response, str):
+                        response = response.strip()
+                        # プレフィックスや余分な修飾を削除
+                        prefixes = [f"{role}: ", f"{role}として、", f"{role}からの応答: ", "回答: ", f"{role}の視点: "]
+                        for prefix in prefixes:
+                            if response.startswith(prefix):
+                                response = response[len(prefix):]
+                        
+                        # メタ発言のチェックと除去（強化版）
+                        meta_phrases = [
+                            "他のエージェント", "応答できません", "回答できません", 
+                            "AIとして", "アシスタントとして", "私はAIです", 
+                            "申し訳ありません", "エラー", "考え中",
+                            "すみません", "対応できかねます", "モデルとして",
+                            "エラーが発生", "回答が生成できません", "別のエージェント",
+                            "エージェントの", "さんは", "さんが", "続行しますか",
+                            "次へ進みますか", "処理を続けますか", "反復処理", "反復"
+                        ]
+                        
+                        contains_meta = any(phrase in response.lower() for phrase in meta_phrases)
+                        
+                        # 次の話題への誘導が含まれているか確認（強化版）
+                        next_topic_phrases = [
+                            "さらに", "次の視点", "考えるべき点", "別の角度", "新たな質問", 
+                            "議論を発展", "検討すべき", "考察すべき", "次に議論すべき",
+                            "さらなる考察", "加えて考えるべき", "今後の展開として", 
+                            "別の観点", "次のステップ", "重要な論点として", "疑問点として"
+                        ]
+                        has_next_topic = any(phrase in response for phrase in next_topic_phrases)
+                        
+                        # メタ発言を含む場合はリトライ
+                        if contains_meta and attempt < max_retries - 1:
+                            if self.debug:
+                                print(f"メタ発言検出のためリトライ: {response[:30]}...")
+                            continue
+                            
+                        # 次の話題誘導がない場合は追加（必ず追加するように強化）
+                        if not has_next_topic and len(response) > 20:
+                            # 役割に応じた次の話題誘導を追加
+                            next_topic_suggestions = [
+                                f"\n\nさらに検討すべき点として、この議論を深めるためには具体例や異なる視点からの分析も重要ではないでしょうか？",
+                                f"\n\n次に考えるべきこととして、この問題の長期的な影響について議論する価値があると思います。",
+                                f"\n\n議論を進めるために、この考えを実践する際の課題について検討してみてはいかがでしょう？"
+                            ]
+                            import random
+                            response = response + random.choice(next_topic_suggestions)
+                        
+                        # 「反復処理を続行しますか?」などの処理継続確認を除去
+                        continuation_patterns = [
+                            r"反復処理を続行します(か|か？|か\?)?", 
+                            r"処理を続行します(か|か？|か\?)?",
+                            r"続行します(か|か？|か\?)?",
+                            r"続けます(か|か？|か\?)?"
+                        ]
+                        for pattern in continuation_patterns:
+                            response = re.sub(pattern, "", response)
+                        
+                        # 成功したらそのまま返却
+                        if response:
+                            return response
+                            
+                except Exception as e:
+                    if self.debug:
+                        print(f"エージェント応答生成エラー (リトライ {attempt+1}/{max_retries}): {str(e)}")
+                    if attempt == max_retries - 1:
+                        raise  # 最後のリトライでエラーが出たら例外送出
+            
+            # すべてのリトライに失敗した場合のフォールバック応答
+            import random
+            fallback_responses = [
+                f"この議論では、{role}として重要なのは幅広い視点から考察することです。次に、具体的な事例を検討してみてはどうでしょうか？",
+                f"この問題については様々な要素を考慮する必要があります。次のステップとして、実際の応用例について議論を深めてみましょう。",
+                f"この課題について考えると、いくつかの重要な側面があります。さらに、長期的な影響についても検討する価値があるでしょう。"
+            ]
+            return random.choice(fallback_responses)
             
         except Exception as e:
             if self.debug:
-                print(f"エージェント応答生成エラー: {str(e)}")
-            return f"[エラー: 応答生成に失敗しました]"
+                print(f"エージェント応答生成の致命的エラー: {str(e)}")
+                import traceback
+                traceback.print_exc()
+            
+            # 致命的エラー時のフォールバック（エラーメッセージを含まない）
+            import random
+            emergency_responses = [
+                f"多角的な視点からこの問題を検討すると、いくつかの重要な側面が浮かび上がります。次に、具体例を交えて議論を深めましょう。",
+                f"この議論の核心部分を考えると、いくつかの重要な要素があります。次のステップとして、実践的な応用について考察を深めてはいかがでしょう？"
+            ]
+            return random.choice(emergency_responses)
     
     def _get_default_system_prompt(self, role: str) -> str:
         """
@@ -1431,21 +1560,30 @@ class AgentPoolManager:
         if self.debug:
             print(f"エージェント実行中...")
             
-        # 再帰呼び出し防止用のセーフガード
+        # 再帰呼び出し防止用のグローバルフラグ
+        # スレッドIDとコールIDでユニークなキーを作成
         import threading
+        import uuid
         
-        # スレッドローカルストレージが初期化されていなければ初期化
-        if not hasattr(threading.current_thread(), '_run_agents_in_progress'):
-            threading.current_thread()._run_agents_in_progress = False
+        # グローバル実行状態管理用の辞書がなければ作成
+        if not hasattr(AgentPoolManager, '_run_agents_status'):
+            AgentPoolManager._run_agents_status = {}
             
-        # すでに実行中なら処理をスキップ
-        if getattr(threading.current_thread(), '_run_agents_in_progress', False):
+        # 現在のスレッドID
+        thread_id = threading.get_ident()
+        
+        # 現在のコールスタックに既存の実行がないか確認
+        if thread_id in AgentPoolManager._run_agents_status:
             if self.debug:
-                print("警告: run_agentsの再帰呼び出しを検出。処理をスキップします。")
+                print(f"警告: run_agentsはすでにスレッド {thread_id} で実行中です。再帰呼び出しを防止します。")
             return []
-            
-        # 実行中フラグを設定
-        threading.current_thread()._run_agents_in_progress = True
+
+        # 実行状態を記録
+        call_id = str(uuid.uuid4())
+        AgentPoolManager._run_agents_status[thread_id] = {
+            'call_id': call_id,
+            'start_time': time.time()
+        }
         
         try:
             use_parallel = self.config.get('use_parallel', False)
@@ -1468,12 +1606,20 @@ class AgentPoolManager:
             # システムプロンプト（あれば）
             system_prompt = blackboard.read('system_prompt') or ""
             
-            # 会話コンテキスト（あれば）
+            # 会話コンテキスト（あれば）- 過去の会話履歴を制限
             conversation_context = blackboard.read('conversation_context') or ""
+            if len(conversation_context) > 1000:  # 1000文字を超える場合は最新部分のみを使用
+                conversation_context = "...(過去の会話は省略)...\n" + conversation_context[-1000:]
+                # 黒板の内容も更新
+                blackboard.write('conversation_context', conversation_context)
+                if self.debug:
+                    print(f"会話コンテキストを短縮: {len(conversation_context)} 文字")
             
-            # 前のエージェント応答（あれば）
+            # 前のエージェント応答（あれば）- 最新の3つのみを使用
             prev_responses = blackboard.read('agent_responses') or []
-            
+            if len(prev_responses) > 3:
+                prev_responses = prev_responses[-3:]
+                
             # エージェント数を確認
             num_agents = 0
             if isinstance(self.agents, dict):
@@ -1582,8 +1728,9 @@ class AgentPoolManager:
             return responses
         finally:
             # 必ず実行されるクリーンアップ処理
-            # 実行中フラグをリセット
-            threading.current_thread()._run_agents_in_progress = False
+            # 実行状態をクリア
+            if thread_id in AgentPoolManager._run_agents_status:
+                del AgentPoolManager._run_agents_status[thread_id]
                 
     async def _generate_agent_response(self, agent_id, input_text, 
                                      system_prompt="", conversation_context="", 
@@ -1717,11 +1864,20 @@ class AgentPoolManager:
             except Exception as e:
                 if self.debug:
                     print(f"エージェント応答生成エラー: {str(e)}")
+                # エラー時の自然な応答を返す
+                fallback_responses = [
+                    f"（{role}は考え中...）",
+                    f"（{role}は議論を聞いています）",
+                    "（他のエージェントの意見を参考にしています...）",
+                    f"（{role}からの応答を待っています...）"
+                ]
+                import random
                 return {
                     'agent_id': agent_id_str,
                     'role': role,
-                    'text': f"エラーが発生しました: {str(e)[:50]}",
-                    'timestamp': time.time()
+                    'text': random.choice(fallback_responses),
+                    'timestamp': time.time(),
+                    'error': True  # エラーフラグを追加
                 }
         finally:
             # 必ず実行されるクリーンアップ処理

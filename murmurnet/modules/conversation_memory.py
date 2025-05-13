@@ -367,34 +367,58 @@ class ConversationMemory:
         """
         context = ""
         
-        # 要約があれば追加
+        # 要約があれば追加（長さ制限を追加）
         if (self.history_summary):
-            context += f"過去の会話要約:\n{self.history_summary}\n\n"
+            # 要約は最大300文字に制限
+            summary = self.history_summary[:300] + ("..." if len(self.history_summary) > 300 else "")
+            context += f"過去の会話要約:\n{summary}\n\n"
             
-        # 直近の会話を追加
+        # 直近の会話を追加（直近の会話数を制限）
         context += "最近の会話:\n"
+        # 3つまでの最近の会話に制限（以前は固定だが明示的に）
         recent_entries = self.conversation_history[-min(3, len(self.conversation_history)):]
+
         for entry in recent_entries:
-            context += f"ユーザー: {entry['user_input']}\n"
-            context += f"システム: {entry['system_response']}\n\n"
+            # 各エントリーも制限
+            user_input = entry['user_input'][:100] + ("..." if len(entry['user_input']) > 100 else "")
+            system_response = entry['system_response'][:150] + ("..." if len(entry['system_response']) > 150 else "")
+            context += f"ユーザー: {user_input}\n"
+            context += f"システム: {system_response}\n\n"
         
-        # 抽出された重要情報の追加
+        # 抽出された重要情報の追加（情報量も制限）
         if self.key_facts["entities"] or self.key_facts["topics"] or self.key_facts["context"]:
             context += "会話から抽出された情報:\n"
             
             if self.key_facts["entities"]:
-                entities_str = ", ".join([entity["value"] for entity in self.key_facts["entities"]])
+                # 最大5つの実体に制限
+                entities = self.key_facts["entities"][:5]
+                entities_str = ", ".join([entity["value"] for entity in entities])
                 context += f"関連する実体: {entities_str}\n"
             
             if self.key_facts["topics"]:
-                topics_str = ", ".join([topic["value"] for topic in self.key_facts["topics"]])
+                # 最大5つのトピックに制限
+                topics = self.key_facts["topics"][:5]
+                topics_str = ", ".join([topic["value"] for topic in topics])
                 context += f"話題: {topics_str}\n"
             
             if self.key_facts["context"]:
                 context += "コンテキスト情報:\n"
-                for key, value in self.key_facts["context"].items():
-                    context += f"- {key}: {value}\n"
+                # 最大5つのコンテキスト情報に制限
+                context_items = list(self.key_facts["context"].items())[:5]
+                for key, value in context_items:
+                    # 各項目も制限
+                    key_str = key[:30] + ("..." if len(key) > 30 else "")
+                    value_str = value[:50] + ("..." if len(value) > 50 else "")
+                    context += f"- {key_str}: {value_str}\n"
         
+        # 全体の長さも制限
+        max_context_length = 1000
+        if len(context) > max_context_length:
+            context = context[:max_context_length] + "...(以下略)"
+            
+        if self.debug:
+            print(f"コンテキスト生成: 長さ={len(context)}文字")
+            
         return context
     
     def get_conversation_context(self) -> str:

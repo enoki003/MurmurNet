@@ -284,10 +284,24 @@ class SelfDiagnosis:
             # 4. 議論が停滞している場合、エージェントの役割を変更
             centroid_movement = change_metrics.get('centroid_movement', 0.05)
             agent_movement = change_metrics.get('average_agent_movement', 0.05)
-            if (centroid_movement < 0.1 and agent_movement < 0.1 and len(agents) >= 2):
+            
+            # 停滞判定の閾値を調整（より保守的に）
+            stagnation_threshold = 0.05  # 以前は0.1
+            
+            # もうひとつの判定基準として繰り返し検出回数を使用
+            if (centroid_movement < stagnation_threshold and agent_movement < stagnation_threshold and len(agents) >= 2):
                 
-                # 停滞が連続して検出された場合のみ
-                if self._check_repeated_diagnosis('stagnation', 2):
+                # 停滞が連続検出回数を増加
+                if 'stagnation' not in self.repeat_counter:
+                    self.repeat_counter['stagnation'] = 0
+                else:
+                    self.repeat_counter['stagnation'] += 1
+                    
+                # 3回以上連続で検出された場合のみアクション（以前は2回）
+                if self.repeat_counter['stagnation'] >= 3:
+                    # カウンターをリセット
+                    self.repeat_counter['stagnation'] = 0
+                    
                     # 貢献度が最も低いエージェントを見つける
                     if agent_contributions:
                         target_id = min(agent_contributions.items(), key=lambda x: x[1])[0]
@@ -320,6 +334,13 @@ class SelfDiagnosis:
                         self.last_diagnosis = result
                         self.last_diagnosis_time = current_time
                         return result
+                else:
+                    # まだアクションを起こす段階ではないが、停滞の可能性を記録
+                    if self.debug:
+                        print(f"議論停滞の可能性を検出: {self.repeat_counter['stagnation']}/3回目")
+            else:
+                # 停滞条件が満たされない場合はカウンターをリセット
+                self.repeat_counter['stagnation'] = 0
             
             # 5. 議論が十分収束し、かつエージェント数が最小値より多い場合はエージェント削減
             convergence = change_metrics.get('opinion_convergence', 0.0)
