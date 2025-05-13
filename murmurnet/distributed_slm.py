@@ -406,10 +406,11 @@ class DistributedSLM:
             
         # 再帰呼び出し防止のためのスレッドローカル変数
         import threading
+        thread_local = threading.local()
         
         # スレッドローカルストレージが初期化されていなければ初期化
-        if not hasattr(threading.local(), '_vectorizing_agents'):
-            threading.local()._vectorizing_agents = set()
+        if not hasattr(thread_local, '_vectorizing_agents'):
+            thread_local._vectorizing_agents = set()
             
         try:
             from MurmurNet.modules.opinion_vectorizer import OpinionVectorizer
@@ -440,13 +441,13 @@ class DistributedSLM:
                     
                 # 再帰呼び出し検出 - 同じエージェントIDを処理中ならスキップ
                 agent_id_str = f"agent_{agent_id}"
-                if agent_id_str in threading.local()._vectorizing_agents:
+                if agent_id_str in thread_local._vectorizing_agents:
                     if self.config.get('debug', False):
                         self.logger.debug(f"再帰呼び出し検出: ベクトル化をスキップ agent_id={agent_id_str}")
                     continue
                 
                 # 処理中マークを設定
-                threading.local()._vectorizing_agents.add(agent_id_str)
+                thread_local._vectorizing_agents.add(agent_id_str)
                 
                 try:
                     # テキストをバッチに追加
@@ -482,7 +483,7 @@ class DistributedSLM:
                 
                 finally:
                     # 処理終了時に必ずマークを削除
-                    threading.local()._vectorizing_agents.discard(agent_id_str)
+                    thread_local._vectorizing_agents.discard(agent_id_str)
             
             # バッチ処理でベクトル化を実行
             if batch_texts and hasattr(vectorizer, 'vectorize_batch'):
@@ -775,51 +776,63 @@ class DistributedSLM:
                 role = f"アシスタント{agent_id.replace('agent_', '')}"
                 response = f"この問題については様々な視点から検討する必要があります。次に具体的な応用例を考えてみましょう。"
             
-            # 「反復処理を続行しますか？」などのメタ発言を除去
+            # 「反復処理を続行しますか？」などのメタ発言を除去（強化版）
             continuation_patterns = [
                 r"反復処理を続行します(か|か？|か\?)?", 
                 r"処理を続行します(か|か？|か\?)?",
                 r"続行します(か|か？|か\?)?",
-                r"続けます(か|か？|か\?)?"
+                r"続けます(か|か？|か\?)?",
+                r"次の(処理|ステップ|段階)に(進みます|進める|進めますか|移ります|移る|移りますか)",
+                r"(さらに|さらなる)(処理|ステップ|段階)を(行いますか|実施しますか|続けますか)",
+                r"(次に何をすれば|どうすれば)よいですか"
             ]
             import re
             for pattern in continuation_patterns:
                 response = re.sub(pattern, "", response)
             
-            # メタ発言のチェック
+            # メタ発言のチェック（拡張版）
             meta_phrases = [
                 "他のエージェント", "応答できません", "回答できません", 
                 "AIとして", "アシスタントとして", "私はAIです", 
                 "申し訳ありません", "エラー", "考え中",
-                "すみません", "対応できかねます"
+                "すみません", "対応できかねます", "私はモデル",
+                "AIモデル", "言語モデル", "モデルとして",
+                "ご質問に対して", "指示を待ちます", "コマンドを待ちます",
+                "何をお手伝い", "お答えします", "よろしくお願いします",
+                "処理を実行", "実行しました", "完了しました"
             ]
             
             contains_meta = any(phrase in response.lower() for phrase in meta_phrases)
             
-            # メタ発言が含まれる場合は修正
+            # メタ発言が含まれる場合は修正（強化版）
             if contains_meta:
                 # メタ発言を含む場合は代替応答を用意
                 import random
                 alternate_responses = [
                     "この議論では多角的な視点が重要です。次に、具体的な応用例について検討してみましょう。",
-                    "このテーマについては様々な側面から考察する必要があります。さらに、実践的な観点を加えてみてはどうでしょうか。"
+                    "このテーマについては様々な側面から考察する必要があります。さらに、実践的な観点を加えてみてはどうでしょうか。",
+                    "この問題には異なる視点から見ると新たな気づきがあるかもしれません。実際の事例に基づいて検討を進めましょう。",
+                    "このトピックを深く理解するには、いくつかの重要な要素を考慮する必要があります。まず、基本的な構造から分析してみましょう。"
                 ]
                 response = random.choice(alternate_responses)
             
-            # 次の話題誘導が含まれているか確認
+            # 次の話題誘導が含まれているか確認（強化版）
             next_topic_phrases = [
                 "さらに", "次の視点", "考えるべき点", "別の角度", "新たな質問", 
-                "議論を発展", "検討すべき"
+                "議論を発展", "検討すべき", "重要な点", "注目すべき",
+                "興味深い側面", "考慮すべき", "着目すると"
             ]
             has_next_topic = any(phrase in response for phrase in next_topic_phrases)
             
             # 次の話題誘導がない場合は追加
             if not has_next_topic and len(response) > 20:
-                # 話題誘導を追加
+                # 話題誘導を追加（バリエーション増加）
                 next_topics = [
                     "\n\nさらに考察すべき点として、この問題の実用的な側面についても検討する価値があるでしょう。",
                     "\n\n次の視点として、この議論が持つ長期的な影響について考えてみてはいかがでしょうか。",
-                    "\n\n議論を発展させるために、具体的な事例を通して理解を深めてみましょう。"
+                    "\n\n議論を発展させるために、具体的な事例を通して理解を深めてみましょう。",
+                    "\n\nもう一つの重要な観点は、この問題が異なる状況でどのように現れるかということです。",
+                    "\n\n別の角度から見ると、この問題には実践的な応用の可能性が広がっています。"
                 ]
                 import random
                 response += random.choice(next_topics)
@@ -1102,7 +1115,7 @@ class DistributedSLM:
                 'processing_time': 0.0
             }
             
-        if self.config.get('debug']:
+        if self.config.get('debug'):
             self.logger.info("バッチ処理機能を初期化しました")
     
     async def _process_batch(self):
@@ -1154,7 +1167,7 @@ class DistributedSLM:
                 
             start_time = time.time()
                 
-            if self.config.get('debug']:
+            if self.config.get('debug'):
                 self.logger.debug(f"バッチ処理開始: {batch_size}個のプロンプト, キュー残り: {len(self._batch_processor['queue'])}")
             
             # ループで1つずつ処理
@@ -1310,7 +1323,7 @@ class DistributedSLM:
             if hasattr(self, '_model_call_stats'):
                 self._model_call_stats['processing_time'] += processing_time
                 
-            if self.config.get('debug'] and batch_size > 0:
+            if self.config.get('debug') and batch_size > 0:
                 avg_time = processing_time / batch_size
                 avg_model_time = total_duration / batch_size if batch_size > 0 else 0
                 efficiency = avg_model_time / avg_time if avg_time > 0 else 0
@@ -1372,7 +1385,7 @@ class DistributedSLM:
                 with open(chat_template, 'r', encoding='utf-8') as f:
                     template_content = f.read()
             except Exception as e:
-                if self.config.get('debug']:
+                if self.config.get('debug'):
                     self.logger.warning(f"テンプレートロードエラー: {e}")
         
         # モデル設定
@@ -1397,7 +1410,7 @@ class DistributedSLM:
             model = Llama(**model_kwargs)
             self._batch_processor['model'] = model
             
-            if self.config.get('debug']:
+            if self.config.get('debug'):
                 self.logger.info(f"バッチ処理用モデルを初期化しました: {os.path.basename(model_path)}")
                 
             return model

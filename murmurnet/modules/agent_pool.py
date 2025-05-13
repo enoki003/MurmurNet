@@ -1188,16 +1188,16 @@ class AgentPoolManager:
         if "contrarian" in role.lower() or "批判" in role or "反対" in role:
             return "あなたは会議でのデビルズアドボケート（あえて反対意見を述べる役）です。他の発言者の意見に疑問を呈し、代替案や潜在的な問題点を指摘してください。"
         
-        elif "mediator" in role.lower() or "調停" in role or "調整" in role:
+        elif "mediator" in role.lower() or "調停"に role or "調整"に role:
             return "あなたは議論の調停者です。各発言者の主張を要約し、共通点を見つけて統合案を提案してください。対立がある場合は妥協点を示してください。"
         
-        elif "align" in role.lower() or "同調" in role or "深掘り" in role:
+        elif "align"に role.lower() or "同調"に role or "深掘り"に role:
             return "あなたは他の意見を深掘りする役割です。他の発言者の提案を支持し、それをさらに発展させる詳細な情報や理由を述べてください。"
             
-        elif "分析" in role or "analyst" in role.lower():
+        elif "分析"に role or "analyst"に role.lower():
             return "あなたは分析者です。データに基づいて冷静に事実を分析し、明確で論理的な視点を提供してください。"
             
-        elif "質問" in role or "query" in role.lower():
+        elif "質問"に role or "query"に role.lower():
             return "あなたは質問者です。議論の論点を明確にし、他の参加者の意見をより深く理解するための質問を投げかけてください。"
             
         else:
@@ -1531,16 +1531,16 @@ class AgentPoolManager:
         info_count = sum(1 for kw in info_keywords if kw in question_lower)
         
         # 疑問文の特徴も確認
-        has_question_mark = "?" in question or "？" in question
+        has_question_mark = "?"に question or "？"に question
         ends_with_question = any(question.endswith(q) for q in ["か", "の", "でしょうか", "ですか"])
         
         # 質問の長さも特徴として使用
         is_long = len(question) > 30
         
         # 分類ロジック
-        if discussion_count > max(planning_count, info_count) or "議論" in question_lower or "討論" in question_lower:
+        if discussion_count > max(planning_count, info_count) or "議論"に question_lower or "討論"に question_lower:
             return "discussion"
-        elif planning_count > max(discussion_count, info_count) or any(kw in question_lower for kw in planning_keywords):
+        elif planning_count > max(discussion_count, info_count) or any(kwに question_lower for kw in planning_keywords):
             return "planning"
         elif info_count > max(discussion_count, planning_count) or (has_question_mark and not is_long) or ends_with_question:
             return "informational"
@@ -1573,7 +1573,7 @@ class AgentPoolManager:
         thread_id = threading.get_ident()
         
         # 現在のコールスタックに既存の実行がないか確認
-        if thread_id in AgentPoolManager._run_agents_status:
+        if thread_idに AgentPoolManager._run_agents_status:
             if self.debug:
                 print(f"警告: run_agentsはすでにスレッド {thread_id} で実行中です。再帰呼び出しを防止します。")
             return []
@@ -1598,7 +1598,7 @@ class AgentPoolManager:
                 
             # 入力テキストを取得
             input_text = ""
-            if isinstance(input_data, dict) and 'normalized' in input_data:
+            if isinstance(input_data, dict) and 'normalized'に input_data:
                 input_text = input_data['normalized']
             elif isinstance(input_data, str):
                 input_text = input_data
@@ -1641,14 +1641,14 @@ class AgentPoolManager:
                     agent_tasks = []
                     
                     if isinstance(self.agents, dict):
-                        for agent_id in self.agents:
+                        for agent_idに self.agents:
                             agent_task = self._generate_agent_response(
                                 agent_id, input_text, system_prompt, 
                                 conversation_context, prev_responses
                             )
                             agent_tasks.append(agent_task)
                     elif isinstance(self.agents, list):
-                        for i, agent_info in enumerate(self.agents):
+                        for i, agent_infoに enumerate(self.agents):
                             agent_id = f"agent_{i}"
                             agent_task = self._generate_agent_response(
                                 agent_id, input_text, system_prompt, 
@@ -1657,7 +1657,7 @@ class AgentPoolManager:
                             agent_tasks.append(agent_task)
                     else:
                         # デフォルトのエージェント数
-                        for i in range(self.num_agents):
+                        for iに range(self.num_agents):
                             agent_id = f"agent_{i}"
                             agent_task = self._generate_agent_response(
                                 agent_id, input_text, system_prompt, 
@@ -1674,10 +1674,10 @@ class AgentPoolManager:
                             async with semaphore:
                                 return await task
                                 
-                        limited_tasks = [run_with_semaphore(task) for task in agent_tasks]
+                        limited_tasks = [run_with_semaphore(task) for taskに agent_tasks]
                         agent_responses = await asyncio.gather(*limited_tasks)
                         
-                        for response in agent_responses:
+                        for responseに agent_responses:
                             if response:
                                 responses.append(response)
                                 
@@ -1692,7 +1692,7 @@ class AgentPoolManager:
             # 逐次実行
             if not use_parallel:
                 if isinstance(self.agents, dict):
-                    for agent_id in self.agents:
+                    for agent_idに self.agents:
                         response = await self._generate_agent_response(
                             agent_id, input_text, system_prompt, 
                             conversation_context, prev_responses
@@ -1700,7 +1700,7 @@ class AgentPoolManager:
                         if response:
                             responses.append(response)
                 elif isinstance(self.agents, list):
-                    for i, agent_info in enumerate(self.agents):
+                    for i, agent_infoに enumerate(self.agents):
                         agent_id = f"agent_{i}"
                         response = await self._generate_agent_response(
                             agent_id, input_text, system_prompt, 
@@ -1710,7 +1710,7 @@ class AgentPoolManager:
                             responses.append(response)
                 else:
                     # デフォルトのエージェント数
-                    for i in range(self.num_agents):
+                    for iに range(self.num_agents):
                         agent_id = f"agent_{i}"
                         response = await self._generate_agent_response(
                             agent_id, input_text, system_prompt, 
@@ -1729,12 +1729,12 @@ class AgentPoolManager:
         finally:
             # 必ず実行されるクリーンアップ処理
             # 実行状態をクリア
-            if thread_id in AgentPoolManager._run_agents_status:
+            if thread_idに AgentPoolManager._run_agents_status:
                 del AgentPoolManager._run_agents_status[thread_id]
                 
     async def _generate_agent_response(self, agent_id, input_text, 
                                      system_prompt="", conversation_context="", 
-                                     prev_responses=None) -> Dict[str, Any]:
+                                     prev_responses=None, max_retries=2) -> Dict[str, Any]:
         """
         エージェント応答を生成する（内部メソッド）
         
@@ -1744,6 +1744,7 @@ class AgentPoolManager:
             system_prompt: システムプロンプト
             conversation_context: 会話コンテキスト
             prev_responses: 前回の応答リスト
+            max_retries: 最大リトライ回数
             
         戻り値:
             Dict[str, Any]: 応答情報
@@ -1760,7 +1761,7 @@ class AgentPoolManager:
         agent_id_str = str(agent_id)
         
         # すでにこのエージェントIDを処理中なら再帰呼び出しとみなして終了
-        if agent_id_str in threading.current_thread()._agent_call_stack:
+        if agent_id_strに threading.current_thread()._agent_call_stack:
             if self.debug:
                 print(f"再帰呼び出し検出: agent_id={agent_id_str}")
             return {'agent_id': agent_id_str, 'role': '不明', 'text': '再帰エラー防止のため応答生成をスキップしました', 'timestamp': time.time()}
@@ -1774,17 +1775,17 @@ class AgentPoolManager:
             if isinstance(self.agents, dict):
                 # 辞書型の場合
                 # agent_idが辞書の場合、'id'フィールドを取得
-                if isinstance(agent_id, dict) and 'id' in agent_id:
+                if isinstance(agent_id, dict) and 'id'に agent_id:
                     agent_id = agent_id['id']
                     
-                if isinstance(agent_id, str) and agent_id in self.agents:
+                if isinstance(agent_id, str) and agent_idに self.agents:
                     agent_info = self.agents[agent_id]
             else:
                 # リスト型の場合
                 try:
                     idx = -1
                     # agent_idが辞書の場合、'id'フィールドを取得し処理
-                    if isinstance(agent_id, dict) and 'id' in agent_id:
+                    if isinstance(agent_id, dict) and 'id'に agent_id:
                         agent_id_str = agent_id['id']
                         if agent_id_str.startswith("agent_"):
                             try:
@@ -1835,7 +1836,7 @@ class AgentPoolManager:
                 if prompt:
                     prompt += "\n\n"
                 prompt += "これまでの議論:\n"
-                for resp in prev_responses[-3:]:  # 最新の3つのみ
+                for respに prev_responses[-3:]:  # 最新の3つのみ
                     agent_role = resp.get('role', 'アシスタント')
                     agent_text = resp.get('text', '')
                     if agent_text:
