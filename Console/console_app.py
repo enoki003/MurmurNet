@@ -1,0 +1,318 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+MurmurNet コンソールアプリケーション
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+分散SLMシステムのコマンドラインインターフェース
+対話的に質問応答を行うためのコンソールUI
+
+作者: Yuhi Sonoki
+"""
+# C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim
+import sys
+import os
+import argparse
+import asyncio
+from pathlib import Path
+import logging
+
+# murmurnetパスを追加
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+murmurnet_dir = project_root / "MurmurNet"
+sys.path.append(str(project_root))  # プロジェクトルートをパスに追加
+
+# ここでモジュールをインポート
+from MurmurNet.distributed_slm import DistributedSLM
+
+# ログ設定
+parser = argparse.ArgumentParser(description="MurmurNet Console App")
+parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
+parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
+parser.add_argument('--iter', type=int, default=1, help='反復回数（デフォルト: 1）')
+parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
+parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
+parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
+# RAGモードのオプションを追加
+parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
+                    help='RAGモード（dummy: ダミーモード、zim: ZIMファイル使用）')
+parser.add_argument('--zim-path', type=str, 
+                    default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
+                    help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
+# 並列処理の安全性に関するオプション
+parser.add_argument('--safe-parallel', action='store_true', 
+                    help='安全な並列処理モード（GGMLエラー回避のためのグローバルロックを使用）')
+parser.add_argument('--max-workers', type=int, default=0, 
+                    help='並列処理時の最大ワーカー数（0: 自動決定）')
+# Boids型自己増殖エージェント機能
+parser.add_argument('--boids', action='store_true', 
+                    help='Boids型自己増殖エージェント機能を有効化（実験的）')
+parser.add_argument('--max-agents', type=int, default=5, 
+                    help='Boids型自己増殖時の最大エージェント数（デフォルト: 5）')
+parser.add_argument('--min-agents', type=int, default=2, 
+                    help='Boids型自己増殖時の最小エージェント数（デフォルト: 2）')
+# 表示形式オプション
+parser.add_argument('--compact', action='store_true', 
+                    help='コンパクト表示モード（詳細情報を非表示）')
+parser.add_argument('--no-time', action='store_true', 
+                    help='実行時間を表示しない')
+# 会話記憶オプション
+parser.add_argument('--no-memory', action='store_true', 
+                    help='会話記憶機能を無効化')
+args, _ = parser.parse_known_args()
+
+log_level = logging.DEBUG if args.debug else logging.INFO
+logging.basicConfig(
+    filename='console_app.log' if args.log else None,
+    level=log_level,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+# コンソールにもログ出力（ファイル出力時のみ追加）
+if args.log:
+    console = logging.StreamHandler()
+    console.setLevel(log_level)
+    console.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logging.getLogger('').addHandler(console)
+
+# libzimがインストールされているか確認
+try:
+    from libzim.reader import Archive
+    HAS_LIBZIM = True
+    print("libzimライブラリが利用可能です")
+except ImportError:
+    HAS_LIBZIM = False
+    print("警告: libzimライブラリがインストールされていません")
+    print("ZIMモードを使用するには、以下のコマンドを実行してください:")
+    print("pip install libzim")
+    if args.rag_mode == "zim":
+        print("ZIMモードが指定されましたが、libzimがないためdummyモードにフォールバックします")
+
+def print_debug(slm):
+    """デバッグモード時の詳細情報表示"""
+    print("\n[DEBUG] 黒板の内容:")
+    # 簡略化されたビューを使用
+    debug_view = slm.blackboard.get_debug_view()
+    for k, v in debug_view.items():
+        print(f"  {k}: {v}")
+    
+    print("\n[DEBUG] RAG結果:")
+    print(f"  {slm.blackboard.read('rag')}")
+    
+    # 要約結果を表示
+    if slm.use_summary:
+        print("\n[DEBUG] 要約結果:")
+        for i in range(slm.iterations):
+            summary = slm.blackboard.read(f'summary_{i}')
+            if summary:
+                print(f"  反復{i+1}の要約: {summary[:100]}...")
+    
+    # 通常のエージェント出力
+    if not args.boids:
+        print("\n[DEBUG] エージェント出力:")
+        for i in range(slm.num_agents):
+            output = slm.blackboard.read(f'agent_{i}_output')
+            if output:
+                # 長い出力は省略表示
+                if len(output) > 100:
+                    output = output[:100] + "..."
+                print(f"  エージェント{i+1}: {output}")
+    # Boids型自己増殖エージェントの場合
+    else:
+        print("\n[DEBUG] Boids型自己増殖エージェント情報:")
+        boids_info = slm.blackboard.read('boids_info')
+        if boids_info:
+            print(f"  アクティブなエージェント数: {len(boids_info.get('active_agents', []))}")
+            diagnoses = boids_info.get('diagnoses', [])
+            if diagnoses:
+                print("  診断結果:")
+                for diag in diagnoses:
+                    print(f"    反復{diag.get('iteration', '?')}: {diag.get('action', 'なし')} ({diag.get('reason', '')})")
+
+def print_system_info():
+    """システム情報を表示"""
+    import platform
+    print(f"システム情報: {platform.system()} {platform.release()} ({platform.architecture()[0]})")
+    
+    # PyTorch情報
+    try:
+        import torch
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"PyTorch: {torch.__version__}, デバイス: {device}")
+        if device.type == "cuda":
+            print(f"CUDA: {torch.version.cuda}, デバイス数: {torch.cuda.device_count()}")
+            for i in range(torch.cuda.device_count()):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+    except ImportError:
+        print("PyTorch: インストールされていません")
+    
+    # 使用可能なRAMの表示
+    try:
+        import psutil
+        vm = psutil.virtual_memory()
+        print(f"メモリ: {vm.available / (1024**3):.1f} GB / {vm.total / (1024**3):.1f} GB (空き: {vm.percent}%)")
+    except ImportError:
+        print("psutilがインストールされていないため、メモリ情報を取得できません")
+
+async def chat_loop():
+    """会話ループのメイン関数"""
+    # 設定
+    config = {
+        # "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
+        # "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
+        "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
+        "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
+
+        "num_agents": args.agents,
+        "iterations": args.iter,
+        "use_summary": not args.no_summary,
+        "use_parallel": args.parallel,
+        "debug": args.debug,
+        # RAG設定
+        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
+        "rag_score_threshold": 0.5,
+        "rag_top_k": 3,
+        "embedding_model": "all-MiniLM-L6-v2",
+        # 並列処理の安全性向上オプション
+        "safe_parallel": args.safe_parallel,
+        "max_workers": args.max_workers if args.max_workers > 0 else None,
+        "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
+        # Boids型自己増殖エージェント設定
+        "use_boids": args.boids,
+        "max_agents": args.max_agents,
+        "min_agents": args.min_agents,
+        # 会話記憶設定
+        "use_memory": not args.no_memory,
+    }
+
+    # ZIMモードの場合、パスを追加
+    if args.rag_mode == "zim":
+        config["zim_path"] = args.zim_path
+        # ZIMファイルの存在確認
+        if not os.path.exists(args.zim_path):
+            print(f"警告: 指定されたZIMファイルが見つかりません: {args.zim_path}")
+            print("ファイルパスが正しいか確認してください")
+        else:
+            print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
+    
+    # システム情報表示
+    if not args.compact:
+        print_system_info()
+    
+    # SLMインスタンス作成
+    try:
+        slm = DistributedSLM(config)
+    except Exception as e:
+        print(f"エラー: SLMインスタンスの作成に失敗しました: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return
+    
+    # RAGモードのチェック
+    try:
+        from MurmurNet.modules.rag_retriever import RAGRetriever
+        rag = RAGRetriever(config)
+        if args.rag_mode == "zim" and rag.mode == "dummy":
+            print("警告: ZIMモードを指定しましたが、dummyモードになっています")
+            print("以下の理由が考えられます:")
+            print("- libzimライブラリがインストールされていない")
+            print("- ZIMファイルのパスが間違っている")
+            print("- ZIMファイルが壊れている")
+    except Exception as e:
+        print(f"警告: RAGモードの確認に失敗しました: {e}")
+    
+    print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
+    print("終了するには 'quit' または 'exit' を入力してください")
+    print("メモリをクリアするには 'clear' または 'reset' を入力してください")
+    
+    if args.parallel:
+        print("[設定] 並列処理: 有効")
+        if args.safe_parallel:
+            print("[設定] 安全な並列処理モード: 有効（GGMLエラー回避用）")
+        if args.max_workers > 0:
+            print(f"[設定] 最大並列ワーカー数: {args.max_workers}")
+    if not args.no_summary:
+        print("[設定] 要約機能: 有効")
+    print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
+    if args.boids:
+        print(f"[設定] Boids型自己増殖エージェント: 有効 (最小{args.min_agents}、最大{args.max_agents})")
+    if not args.no_memory:
+        print("[設定] 会話記憶機能: 有効")
+    if args.rag_mode == "zim":
+        print(f"[設定] ZIMファイル: {args.zim_path}")
+    
+    history = []
+    
+    while True:
+        try:
+            # ユーザー入力
+            user_input = input("\nあなた> ")
+            user_input = user_input.strip()
+            
+            # 終了コマンド
+            if user_input.lower() in ["quit", "exit", "終了", "q"]:
+                break
+            
+            # 空入力はスキップ
+            if not user_input:
+                continue
+                
+            # メモリクリアコマンド
+            if user_input.lower() in ["clear", "reset", "クリア", "リセット"]:
+                try:
+                    slm.reset_memory()
+                    print("会話記憶をクリアしました")
+                except Exception as e:
+                    print(f"メモリクリア中にエラーが発生しました: {e}")
+                continue
+            
+            # 履歴に追加
+            history.append({"role": "user", "content": user_input})
+            
+            # 生成開始
+            print("AI> ", end="", flush=True)
+            
+            try:
+                start_time = asyncio.get_event_loop().time()
+                response = await slm.generate(user_input)
+                elapsed = asyncio.get_event_loop().time() - start_time
+            
+                # 応答表示
+                print(f"{response}")
+                
+                # 実行時間表示
+                if not args.no_time and not args.compact:
+                    print(f"\n[実行時間: {elapsed:.2f}秒]")
+                
+                # デバッグ情報表示
+                if args.debug:
+                    print_debug(slm)
+                    print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
+                
+                # 履歴に追加
+                history.append({"role": "assistant", "content": response})
+                
+            except Exception as e:
+                print(f"\n応答生成中にエラーが発生しました: {e}")
+                if args.debug:
+                    import traceback
+                    traceback.print_exc()
+            
+        except KeyboardInterrupt:
+            print("\n中断されました。終了するには 'exit' を入力してください。")
+        except Exception as e:
+            print(f"\nエラーが発生しました: {e}")
+            if args.debug:
+                import traceback
+                traceback.print_exc()
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(chat_loop())
+    except KeyboardInterrupt:
+        print("\nプログラムを終了します。")
+    except Exception as e:
+        print(f"予期せぬエラーが発生しました: {e}")
+        if "--debug" in sys.argv:
+            import traceback
+            traceback.print_exc()

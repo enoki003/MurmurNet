@@ -1,0 +1,111 @@
+以下、大学院レベルの論述形式で、本システムの設計から動作に至るまでを包括的にまとめる。専門用語は定義し、構造的かつ批判的観点を含めた記述とする。  
+
+---
+
+## 1. はじめに  
+近年、大規模言語モデル（LLM）は顕著な性能向上を示す一方で、計算資源要求の肥大化、エネルギー消費の増大、ハルシネーションの発生といった課題が顕在化している。本研究は、これらの問題に対する代替的パラダイムとして、計算的に軽量な小規模言語モデル（SLM）を多数並列・協調的に動作させる「分散創発型アーキテクチャ」を提案する。SLM群は中央制御を持たず、単純な共有メモリ（黒板）を介した反復的情報交換により全体として知性的振る舞いを創発する。本稿では、システムを「モジュール」としてパッケージ化するための詳細設計と、その動作フローを厳密に記述する。  
+
+---
+
+## 2. システムアーキテクチャ  
+
+### 2.1 モジュール化の概念設計  
+本システムは、利用者が単一の関数呼び出しで高度な対話生成機能を利用できる「ブラックボックス型モジュール」として提供される。内部では以下の構成要素が連携する：  
+1. **Input Reception**：入力の前処理  
+2. **Blackboard（共有メモリ）**：状態の蓄積と共有  
+3. **Summary Engine**：情報圧縮による要約  
+4. **Agent Pool**：Gemma-3 1B モデルエージェントおよび役割型エージェント  
+5. **RAG Knowledge Base**：埋め込み検索による外部知識取得  
+6. **Output Agent**：最終応答の合成  
+
+これらはすべて Python パッケージ `distributed_slm` 以下にモジュール化され、外部 API `generate(input_text)` を公開する。  
+
+### 2.2 コンポーネント責務  
+| コンポーネント             | 責務                                                         |
+|-------------------------|--------------------------------------------------------------|
+| Input Reception         | テキスト正規化、トークナイズ、埋め込み計算                           |
+| Blackboard              | エントリの時系列的蓄積・読み書き管理                                 |
+| Summary Engine          | 黒板上情報の圧縮的要約                                         |
+| Model Agent             | Gemma-3 1B による言語生成処理                                    |
+| Functional Agent        | 分析・批判・補足など特定機能を担う小規模エージェント                     |
+| RAG Knowledge Base      | Cosine 類似度に基づく埋め込み検索、外部ドキュメント添付                   |
+| Output Agent            | 黒板内容の統合的再要約および最終テキスト生成                          |
+
+---
+
+## 3. 詳細設計  
+
+### 3.1 パッケージ構造  
+```
+distributed_slm/
+├─ __init__.py              # DistributedSLM クラス定義
+├─ config.py                # デフォルト設定と設定読み込み
+├─ preprocess.py            # Input Reception 実装
+├─ blackboard.py            # Blackboard 実装（SQLiteバックエンド）
+├─ summary.py               # Summary Engine 実装
+├─ agents/
+│    ├─ base.py             # Agent 抽象基底クラス
+│    ├─ model_agent.py      # Gemma-3 1B エージェント
+│    └─ functional_agent.py # 分析・批判エージェント
+├─ rag.py                   # RAG Knowledge Base 実装
+├─ synth.py                 # Output Agent 実装
+└─ utils.py                 # 共通ユーティリティ
+```
+
+### 3.2 クラス設計  
+
+```python
+class DistributedSLM:
+    def __init__(self, config: dict):
+        self.config = load_config(config)
+        self.bb = Blackboard(self.config['blackboard'])
+        self.summary = SummaryEngine(self.config['summary'])
+        self.agent_pool = AgentPool(self.config['agents'])
+        self.rag = RAGRetriever(self.config['rag'])
+        self.output = OutputAgent(self.config['output'])
+
+    async def generate(self, input_text: str) -> str:
+        # 1. 入力受付
+        entry = self.bb.write({'type':'user', 'text':input_text})
+        # 2. 初回要約
+        self.summary.summarize(self.bb.read_all())
+        # 3. エージェント群実行（反復）
+        for _ in range(self.config['iterations']):
+            await self.agent_pool.run_all(self.bb.snapshot())
+            if self.config['use_rag']:
+                docs = self.rag.retrieve(self.bb.latest_embedding())
+                self.bb.write({'type':'rag', 'docs':docs})
+            self.summary.summarize(self.bb.read_all())
+        # 4. 最終応答生成
+        response = self.output.generate(self.bb.read_all())
+        return response
+```
+
+---
+
+## 4. 動作フロー  
+
+1. **呼び出し**: `await bot.generate("質問")`  
+2. **黒板初期化**: ユーザー発話を黒板に書き込む  
+3. **要約サイクル**: 黒板を要約して冗長性を排除  
+4. **並列エージェント実行**:  
+   - Gemma-3 1B が最新要約をもとに生成  
+   - Functional Agent が分析・批判を行い黒板に追記  
+5. **RAG検索**（オプション）: 埋め込み近傍で外部知識を取得し黒板に追加  
+6. **再要約**: 情報が増大した黒板を再度要約  
+7. **反復**: 所定回数繰り返し、議論を深化  
+8. **最終合成**: Output Agent が黒板全体の情報を統合し一貫した自然文を生成  
+9. **返却**: クライアントにテキスト応答を返す  
+
+---
+
+## 5. 設計原則  
+
+- **KISS**：各モジュールは単機能に徹し、インターフェースを明確化  
+- **設定駆動**：YAML/JSON でエージェント数や反復回数など全パラメータを定義  
+- **プラグイン性**：Agent は抽象基底クラス実装で追加可能  
+- **ブラックボックス性**：外部からは単一メソッド呼び出しのみ意識すればよい  
+
+---
+
+以上により、本モジュールは「大規模モデルを動かす感覚で、内部では多数の小規模モデルが自己組織的に協調する」新しいAIアーキテクチャを実現する。モジュール化により、研究者や開発者は容易に機能拡張・パラメータ調整を行え、Tauri/React 等のフロントエンドとシームレスに統合可能である。
