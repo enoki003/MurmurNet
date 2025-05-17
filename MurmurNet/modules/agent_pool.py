@@ -1215,9 +1215,8 @@ class AgentPoolManager:
         """
         if "contrarian" in role.lower() or "批判" in role or "反対" in role:
             return "あなたは会議でのデビルズアドボケート（あえて反対意見を述べる役）です。他の発言者の意見に疑問を呈し、代替案や潜在的な問題点を指摘してください。"
-          elif "mediator" in role.lower() or "調停" in role or "調整" in role:
+        elif "mediator" in role.lower() or "調停" in role or "調整" in role:
             return "あなたは議論の調停者です。各発言者の主張を要約し、共通点を見つけて統合案を提案してください。対立がある場合は妥協点を示してください。"
-        
         elif "align" in role.lower() or "同調" in role or "深掘り" in role:
             return "あなたは他の意見を深掘りする役割です。他の発言者の提案を支持し、それをさらに発展させる詳細な情報や理由を述べてください。"
             
@@ -1855,7 +1854,7 @@ class AgentPoolManager:
             
             if self.debug:
                 print(f"{len(responses)}個のエージェント応答を生成")
-                  return responses
+                return responses
         finally:
             # 必ず実行されるクリーンアップ処理
             # 経過時間を計測
@@ -1875,163 +1874,164 @@ class AgentPoolManager:
                     threading._run_agents_call_info.running = False
                     
             # 下位互換性維持のための処理
-            if hasattr(threading, '_run_agents_call_stack') and hasattr(threading._run_agents_call_stack, 'stack'):
-                threading._run_agents_call_stack.stack.discard(frame_id)
-                  async def _generate_agent_response(self, agent_id, input_text, 
-                                     system_prompt="", conversation_context="", 
-                                     prev_responses=None, max_retries=2) -> Dict[str, Any]:
-        """
-        エージェント応答を生成する（内部メソッド）
-        
-        引数:
-            agent_id: エージェントID
-            input_text: 入力テキスト
-            system_prompt: システムプロンプト
-            conversation_context: 会話コンテキスト
-            prev_responses: 前回の応答リスト
-            max_retries: 最大リトライ回数
+                if hasattr(threading, '_run_agents_call_stack') and hasattr(threading._run_agents_call_stack, 'stack'):
+                    threading._run_agents_call_stack.stack.discard(frame_id)
+    
+        async def _generate_agent_response(self, agent_id, input_text, 
+                                           system_prompt="", conversation_context="", 
+                                           prev_responses=None, max_retries=2) -> Dict[str, Any]:
+            """
+            エージェント応答を生成する（内部メソッド）
             
-        戻り値:
-            Dict[str, Any]: 応答情報
-        """
-        # 再帰呼び出し防止用セーフガード
-        # スレッドローカル変数を使用してコールスタックを追跡
-        import threading
-        import time
-        
-        agent_call_id = f"response_gen_{time.time()}"
-        
-        # スレッドローカルストレージが初期化されていなければ初期化
-        if not hasattr(threading.current_thread(), '_agent_call_stack'):
-            threading.current_thread()._agent_call_stack = set()
+            引数:
+                agent_id: エージェントID
+                input_text: 入力テキスト
+                system_prompt: システムプロンプト
+                conversation_context: 会話コンテキスト
+                prev_responses: 前回の応答リスト
+                max_retries: 最大リトライ回数
+                
+            戻り値:
+                Dict[str, Any]: 応答情報
+            """
+            # 再帰呼び出し防止用セーフガード
+            # スレッドローカル変数を使用してコールスタックを追跡
+            import threading
+            import time
             
-        # エージェントIDを文字列化
-        agent_id_str = str(agent_id)
-        
-        # すでにこのエージェントIDを処理中なら再帰呼び出しとみなして終了
-        if agent_id_str in threading.current_thread()._agent_call_stack:
-            if self.debug:
-                print(f"再帰呼び出し検出: agent_id={agent_id_str}")
-            return {'agent_id': agent_id_str, 'role': '不明', 'text': '再帰エラー防止のため応答生成をスキップしました', 'timestamp': time.time()}
-        
-        # コールスタックに追加
-        threading.current_thread()._agent_call_stack.add(agent_id_str)
-        
-        # 実行時間計測開始
-        start_time = time.time()
-        
-        try:
-            # エージェント情報を取得
-            agent_info = None
-            if isinstance(self.agents, dict):
-                # 辞書型の場合
-                # agent_idが辞書の場合、'id'フィールドを取得
-                if isinstance(agent_id, dict) and 'id' in agent_id:
-                    agent_id = agent_id['id']
-                    
-                if isinstance(agent_id, str) and agent_id in self.agents:
-                    agent_info = self.agents[agent_id]
-            else:
-                # リスト型の場合
-                try:
-                    idx = -1
-                    # agent_idが辞書の場合、'id'フィールドを取得し処理
-                    if isinstance(agent_id, dict) and 'id' in agent_id:
-                        agent_id_str = agent_id['id']
-                        if agent_id_str.startswith("agent_"):
-                            try:
-                                idx = int(agent_id_str.replace("agent_", ""))
-                            except ValueError:
-                                idx = -1
-                    elif isinstance(agent_id, str) and agent_id.startswith("agent_"):
-                        try:
-                            idx = int(agent_id.replace("agent_", ""))
-                        except ValueError:
-                            idx = -1
-                    elif isinstance(agent_id, int):
-                        idx = agent_id
-                        
-                    if 0 <= idx < len(self.agents):
-                        agent_info = self.agents[idx]
-                except (ValueError, IndexError, TypeError):
-                    agent_info = None
+            agent_call_id = f"response_gen_{time.time()}"
             
-            if not agent_info:
-                # エージェント情報が取得できなければデフォルト情報を使用
-                agent_info = {
-                    'role': 'アシスタント',
-                    'system_prompt': ''
-                }
+            # スレッドローカルストレージが初期化されていなければ初期化
+            if not hasattr(threading.current_thread(), '_agent_call_stack'):
+                threading.current_thread()._agent_call_stack = set()
                 
-            # エージェントの役割を取得
-            role = agent_info.get('role', 'アシスタント')
+            # エージェントIDを文字列化
+            agent_id_str = str(agent_id)
             
-            # エージェント固有のシステムプロンプト
-            agent_system = agent_info.get('system_prompt', '')
-            if not agent_system:
-                agent_system = self._get_default_system_prompt(role)
-                
-            # プロンプトの組み立て
-            prompt = agent_system
-            if system_prompt and not prompt:
-                prompt = system_prompt
-                
-            # 会話履歴を追加
-            if conversation_context:
-                if prompt:
-                    prompt += "\n\n"
-                prompt += conversation_context
-                
-            # 前の応答を追加
-            if prev_responses:
-                if prompt:
-                    prompt += "\n\n"
-                prompt += "これまでの議論:\n"
-                for resp in prev_responses[-3:]:  # 最新の3つのみ
-                    agent_role = resp.get('role', 'アシスタント')
-                    agent_text = resp.get('text', '')
-                    if agent_text:
-                        prompt += f"{agent_role}: {agent_text}\n"
-                        
-            # 入力を追加
-            if prompt:
-                prompt += "\n\n"
-            prompt += f"クエリ: {input_text}\n"
-            prompt += f"\nあなたは{role}として発言してください。"
+            # すでにこのエージェントIDを処理中なら再帰呼び出しとみなして終了
+            if agent_id_str in threading.current_thread()._agent_call_stack:
+                if self.debug:
+                    print(f"再帰呼び出し検出: agent_id={agent_id_str}")
+                return {'agent_id': agent_id_str, 'role': '不明', 'text': '再帰エラー防止のため応答生成をスキップしました', 'timestamp': time.time()}
+            
+            # コールスタックに追加
+            threading.current_thread()._agent_call_stack.add(agent_id_str)
+            
+            # 実行時間計測開始
+            start_time = time.time()
             
             try:
-                # LLM呼び出し
-                response_text = await self.llm.generate(prompt)
+                # エージェント情報を取得
+                agent_info = None
+                if isinstance(self.agents, dict):
+                    # 辞書型の場合
+                    # agent_idが辞書の場合、'id'フィールドを取得
+                    if isinstance(agent_id, dict) and 'id' in agent_id:
+                        agent_id = agent_id['id']
+                        
+                    if isinstance(agent_id, str) and agent_id in self.agents:
+                        agent_info = self.agents[agent_id]
+                else:
+                    # リスト型の場合
+                    try:
+                        idx = -1
+                        # agent_idが辞書の場合、'id'フィールドを取得し処理
+                        if isinstance(agent_id, dict) and 'id' in agent_id:
+                            agent_id_str = agent_id['id']
+                            if agent_id_str.startswith("agent_"):
+                                try:
+                                    idx = int(agent_id_str.replace("agent_", ""))
+                                except ValueError:
+                                    idx = -1
+                        elif isinstance(agent_id, str) and agent_id.startswith("agent_"):
+                            try:
+                                idx = int(agent_id.replace("agent_", ""))
+                            except ValueError:
+                                idx = -1
+                        elif isinstance(agent_id, int):
+                            idx = agent_id
+                            
+                        if 0 <= idx < len(self.agents):
+                            agent_info = self.agents[idx]
+                    except (ValueError, IndexError, TypeError):
+                        agent_info = None
                 
-                # 応答情報の構築
-                response = {
-                    'agent_id': agent_id_str,
-                    'role': role,
-                    'text': response_text,
-                    'timestamp': time.time()
-                }
+                if not agent_info:
+                    # エージェント情報が取得できなければデフォルト情報を使用
+                    agent_info = {
+                        'role': 'アシスタント',
+                        'system_prompt': ''
+                    }
+                    
+                # エージェントの役割を取得
+                role = agent_info.get('role', 'アシスタント')
                 
-                return response
+                # エージェント固有のシステムプロンプト
+                agent_system = agent_info.get('system_prompt', '')
+                if not agent_system:
+                    agent_system = self._get_default_system_prompt(role)
+                    
+                # プロンプトの組み立て
+                prompt = agent_system
+                if system_prompt and not prompt:
+                    prompt = system_prompt
+                    
+                # 会話履歴を追加
+                if conversation_context:
+                    if prompt:
+                        prompt += "\n\n"
+                    prompt += conversation_context
+                    
+                # 前の応答を追加
+                if prev_responses:
+                    if prompt:
+                        prompt += "\n\n"
+                    prompt += "これまでの議論:\n"
+                    for resp in prev_responses[-3:]:  # 最新の3つのみ
+                        agent_role = resp.get('role', 'アシスタント')
+                        agent_text = resp.get('text', '')
+                        if agent_text:
+                            prompt += f"{agent_role}: {agent_text}\n"
+                            
+                # 入力を追加
+                if prompt:
+                    prompt += "\n\n"
+                prompt += f"クエリ: {input_text}\n"
+                prompt += f"\nあなたは{role}として発言してください。"
                 
-            except Exception as e:
-                if self.debug:
-                    print(f"エージェント応答生成エラー: {str(e)}")
-                # エラー時の自然な応答を返す
-                fallback_responses = [
-                    f"（{role}は考え中...）",
-                    f"（{role}は議論を聞いています）",
-                    "（他のエージェントの意見を参考にしています...）",
-                    f"（{role}からの応答を待っています...）"
-                ]
-                import random
-                return {
-                    'agent_id': agent_id_str,
-                    'role': role,
-                    'text': random.choice(fallback_responses),
-                    'timestamp': time.time(),
-                    'error': True  # エラーフラグを追加
-                }
-        finally:
-            # 必ず実行されるクリーンアップ処理
-            # コールスタックから削除
-            threading.current_thread()._agent_call_stack.discard(agent_id_str)
+                try:
+                    # LLM呼び出し
+                    response_text = await self.llm.generate(prompt)
+                    
+                    # 応答情報の構築
+                    response = {
+                        'agent_id': agent_id_str,
+                        'role': role,
+                        'text': response_text,
+                        'timestamp': time.time()
+                    }
+                    
+                    return response
+                    
+                except Exception as e:
+                    if self.debug:
+                        print(f"エージェント応答生成エラー: {str(e)}")
+                    # エラー時の自然な応答を返す
+                    fallback_responses = [
+                        f"（{role}は考え中...）",
+                        f"（{role}は議論を聞いています）",
+                        "（他のエージェントの意見を参考にしています...）",
+                        f"（{role}からの応答を待っています...）"
+                    ]
+                    import random
+                    return {
+                        'agent_id': agent_id_str,
+                        'role': role,
+                        'text': random.choice(fallback_responses),
+                        'timestamp': time.time(),
+                        'error': True  # エラーフラグを追加
+                    }
+            finally:
+                # 必ず実行されるクリーンアップ処理
+                # コールスタックから削除
+                threading.current_thread()._agent_call_stack.discard(agent_id_str)

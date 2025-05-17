@@ -1,23 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-OpinionSpaceManager モジュール
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-エージェントの意見ベクトル空間を管理し、多様性・収束性を分析する
+Opinion Space Manager モジュール
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+エージェント意見のベクトル空間を管理
+- 意見ベクトルの蓄積
+- クラスタリング分析
+- 意見の多様性と収束性の評価
 
 作者: Yuhi Sonoki
 """
 
-from typing import List, Dict, Any, Tuple, Optional, Union
 import numpy as np
+from typing import Dict, List, Any, Tuple, Optional
 import time
-from collections import deque
-import threading
-import traceback
-
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from collections import deque
 
 class OpinionSpaceManager:
     """
@@ -140,6 +141,7 @@ class OpinionSpaceManager:
             bool: 追加に成功したかどうか
         """
         # 再帰呼び出し防止（スレッドセーフ処理）
+        import threading
         
         # スレッドローカルストレージを初期化
         if not hasattr(threading.current_thread(), '_opinion_processing_set'):
@@ -211,16 +213,15 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"ベクトル追加エラー: {str(e)}")
+                import traceback
                 traceback.print_exc()
             return False
-        finally:
-            # 必ず実行されるクリーンアップ処理
+        finally:            # 必ず実行されるクリーンアップ処理
             # 処理中セットから削除
             threading.current_thread()._opinion_processing_set.discard(agent_id_str)
     
     def next_turn(self) -> None:
-        """新しいターンに移行"""
-        self.current_turn += 1
+        """新しいターンに移行"""        self.current_turn += 1
         # 現在の意見数を境界として記録
         self.turn_boundaries.append(len(self.vectors))
         
@@ -274,8 +275,7 @@ class OpinionSpaceManager:
                 'silhouette': -1.0,
                 'k': 1
             }
-            
-        self._is_clustering = True
+            self._is_clustering = True
         
         try:
             if len(self.vectors) < 2:
@@ -343,6 +343,7 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"クラスタリングエラー: {str(e)}")
+                import traceback
                 traceback.print_exc()
                 
             # エラー発生時は空結果を返す
@@ -361,6 +362,18 @@ class OpinionSpaceManager:
             # 必ず実行処理
             self._is_clustering = False
 
+            # エラー発生時は空結果を返す
+            self.clusters = np.zeros(len(self.vectors), dtype=int)
+            self.cluster_centers = np.zeros((1, self.dimension))
+            self.silhouette = -1.0
+            self.optimal_k = 1
+            
+            return {
+                'clusters': self.clusters.tolist(),
+                'centers': self.cluster_centers.tolist(),
+                'silhouette': -1.0,
+                'k': 1
+            }
     def _find_optimal_k(self, vectors: np.ndarray, n_init: int = 5, max_iter: int = 200) -> int:
         """
         最適なクラスタ数を決定（内部メソッド）
@@ -470,6 +483,7 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"メトリクス計算エラー: {str(e)}")
+                import traceback
                 traceback.print_exc()
                 
             # エラー発生時はデフォルト値を返す
@@ -533,6 +547,7 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"収束トレンド計算エラー: {str(e)}")
+                import traceback
                 traceback.print_exc()
                 
             # エラー発生時はデフォルト値を返す
@@ -651,6 +666,70 @@ class OpinionSpaceManager:
             if self.debug:
                 print(f"意見距離計算エラー: {str(e)}")
             return []
+    
+    def plot_opinion_space(self, save_path: str = None) -> Optional[Figure]:
+        """
+        意見空間の可視化
+        
+        引数:
+            save_path: 保存先ファイルパス（Noneならファイルに保存しない）
+            
+        戻り値:
+            matplotlib.figure.Figure: プロット図
+        """
+        if len(self.vectors) < 2:
+            return None
+            
+        try:
+            from sklearn.decomposition import PCA
+            
+            # PCAで2次元に削減
+            pca = PCA(n_components=2)
+            vectors = np.array(self.vectors)
+            reduced = pca.fit_transform(vectors)
+            
+            # プロット準備
+            fig, ax = plt.subplots(figsize=(10, 8))
+            
+            # クラスタごとに色分け
+            if self.clusters is not None:
+                for cluster_id in range(self.optimal_k):
+                    indices = np.where(self.clusters == cluster_id)[0]
+                    ax.scatter(reduced[indices, 0], reduced[indices, 1], 
+                               label=f'クラスタ {cluster_id+1}', alpha=0.7)
+            else:
+                ax.scatter(reduced[:, 0], reduced[:, 1], alpha=0.7)
+            
+            # ターンごとの境界線を追加
+            for turn, boundary_idx in enumerate(self.turn_boundaries[1:], 1):
+                if boundary_idx < len(reduced):
+                    ax.axvline(x=reduced[boundary_idx, 0], color='gray', linestyle='--', alpha=0.5)
+                    ax.text(reduced[boundary_idx, 0], ax.get_ylim()[1] * 0.9, f'T{turn}', 
+                            fontsize=8, alpha=0.7)
+            
+            # クラスタ中心を追加
+            if self.cluster_centers is not None:
+                centers_reduced = pca.transform(self.cluster_centers)
+                ax.scatter(centers_reduced[:, 0], centers_reduced[:, 1], 
+                           marker='X', s=100, color='black', label='クラスタ中心')
+            
+            # グラフ設定
+            ax.set_title('意見空間のクラスタ構造')
+            ax.set_xlabel(f'主成分1 ({pca.explained_variance_ratio_[0]:.2%})')
+            ax.set_ylabel(f'主成分2 ({pca.explained_variance_ratio_[1]:.2%})')
+            ax.legend()
+            ax.grid(True, linestyle='--', alpha=0.7)
+            
+            # ファイル保存
+            if save_path:
+                plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            
+            return fig
+            
+        except Exception as e:
+            if self.debug:
+                print(f"意見空間プロットエラー: {str(e)}")
+            return None
     
     def export_data(self) -> Dict[str, Any]:
         """
@@ -908,6 +987,7 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"意見空間分析エラー: {e}")
+                import traceback
                 traceback.print_exc()
             return {
                 'diversity': 0.0,
@@ -991,8 +1071,7 @@ class OpinionSpaceManager:
                 distances[j, i] = distance  # 対称行列
                 
         return distances
-    
-    def _cosine_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+      def _cosine_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
         """
         2つのベクトル間のコサイン距離を計算（内部メソッド）
         
@@ -1021,8 +1100,7 @@ class OpinionSpaceManager:
         
         # コサイン距離に変換（1 - 類似度）
         return 1.0 - similarity
-        
-    def _cluster_opinions(self, vectors: List[np.ndarray], n_clusters: int = None, n_init: int = 10, max_iter: int = 300) -> Dict:
+          def _cluster_opinions(self, vectors: List[np.ndarray], n_clusters: int = None, n_init: int = 10, max_iter: int = 300) -> Dict:
         """
         意見ベクトルのクラスタリングを行う（内部メソッド）
         
@@ -1091,6 +1169,7 @@ class OpinionSpaceManager:
         except Exception as e:
             if self.debug:
                 print(f"クラスタリングエラー: {e}")
+                import traceback
                 traceback.print_exc()
             # エラー時は単一クラスタとして扱う
             best_k = 1
@@ -1105,208 +1184,3 @@ class OpinionSpaceManager:
             'labels': best_labels.tolist(),
             'silhouette': best_silhouette
         }
-    
-    def compute_diversity_metrics(self) -> Dict[str, float]:
-        """
-        意見の多様性に関連するメトリクスを計算
-        
-        戻り値:
-            Dict[str, float]: 多様性関連のメトリクス
-        """
-        try:
-            if len(self.vectors) < 2:
-                return {'mean_distance': 0.0, 'variance': 0.0, 'max_distance': 0.0}
-                
-            vectors = np.array(self.vectors)
-            
-            # 中心点の計算
-            centroid = np.mean(vectors, axis=0)
-            
-            # 中心からの距離
-            distances = np.linalg.norm(vectors - centroid, axis=1)
-            
-            # 各距離の統計量
-            mean_distance = float(np.mean(distances))
-            variance = float(np.var(distances))
-            max_distance = float(np.max(distances))
-            
-            return {
-                'mean_distance': mean_distance,
-                'variance': variance,
-                'max_distance': max_distance
-            }
-            
-        except Exception as e:
-            if self.debug:
-                print(f"多様性メトリクス計算エラー: {str(e)}")
-            return {'mean_distance': 0.5, 'variance': 0.1, 'max_distance': 0.0}
-            
-    def compute_change_metrics(self) -> Dict[str, float]:
-        """
-        意見空間の変化に関連するメトリクスを計算
-        
-        戻り値:
-            Dict[str, float]: 変化関連のメトリクス
-        """
-        try:
-            # 中心点の移動
-            centroid_movement = self.calculate_centroid_movement()
-            
-            # エージェントの移動量
-            agent_movement = 0.05  # デフォルト値
-            
-            # 最新のエージェント分布状態を取得
-            latest_vectors = self.get_latest_vectors()
-            if len(latest_vectors) >= 2:
-                vectors = np.array(list(latest_vectors.values()))
-                
-                # 意見の収束度合い（距離の逆数）
-                distances = []
-                centroid = np.mean(vectors, axis=0)
-                for v in vectors:
-                    distances.append(np.linalg.norm(v - centroid))
-                
-                mean_distance = np.mean(distances)
-                opinion_convergence = 1.0 / (1.0 + mean_distance)
-                
-                # エージェント間の平均移動量（前回と今回の距離）
-                # TODO: 実際の移動量の計算を実装
-                if len(self.centroid_history) >= 2:
-                    agent_movement = centroid_movement
-                
-            else:
-                opinion_convergence = 0.0
-            
-            return {
-                'centroid_movement': float(centroid_movement),
-                'average_agent_movement': float(agent_movement),
-                'opinion_convergence': float(opinion_convergence)
-            }
-            
-        except Exception as e:
-            if self.debug:
-                print(f"変化メトリクス計算エラー: {str(e)}")
-            return {
-                'centroid_movement': 0.05,
-                'average_agent_movement': 0.05,
-                'opinion_convergence': 0.0
-            }
-    
-    def compute_distance_matrix(self) -> np.ndarray:
-        """
-        最新の意見ベクトル間の距離行列を計算
-        
-        戻り値:
-            np.ndarray: 距離行列
-        """
-        try:
-            # 最新のエージェントベクトルを取得
-            latest_vectors = self.get_latest_vectors()
-            vectors = list(latest_vectors.values())
-            
-            if len(vectors) < 2:
-                return np.zeros((1, 1))
-                
-            # 距離行列の計算
-            return self._calculate_distance_matrix(vectors)
-            
-        except Exception as e:
-            if self.debug:
-                print(f"距離行列計算エラー: {str(e)}")
-            return np.ones((1, 1))  # エラー時は1x1の単位行列
-    
-    def get_agent_contribution_score(self, agent_id) -> float:
-        """
-        エージェントの貢献度スコアを計算
-        
-        引数:
-            agent_id: エージェントID
-            
-        戻り値:
-            float: 貢献度スコア（0-1）
-        """
-        try:
-            agent_id_str = str(agent_id)
-            
-            # 最新のエージェントベクトルを取得
-            latest_vectors = self.get_latest_vectors()
-            
-            if agent_id_str not in latest_vectors:
-                return 0.5  # デフォルト値
-                
-            agent_vector = latest_vectors[agent_id_str]
-            all_vectors = list(latest_vectors.values())
-            
-            if len(all_vectors) < 2:
-                return 0.5  # 比較対象がない場合
-                
-            # 全体の中心を計算
-            centroid = np.mean(all_vectors, axis=0)
-            
-            # このエージェントの中心からの距離
-            distance = np.linalg.norm(agent_vector - centroid)
-            
-            # 全エージェントの中心からの距離
-            all_distances = []
-            for v in all_vectors:
-                all_distances.append(np.linalg.norm(v - centroid))
-                
-            # 平均距離と標準偏差
-            mean_distance = np.mean(all_distances)
-            std_distance = np.std(all_distances) if len(all_distances) > 1 else 0.1
-            
-            # 多様性への貢献度（z-score）
-            if std_distance > 0:
-                diversity_score = (distance - mean_distance) / std_distance
-            else:
-                diversity_score = 0.0
-                
-            # 値を0-1に正規化
-            normalized_score = 1.0 / (1.0 + np.exp(-diversity_score))
-            
-            return float(normalized_score)
-            
-        except Exception as e:
-            if self.debug:
-                print(f"エージェント貢献度計算エラー: {str(e)}")
-            return 0.5  # エラー時はデフォルト値
-            
-    def get_centroid(self, vectors) -> np.ndarray:
-        """
-        ベクトル群の中心点を計算
-        
-        引数:
-            vectors: ベクトルのリスト
-            
-        戻り値:
-            np.ndarray: 中心点ベクトル
-        """
-        if not vectors:
-            return np.zeros(self.dimension)
-            
-        return np.mean(vectors, axis=0)
-        
-    def get_inter_cluster_distances(self) -> List[float]:
-        """
-        クラスタ間の距離を計算
-        
-        戻り値:
-            List[float]: クラスタ間距離のリスト
-        """
-        try:
-            if self.cluster_centers is None or len(self.cluster_centers) < 2:
-                return []
-                
-            # クラスタ中心間の距離を計算
-            distances = []
-            for i in range(len(self.cluster_centers)):
-                for j in range(i+1, len(self.cluster_centers)):
-                    dist = np.linalg.norm(self.cluster_centers[i] - self.cluster_centers[j])
-                    distances.append(float(dist))
-                    
-            return distances
-            
-        except Exception as e:
-            if self.debug:
-                print(f"クラスタ間距離計算エラー: {str(e)}")
-            return []
