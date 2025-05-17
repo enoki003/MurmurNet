@@ -248,41 +248,54 @@ class OpinionSpaceManager:
             
         start_idx = self.turn_boundaries[turn]
         end_idx = self.turn_boundaries[turn + 1] if turn + 1 < len(self.turn_boundaries) else len(self.vectors)
-        
-        result = []
+          result = []
         for i in range(start_idx, end_idx):
             result.append((self.opinions[i], self.metadata[i], self.vectors[i]))
             
         return result
-    
-    def cluster_opinions(self, k: int = None) -> Dict[str, Any]:
+      def cluster_opinions(self, n_clusters: int = None, max_iter: int = 300, n_init: int = 10) -> Dict[str, Any]:
         """
         意見ベクトル空間をクラスタリング
         
         引数:
-            k: クラスタ数（Noneなら最適なクラスタ数を自動決定）
+            n_clusters: クラスタ数（Noneなら最適なクラスタ数を自動決定）
+            max_iter: KMeansの最大反復回数
+            n_init: KMeansの初期化回数
             
         戻り値:
             Dict[str, Any]: クラスタリング結果
         """
-        if len(self.vectors) < 2:
-            # 意見が不足している場合
-            self.clusters = np.zeros(len(self.vectors), dtype=int)
-            self.cluster_centers = np.zeros((1, self.dimension)) if len(self.vectors) > 0 else np.array([])
-            self.silhouette = -1.0
-            self.optimal_k = 1
-            
+        # 再帰呼び出し防止
+        if getattr(self, '_is_clustering', False):
+            if self.debug:
+                print("警告: cluster_opinionsの再帰呼び出しを検出。処理をスキップします。")
             return {
-                'clusters': self.clusters.tolist() if len(self.vectors) > 0 else [],
-                'centers': self.cluster_centers.tolist() if len(self.vectors) > 0 else [],
+                'clusters': [],
+                'centers': [],
                 'silhouette': -1.0,
                 'k': 1
             }
+              self._is_clustering = True
         
         try:
+            if len(self.vectors) < 2:
+                # 意見が不足している場合
+                self.clusters = np.zeros(len(self.vectors), dtype=int)
+                self.cluster_centers = np.zeros((1, self.dimension)) if len(self.vectors) > 0 else np.array([])
+                self.silhouette = -1.0
+                self.optimal_k = 1
+                
+                return {
+                    'clusters': self.clusters.tolist() if len(self.vectors) > 0 else [],
+                    'centers': self.cluster_centers.tolist() if len(self.vectors) > 0 else [],
+                    'silhouette': -1.0,
+                    'k': 1
+                }
+            
             vectors = np.array(self.vectors)
             
-            # 最適なクラスタ数を決定（kが指定されていない場合）
+            # 最適なクラスタ数を決定（n_clustersが指定されていない場合）
+            k = n_clusters
             if k is None:
                 k = self._find_optimal_k(vectors)
             
@@ -290,7 +303,19 @@ class OpinionSpaceManager:
             k = max(1, min(k, len(vectors) - 1))
             
             # クラスタリング実行
-            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+            start_time = time.time()
+            
+            # scikit-learn 1.3+との互換性のため、init_と_n_initの両方をサポート
+            kmeans_params = {'n_clusters': k, 'random_state': 42, 'max_iter': max_iter}
+            if hasattr(KMeans, 'n_init'):
+                kmeans_params['n_init'] = n_init
+            elif hasattr(KMeans, '_n_init'):
+                kmeans_params['_n_init'] = n_init
+            else:
+                # n_initを指定しない（デフォルト値を使用）
+                pass
+                
+            kmeans = KMeans(**kmeans_params)
             self.clusters = kmeans.fit_predict(vectors)
             self.cluster_centers = kmeans.cluster_centers_
             
@@ -303,8 +328,9 @@ class OpinionSpaceManager:
             # 結果を保存
             self.optimal_k = k
             
-            if self.debug:
-                print(f"意見クラスタリング完了: {k}クラスタ, シルエットスコア={self.silhouette:.3f}")
+            # 詳細デバッグが有効な場合のみログ出力
+            if self.debug and self.config.get('verbose_logging', False):
+                print(f"意見クラスタリング完了: {k}クラスタ, シルエットスコア={self.silhouette:.3f}, 処理時間={time.time()-start_time:.3f}秒")
             
             # 結果を返す
             return {
@@ -332,13 +358,31 @@ class OpinionSpaceManager:
                 'silhouette': -1.0,
                 'k': 1
             }
-    
-    def _find_optimal_k(self, vectors: np.ndarray) -> int:
+        finally:
+            # 必ず実行処理
+            self._is_clustering = False
+                traceback.print_exc()
+                
+            # エラー発生時は空結果を返す
+            self.clusters = np.zeros(len(self.vectors), dtype=int)
+            self.cluster_centers = np.zeros((1, self.dimension))
+            self.silhouette = -1.0
+            self.optimal_k = 1
+            
+            return {
+                'clusters': self.clusters.tolist(),
+                'centers': self.cluster_centers.tolist(),
+                'silhouette': -1.0,
+                'k': 1
+            }
+    def _find_optimal_k(self, vectors: np.ndarray, n_init: int = 5, max_iter: int = 200) -> int:
         """
         最適なクラスタ数を決定（内部メソッド）
         
         引数:
             vectors: 意見ベクトルの配列
+            n_init: KMeansの初期化回数
+            max_iter: KMeansの最大反復回数
             
         戻り値:
             int: 最適なクラスタ数
@@ -358,7 +402,7 @@ class OpinionSpaceManager:
         silhouette_scores = []
         for k in range_k:
             try:
-                kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+                kmeans = KMeans(n_clusters=k, random_state=42, n_init=n_init, max_iter=max_iter)
                 clusters = kmeans.fit_predict(vectors)
                 score = silhouette_score(vectors, clusters)
                 silhouette_scores.append((k, score))
@@ -370,10 +414,9 @@ class OpinionSpaceManager:
         silhouette_scores.sort(key=lambda x: x[1], reverse=True)
         
         # 最良のクラスタ数を選択
-        best_k, _ = silhouette_scores[0]
-        
+        best_k, best_score = silhouette_scores[0]
         if self.debug:
-            print(f"最適なクラスタ数: {best_k}")
+            print(f"最適なクラスタ数を判定: {best_k} (シルエットスコア={best_score:.3f})")
             
         return best_k
     
@@ -873,3 +916,272 @@ class OpinionSpaceManager:
             if self.debug:
                 print(f"中心点移動計算エラー: {str(e)}")
             return 0.0
+    
+    def analyze_opinion_space(self, turn=None) -> Dict[str, Any]:
+        """
+        意見空間の分析を行う
+        
+        引数:
+            turn: 分析対象のターン（Noneの場合は最新ターン）
+            
+        戻り値:
+            分析結果（多様性、クラスタ数、収束度合いなど）
+        """
+        # 分析対象のベクトル群を取得
+        vectors, meta = self._get_vectors_for_turn(turn)
+        
+        if len(vectors) <= 1:
+            # ベクトルが1つ以下の場合は分析不能
+            return {
+                'diversity': 0.0,
+                'convergence': 1.0,
+                'clusters': 1,
+                'valid': False,
+                'centroid': np.zeros(self.dimension) if len(vectors) == 0 else vectors[0],
+                'agent_count': len(vectors),
+                'distances': []
+            }
+            
+        try:
+            # 全ベクトルの平均（重心）を計算
+            centroid = np.mean(vectors, axis=0)
+            
+            # 各ベクトル間の距離行列を計算
+            distances = self._calculate_distance_matrix(vectors)
+            
+            # 多様性指標（平均距離）を計算
+            diversity = np.mean(distances)
+            
+            # 最大距離（最も異なる意見間）
+            max_distance = np.max(distances)
+            
+            # クラスタリング分析
+            cluster_results = self._cluster_opinions(vectors)
+            n_clusters = cluster_results['n_clusters']
+            cluster_centers = cluster_results['cluster_centers']
+            labels = cluster_results['labels']
+            silhouette = cluster_results['silhouette']
+            
+            # 収束度合い（1-多様性）
+            convergence = 1.0 - min(1.0, diversity)
+            
+            # 分析結果をまとめる
+            result = {
+                'diversity': float(diversity),
+                'convergence': float(convergence),
+                'max_distance': float(max_distance),
+                'clusters': n_clusters,
+                'cluster_centers': cluster_centers,
+                'cluster_labels': labels,
+                'silhouette': float(silhouette),
+                'centroid': centroid,
+                'agent_count': len(vectors),
+                'distances': distances.tolist(),
+                'valid': True
+            }
+            
+            # 履歴に追加
+            self.centroid_history.append(centroid)
+            self.diversity_history.append(diversity)
+            
+            return result
+        except Exception as e:
+            if self.debug:
+                print(f"意見空間分析エラー: {e}")
+                import traceback
+                traceback.print_exc()
+            return {
+                'diversity': 0.0,
+                'convergence': 0.0,
+                'clusters': 1,
+                'valid': False,
+                'error': str(e)
+            }
+    
+    def _get_vectors_for_turn(self, turn=None) -> Tuple[List[np.ndarray], List[Dict]]:
+        """
+        特定ターンのベクトルとメタデータを取得（内部メソッド）
+        
+        引数:
+            turn: 対象ターン（Noneの場合は最新ターン）
+            
+        戻り値:
+            (ベクトルのリスト, メタデータのリスト)
+        """
+        if not self.vectors:
+            return [], []
+            
+        # ターンが指定されていない場合は最新ターン
+        if turn is None:
+            turn = self.current_turn
+        
+        # 指定ターンのベクトルとメタデータを抽出
+        turn_vectors = []
+        turn_metadata = []
+        
+        for i, metadata in enumerate(self.metadata):
+            if i < len(self.vectors) and metadata.get('turn') == turn:
+                turn_vectors.append(self.vectors[i])
+                turn_metadata.append(metadata)
+                
+        # 各エージェントの最新ベクトルのみを取得
+        if not turn_vectors:
+            # エージェントIDでグループ化して最新のものだけ取得
+            agent_latest = {}
+            for i, metadata in enumerate(self.metadata):
+                if i >= len(self.vectors):
+                    continue
+                agent_id = metadata.get('agent_id')
+                if not agent_id:
+                    continue
+                timestamp = metadata.get('timestamp', 0)
+                
+                if agent_id not in agent_latest or timestamp > agent_latest[agent_id]['timestamp']:
+                    agent_latest[agent_id] = {
+                        'index': i,
+                        'timestamp': timestamp
+                    }
+            
+            # 最新ベクトルのみを追加
+            for agent_data in agent_latest.values():
+                idx = agent_data['index']
+                if 0 <= idx < len(self.vectors):
+                    turn_vectors.append(self.vectors[idx])
+                    turn_metadata.append(self.metadata[idx])
+        
+        return turn_vectors, turn_metadata
+    
+    def _calculate_distance_matrix(self, vectors: List[np.ndarray]) -> np.ndarray:
+        """
+        ベクトル間の距離行列を計算（内部メソッド）
+        
+        引数:
+            vectors: ベクトルのリスト
+            
+        戻り値:
+            距離行列（NumPy配列）
+        """
+        n = len(vectors)
+        distances = np.zeros((n, n))
+        
+        for i in range(n):
+            for j in range(i+1, n):
+                # コサイン距離を計算
+                distance = self._cosine_distance(vectors[i], vectors[j])
+                distances[i, j] = distance
+                distances[j, i] = distance  # 対称行列
+                
+        return distances
+    
+    def _cosine_distance(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        """
+        2つのベクトル間のコサイン距離を計算（内部メソッド）
+        
+        引数:
+            vec1, vec2: 比較するベクトル
+            
+        戻り値:
+            距離値（0.0-2.0の範囲、0.0が同一）
+        """
+        # ゼロベクトルチェック
+        if np.all(vec1 == 0) or np.all(vec2 == 0):
+            return 1.0  # デフォルト距離
+            
+        # コサイン類似度の計算
+        dot_product = np.dot(vec1, vec2)
+        norm1 = np.linalg.norm(vec1)
+        norm2 = np.linalg.norm(vec2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 1.0
+            
+        similarity = dot_product / (norm1 * norm2)
+        
+        # 類似度を[-1, 1]の範囲に制限
+        similarity = max(-1.0, min(1.0, similarity))
+        
+        # コサイン距離に変換（1 - 類似度）
+        return 1.0 - similarity
+    def _cluster_opinions(self, vectors: List[np.ndarray], n_clusters: int = None, n_init: int = 10, max_iter: int = 300) -> Dict:
+        """
+        意見ベクトルのクラスタリングを行う（内部メソッド）
+        
+        引数:
+            vectors: ベクトルのリスト
+            n_clusters: 最大クラスタ数（Noneの場合はベクトル数/2）
+            n_init: KMeansの初期化回数
+            max_iter: KMeansの最大反復回数
+            
+        戻り値:
+            クラスタリング結果
+        """
+        n_vectors = len(vectors)
+        if n_vectors <= 1:
+            return {
+                'n_clusters': 1,
+                'cluster_centers': [vectors[0]] if n_vectors == 1 else [],
+                'labels': [0] if n_vectors == 1 else [],
+                'silhouette': 0.0
+            }
+              # 最大クラスタ数の決定（デフォルトはベクトル数の半分）
+        if n_clusters is None:
+            n_clusters = max(2, n_vectors // 2)
+        n_clusters = min(n_clusters, n_vectors - 1)
+        
+        # クラスタ数1から順にシルエットスコアを計算し最適なkを見つける
+        best_silhouette = -1.0
+        best_k = 1
+        best_labels = None
+        best_centers = None
+        
+        try:
+            # ベクトルが少なければ全探索、多ければ効率化
+            if n_vectors <= 10:
+                # 探索範囲: 1〜n_clusters
+                search_range = range(1, n_clusters + 1)
+            else:
+                # 効率化のため少数のkのみ評価
+                search_range = [1, 2, 3, min(5, n_clusters)]
+                
+            for k in search_range:
+                if k == 1:
+                    # k=1の場合は全て同じクラスタ
+                    labels = np.zeros(n_vectors, dtype=int)
+                    centers = [np.mean(vectors, axis=0)]
+                    silhouette = 0.0  # 単一クラスタの場合シルエットスコアは計算不能
+                else:
+                    # k-meansクラスタリング - n_initとmax_iterを明示的に指定
+                    kmeans = KMeans(n_clusters=k, random_state=42, n_init=n_init, max_iter=max_iter)
+                    labels = kmeans.fit_predict(vectors)
+                    centers = kmeans.cluster_centers_
+                    
+                    # シルエットスコア計算
+                    if len(set(labels)) > 1:  # 複数のクラスタに分かれていれば
+                        silhouette = silhouette_score(vectors, labels)
+                    else:
+                        silhouette = 0.0
+                
+                # より良いスコアを持つkを記録
+                if silhouette > best_silhouette:
+                    best_silhouette = silhouette
+                    best_k = k
+                    best_labels = labels
+                    best_centers = centers
+        except Exception as e:
+            if self.debug:
+                print(f"クラスタリングエラー: {e}")
+                import traceback
+                traceback.print_exc()
+            # エラー時は単一クラスタとして扱う
+            best_k = 1
+            best_labels = np.zeros(n_vectors, dtype=int)
+            best_centers = [np.mean(vectors, axis=0)]
+            best_silhouette = 0.0
+            
+        # 結果を返す
+        return {
+            'n_clusters': best_k,
+            'cluster_centers': best_centers,
+            'labels': best_labels.tolist(),
+            'silhouette': best_silhouette
+        }

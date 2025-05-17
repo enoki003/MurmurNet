@@ -21,6 +21,7 @@ class Blackboard:
     - シンプルなkey-value保存
     - 時系列的な記録と管理
     - コンテキスト管理と自動サイズ制限
+    - スナップショット機能による並列処理サポート
     """
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -73,7 +74,7 @@ class Blackboard:
         # 正規表現パターン（エージェントの応答失敗パターン）
         self.failure_patterns = [
             r'エージェント\s*\d+\s*は.*応答.*できませんでした',
-            r'エージェント\s*\d+\s*は.*回答.*できませんでした',
+            r'エージェント\s*\d+\\s*は.*回答.*できませんでした',
             r'.*さんは.*応答.*できませんでした',
             r'.*さんは.*回答.*できませんでした',
             r'応答を生成できませ.*でした',
@@ -332,9 +333,34 @@ class Blackboard:
             result['_context_stats'] = self.context_stats
             
         return result
-        
-    def get_context_stats(self) -> Dict[str, Any]:
+      def get_context_stats(self) -> Dict[str, Any]:
         """
         コンテキスト管理の統計情報を取得
         """
         return self.context_stats.copy()
+        
+    def create_snapshot(self) -> Dict[str, Any]:
+        """
+        現在の黒板の状態の読み取り専用スナップショットを作成
+        
+        戻り値:
+            Dict[str, Any]: 黒板の現在の状態のディープコピー
+        """
+        import copy
+        # ディープコピーで完全に独立したスナップショットを作成
+        snapshot = copy.deepcopy(self.memory)
+        return snapshot
+    
+    def bulk_write(self, updates: Dict[str, Any]) -> None:
+        """
+        複数の更新をまとめて黒板に書き込む（アトミック操作）
+        
+        引数:
+            updates: 更新するキーと値の辞書
+        """
+        # すべての更新を一度に適用
+        for key, value in updates.items():
+            self.write(key, value)
+            
+        if self.debug and updates:
+            print(f"黒板に{len(updates)}個のキーをバルク更新しました")

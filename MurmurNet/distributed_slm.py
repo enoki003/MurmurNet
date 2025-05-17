@@ -17,7 +17,7 @@ import asyncio
 import re
 import time
 import numpy as np
-from typing import Any
+from typing import Any, List, Dict
 from concurrent.futures import ThreadPoolExecutor
 from MurmurNet.modules.input_reception import InputReception
 from MurmurNet.modules.blackboard import Blackboard
@@ -52,6 +52,7 @@ class DistributedSLM:
             config: 設定辞書
             blackboard: Blackboardインスタンス（省略時は内部で作成）
         """
+        start_time = time.time()
         self.config = config or {}
         
         # 動作パラメータ
@@ -60,6 +61,7 @@ class DistributedSLM:
         self.use_summary = self.config.get('use_summary', True)  # 要約を使うか
         self.use_parallel = self.config.get('use_parallel', False)  # 並列処理を使うか
         self.use_memory = self.config.get('use_memory', True)  # 会話履歴を使うか
+        self.debug = self.config.get('debug', False)  # デバッグモード
         
         # Boids型自己増殖エージェント機能の設定
         self.use_boids = self.config.get('use_boids', False)  # Boids型自己増殖機能を使うか
@@ -79,6 +81,9 @@ class DistributedSLM:
             self.config['min_agents'] = self.config.get('min_agents', 3)
             self.config['enable_agent_growth'] = True
             self.config['vector_dim'] = self.config.get('vector_dim', 384)  # 意見空間のベクトルサイズ
+          # モデル初期化をロギング（性能測定用）
+        if self._should_log("important"):
+            print(f"初期化開始: {time.time() - start_time:.3f}秒経過")
                 
         # 各モジュールの初期化
         self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
@@ -87,16 +92,15 @@ class DistributedSLM:
         # Boids型自己増殖エージェント機能が有効な場合、OpinionSpaceManagerを初期化
         self.opinion_space = None
         self.vectorizer = None
-        if self.use_boids:
-            # まず意見ベクトル化モジュールを初期化
+        if self.use_boids:            # まず意見ベクトル化モジュールを初期化
             self.vectorizer = OpinionVectorizer(self.config)
-            if self.config.get('debug', False):
-                print("OpinionVectorizerを初期化しました")
+            if self._should_log("normal"):
+                print(f"OpinionVectorizerを初期化しました: {time.time() - start_time:.3f}秒経過")
                 
             # 次に意見空間マネージャを初期化（ベクトル化モジュールを渡す）
             self.opinion_space = OpinionSpaceManager(self.config, self.vectorizer)
-            if self.config.get('debug', False):
-                print("OpinionSpaceManagerを初期化しました")
+            if self._should_log("normal"):
+                print(f"OpinionSpaceManagerを初期化しました: {time.time() - start_time:.3f}秒経過")
 
         # AgentPoolManagerの初期化（必要に応じて意見空間を渡す）
         if self.use_boids and self.opinion_space:
@@ -153,18 +157,17 @@ class DistributedSLM:
                         'contribution_score': 0.0,
                         'active': True
                     }
-                    
-                    # エージェントを追加
+                      # エージェントを追加
                     if isinstance(self.agent_pool.agents, list):
                         self.agent_pool.agents.append(agent_info)
                     elif isinstance(self.agent_pool.agents, dict):
                         self.agent_pool.agents[f"agent_{i}"] = agent_info
                 
-                if self.config.get('debug', False):
+                if self._should_log("normal"):
                     print(f"Boids型自己増殖エージェント {len(initial_roles)} 体を初期化しました")
         except Exception as e:
             # エラーハンドリング
-            if self.config.get('debug', False):
+            if self._should_log("critical"):
                 print(f"Boidsエージェント初期化エラー: {str(e)}")
                 import traceback
                 traceback.print_exc()
@@ -178,6 +181,35 @@ class DistributedSLM:
             handler.setFormatter(formatter)
         self.logger.addHandler(handler)
         self.logger.setLevel(logging.INFO if not self.config.get('debug') else logging.DEBUG)
+
+    def _should_log(self, importance: str = "normal") -> bool:
+        """
+        ログ出力が必要かどうか判断する
+        
+        引数:
+            importance: ログの重要度 ("critical", "important", "normal", "verbose")
+        
+        戻り値:
+            bool: ログ出力すべきかどうか
+        """
+        if not self.debug:
+            return False
+            
+        # 重要度に応じた出力制御
+        verbose_logging = self.config.get('verbose_logging', False)
+        
+        if importance == "critical":
+            # 重大なエラーは常にログ
+            return True
+        elif importance == "important":
+            # 重要な情報は常にデバッグモードでログ
+            return True
+        elif importance == "normal":
+            # 通常情報はverbose_loggingがTrueの場合のみ
+            return verbose_logging
+        else:  # "verbose"
+            # 詳細情報は更に厳しく制限
+            return verbose_logging and self.config.get('extra_verbose', False)
 
     async def _run_iteration(self, iteration: int) -> None:
         """単一の反復サイクルを実行（内部メソッド）"""
@@ -393,146 +425,43 @@ class DistributedSLM:
                 import traceback
                 self.logger.debug(traceback.format_exc())
     
-    def _vectorize_agent_outputs(self, agent_entries: list, iteration: int) -> None:
+    def _vectorize_agent_outputs(self, agent_entries: List[Dict], iteration: int) -> None:
         """
-        エージェント出力をベクトル化し意見空間に追加（内部メソッド）
+        エージェント出力をベクトル化して意見空間に追加（内部メソッド）
         
         引数:
             agent_entries: エージェント出力のリスト
-            iteration: 現在の反復番号
+            iteration: 現在の反復回数
         """
-        if not self.use_boids or not self.opinion_space or not hasattr(self.agent_pool, 'agents'):
+        if not self.opinion_space or not self.vectorizer or not agent_entries:
             return
             
-        # 再帰呼び出し防止のためのスレッドローカル変数
-        import threading
-        thread_local = threading.local()
-        
-        # スレッドローカルストレージが初期化されていなければ初期化
-        if not hasattr(thread_local, '_vectorizing_agents'):
-            thread_local._vectorizing_agents = set()
+        # 各エージェント出力をベクトル化
+        for entry in agent_entries:
+            agent_id = entry.get('agent')
+            text = entry.get('text')
             
-        try:
-            from MurmurNet.modules.opinion_vectorizer import OpinionVectorizer
-            
-            # ベクトル化モジュールの確認
-            vectorizer = None
-            if hasattr(self.agent_pool, 'vectorizer') and self.agent_pool.vectorizer:
-                # AgentPoolのベクトル化モジュールを使用
-                vectorizer = self.agent_pool.vectorizer
-            elif not hasattr(self, 'vectorizer') or not self.vectorizer:
-                # 必要に応じて新しく作成
-                self.vectorizer = OpinionVectorizer(self.config)
-                vectorizer = self.vectorizer
-            else:
-                vectorizer = self.vectorizer
-                
-            # バッチ処理用の配列
-            batch_texts = []
-            batch_metadata = []
-            agent_ids = []
-                
-            for entry in agent_entries:
-                agent_id = entry.get('agent')
-                text = entry.get('text', '')
-                
-                if not text:
-                    continue
-                    
-                # 再帰呼び出し検出 - 同じエージェントIDを処理中ならスキップ
-                agent_id_str = f"agent_{agent_id}"
-                if agent_id_str in thread_local._vectorizing_agents:
-                    if self.config.get('debug', False):
-                        self.logger.debug(f"再帰呼び出し検出: ベクトル化をスキップ agent_id={agent_id_str}")
-                    continue
-                
-                # 処理中マークを設定
-                thread_local._vectorizing_agents.add(agent_id_str)
-                
+            if text and agent_id is not None:
                 try:
-                    # テキストをバッチに追加
-                    if isinstance(text, dict) and 'text' in text:
-                        batch_texts.append(text['text'])
-                    elif isinstance(text, str):
-                        batch_texts.append(text)
-                    else:
-                        if self.config.get('debug', False):
-                            self.logger.warning(f"警告: 出力テキストが文字列でもなく辞書でもありません: {type(text)}")
-                        continue
-                        
-                    # メタデータを構築
+                    # メタデータ作成
                     metadata = {
-                        'agent_id': agent_id_str,
-                        'text': text[:100] if isinstance(text, str) and len(text) > 100 else str(text)[:100],
-                        'iteration': iteration,
-                        'timestamp': time.time()
+                        'agent_id': f"agent_{agent_id}",
+                        'turn': iteration,
+                        'timestamp': int(time.time())
                     }
                     
-                    # エージェントメタデータの追加
-                    if isinstance(self.agent_pool.agents, dict) and agent_id_str in self.agent_pool.agents:
-                        agent = self.agent_pool.agents[agent_id_str]
-                        if isinstance(agent, dict):
-                            metadata['role'] = agent.get('role', 'Unknown')
-                    elif isinstance(self.agent_pool.agents, list) and agent_id < len(self.agent_pool.agents):
-                        agent = self.agent_pool.agents[agent_id]
-                        if isinstance(agent, dict):
-                            metadata['role'] = agent.get('role', 'Unknown')
-                            
-                    batch_metadata.append(metadata)
-                    agent_ids.append(agent_id_str)
-                
-                finally:
-                    # 処理終了時に必ずマークを削除
-                    thread_local._vectorizing_agents.discard(agent_id_str)
-            
-            # バッチ処理でベクトル化を実行
-            if batch_texts and hasattr(vectorizer, 'vectorize_batch'):
-                vectors = vectorizer.vectorize_batch(batch_texts)
-                
-                # 意見空間に追加
-                for i, vector in enumerate(vectors):
-                    if vector is not None and i < len(batch_metadata):
-                        if hasattr(self.opinion_space, 'add_vector'):
-                            self.opinion_space.add_vector(agent_ids[i], vector, batch_metadata[i])
-                        elif hasattr(self.opinion_space, 'add_opinion_vector'):
-                            self.opinion_space.add_opinion_vector(vector, batch_metadata[i])
-            
-            # バッチ処理がサポートされていない場合は1つずつ処理
-            elif batch_texts:
-                for i, text in enumerate(batch_texts):
-                    if i >= len(batch_metadata):
-                        continue
+                    # 意見空間に追加
+                    self.opinion_space.add_opinion(text, metadata)
+                    if self.config.get('debug', False):
+                        print(f"エージェント {agent_id} の意見をベクトル化して追加しました")
                         
-                    # テキストをベクトル化
-                    vector = None
-                    if hasattr(vectorizer, 'vectorize_text'):
-                        vector = vectorizer.vectorize_text(text)
-                    elif hasattr(vectorizer, 'vectorize'):
-                        vector = vectorizer.vectorize(text)
-                    
-                    if vector is not None:
-                        # 意見空間に追加
-                        if hasattr(self.opinion_space, 'add_vector'):
-                            self.opinion_space.add_vector(agent_ids[i], vector, batch_metadata[i])
-                        elif hasattr(self.opinion_space, 'add_opinion_vector'):
-                            self.opinion_space.add_opinion_vector(vector, batch_metadata[i])
-                
-            if self.config.get('debug', False) and batch_texts:
-                self.logger.debug(f"{len(batch_texts)}個の意見ベクトルを追加")
-                
-        except Exception as e:
-            if self.config.get('debug', False):
-                self.logger.error(f"ベクトル化エラー: {str(e)}")
-                import traceback
-                self.logger.debug(traceback.format_exc())
-        finally:
-            # 念のため、スレッドローカル変数をクリア
-            if hasattr(threading.local(), '_vectorizing_agents'):
-                threading.local()._vectorizing_agents.clear()
+                except Exception as e:
+                    if self.config.get('debug', False):
+                        print(f"エージェント出力ベクトル化エラー: {e}")
     
-    def _evaluate_agent_contributions(self, agent_entries: list) -> None:
+    def _evaluate_agent_contributions(self, agent_entries: List[Dict]) -> None:
         """
-        エージェントの貢献度を評価（内部メソッド）
+        各エージェントの貢献度を評価（内部メソッド）
         
         引数:
             agent_entries: エージェント出力のリスト
@@ -540,128 +469,214 @@ class DistributedSLM:
         if not self.use_boids or not hasattr(self.agent_pool, 'agents'):
             return
             
+        # 貢献度評価実行
         try:
-            # 各エージェントの貢献度スコアを計算
-            contributions = {}
-            
-            # 簡易的な貢献度計算（文章の長さとトピックの適合性）
-            for entry in agent_entries:
-                agent_id = entry.get('agent')
-                text = entry.get('text', '')
+            # 簡易評価: 発言の長さと多様性に基づく評価
+            if self.opinion_space:
+                # 意見空間から最新分析を取得
+                space_analysis = self.opinion_space.analyze_opinion_space()
                 
-                if not text:
-                    continue
+                if space_analysis.get('valid', False) and 'diversity' in space_analysis:
+                    # 貢献度をスコア更新
+                    for entry in agent_entries:
+                        agent_id = entry.get('agent')
+                        text = entry.get('text', '')
+                        
+                        # 発言がある場合のみ評価
+                        if text and agent_id is not None:
+                            # 貢献スコアを計算（発言量と多様性に基づく）
+                            # - 長い発言ほど高評価
+                            # - 独自性のある発言ほど高評価
+                            text_len_score = min(1.0, len(text) / 500)  # 文字数（最大500文字まで）
+                            diversity = space_analysis.get('diversity', 0.5)
+                            
+                            # スコア計算
+                            contribution = 0.5 * text_len_score + 0.5 * diversity
+                            
+                            # エージェントスコア更新
+                            self._update_agent_contribution(f"agent_{agent_id}", contribution)
+            else:
+                # 意見空間なしの場合は単純長さベース評価
+                for entry in agent_entries:
+                    agent_id = entry.get('agent')
+                    text = entry.get('text', '')
                     
-                # 基本点（文章の長さに基づく）
-                score = min(len(text) / 100, 3.0)  # 最大3点
-                
-                # 追加点（内容に基づく）
-                has_facts = any(marker in text.lower() for marker in ['研究によると', '調査結果', '統計', 'データ'])
-                has_structure = any(marker in text for marker in ['第一に', '一方で', 'しかし', 'また', 'ただし'])
-                has_examples = any(marker in text for marker in ['例えば', '具体的には', '一例として'])
-                
-                if has_facts:
-                    score += 0.5
-                if has_structure:
-                    score += 0.5
-                if has_examples:
-                    score += 0.5
-                
-                # 貢献度スコアを記録
-                contributions[f"agent_{agent_id}"] = score
-            
-            # AgentPoolに貢献度を割り当て
-            if hasattr(self.agent_pool, 'assign_contributions'):
-                self.agent_pool.assign_contributions(contributions)
-                
-                if self.config.get('debug', False) and contributions:
-                    self.logger.debug(f"{len(contributions)}エージェントに貢献度を割り当て")
-                    
+                    if text and agent_id is not None:
+                        # 文字数に基づくスコア
+                        score = min(1.0, len(text) / 500)
+                        self._update_agent_contribution(f"agent_{agent_id}", score)
+                        
         except Exception as e:
             if self.config.get('debug', False):
-                self.logger.error(f"貢献度評価エラー: {str(e)}")
-                import traceback
-                self.logger.debug(traceback.format_exc())
+                print(f"エージェント貢献度評価エラー: {e}")
                 
-    def _run_self_diagnosis(self, iteration: int) -> dict:
+    def _update_agent_contribution(self, agent_id: str, contribution: float) -> None:
+        """
+        エージェントの貢献度スコアを更新（内部メソッド）
+        
+        引数:
+            agent_id: エージェントID
+            contribution: 新しい貢献度スコア（0.0～1.0）
+        """
+        try:
+            if isinstance(self.agent_pool.agents, dict) and agent_id in self.agent_pool.agents:
+                # 既存のスコアと平均化（履歴効果）
+                old_score = self.agent_pool.agents[agent_id].get('contribution_score', 0.0)
+                new_score = 0.7 * contribution + 0.3 * old_score  # 新しい貢献に重み付け
+                self.agent_pool.agents[agent_id]['contribution_score'] = new_score
+                
+            elif isinstance(self.agent_pool.agents, list):
+                # リスト内のエージェントを検索して更新
+                for agent in self.agent_pool.agents:
+                    if agent.get('id') == agent_id:
+                        old_score = agent.get('contribution_score', 0.0)
+                        new_score = 0.7 * contribution + 0.3 * old_score
+                        agent['contribution_score'] = new_score
+                        break
+        except Exception as e:
+            if self.config.get('debug', False):
+                print(f"エージェント貢献度更新エラー: {e}")
+    
+    def _run_self_diagnosis(self, iteration: int) -> Dict[str, Any]:
         """
         自己診断を実行（内部メソッド）
         
         引数:
-            iteration: 現在の反復番号
+            iteration: 現在の反復回数
             
         戻り値:
-            診断結果の辞書
+            診断結果
         """
-        if not self.use_boids or not self.opinion_space:
-            return {}
+        # デフォルト値（診断できない場合）
+        default_result = {
+            'action': 'none',
+            'reason': '診断システムが利用できません',
+            'timestamp': time.time()
+        }
+        
+        # 必要なモジュールをインポート
+        try:
+            from MurmurNet.modules.self_diagnosis import SelfDiagnosis
+        except ImportError:
+            return default_result
+        
+        # エージェントと自己診断モジュールが利用可能か確認
+        if not hasattr(self.agent_pool, 'agents') or not self.opinion_space:
+            return default_result
         
         try:
-            # 意見空間のメトリクスを取得
-            avg_distance = self.opinion_space.calculate_average_distance() if hasattr(self.opinion_space, 'calculate_average_distance') else None
-            centroid_movement = self.opinion_space.calculate_centroid_movement() if hasattr(self.opinion_space, 'calculate_centroid_movement') else None
-            clusters = self.opinion_space.detect_clusters(threshold=0.2) if hasattr(self.opinion_space, 'detect_clusters') else []
+            # エージェントリストの取得
+            agents = []
+            if isinstance(self.agent_pool.agents, dict):
+                agents = list(self.agent_pool.agents.values())
+            elif isinstance(self.agent_pool.agents, list):
+                agents = self.agent_pool.agents
             
-            # 診断の初期化
-            diagnosis = {
-                'iteration': iteration,
-                'timestamp': time.time(),
-                'metrics': {
-                    'avg_distance': avg_distance,
-                    'centroid_movement': centroid_movement,
-                    'cluster_count': len(clusters) if clusters else 0
-                }
-            }
+            # 診断インスタンスがない場合は作成
+            if not hasattr(self, 'self_diagnosis'):
+                self.self_diagnosis = SelfDiagnosis(self.config, self.opinion_space)
             
-            # エージェント数の取得
-            num_agents = 0
-            if hasattr(self.agent_pool, 'agents'):
-                if isinstance(self.agent_pool.agents, dict):
-                    num_agents = len(self.agent_pool.agents)
-                elif isinstance(self.agent_pool.agents, list):
-                    num_agents = len(self.agent_pool.agents)
+            # 診断実行
+            diagnosis = self.self_diagnosis.diagnose(agents, self.blackboard)
             
-            # 閾値を設定
-            threshold_stagnation = self.config.get('threshold_stagnation', 0.1)  # 停滞閾値
-            threshold_diversity_low = self.config.get('threshold_diversity_low', 0.2)  # 多様性低下閾値
-            threshold_diversity_high = self.config.get('threshold_diversity_high', 0.7)  # 多様性過剰閾値
-            
-            # 状態を判断
-            is_stagnant = centroid_movement is not None and centroid_movement < threshold_stagnation
-            is_converged = avg_distance is not None and avg_distance < threshold_diversity_low
-            is_diverged = avg_distance is not None and avg_distance > threshold_diversity_high
-            
-            # 診断結果を決定
-            if num_agents < self.config.get('min_agents', 3):
-                action = 'add_agent'
-                reason = 'エージェント数が最小値を下回っています'
-            elif is_stagnant and is_converged:
-                action = 'add_contrarian'
-                reason = '議論が停滞し意見が収束しています'
-            elif is_diverged:
-                action = 'add_mediator'
-                reason = '意見が発散しています'
-            elif is_stagnant:
-                action = 'add_innovation'
-                reason = '議論が停滞しています'
-            elif num_agents > self.config.get('max_agents', 5):
-                action = 'remove_agent'
-                reason = 'エージェント数が過剰です'
-            else:
-                action = None
-                reason = '特に問題ありません'
-            
-            diagnosis['action'] = action
-            diagnosis['reason'] = reason
-            
+            # 診断結果に応じてエージェント追加/削減を実行
+            if diagnosis and 'action' in diagnosis:
+                self._apply_diagnosis_action(diagnosis)
+                
             return diagnosis
             
         except Exception as e:
             if self.config.get('debug', False):
-                self.logger.error(f"自己診断エラー: {str(e)}")
+                print(f"自己診断エラー: {e}")
                 import traceback
-                self.logger.debug(traceback.format_exc())
-            return {}
+                traceback.print_exc()
+            
+            return default_result
+            
+    def _apply_diagnosis_action(self, diagnosis: Dict[str, Any]) -> None:
+        """
+        診断結果に基づいて実際のエージェント変更を適用（内部メソッド）
+        
+        引数:
+            diagnosis: 診断結果
+        """
+        if not diagnosis or 'action' not in diagnosis:
+            return
+            
+        action = diagnosis.get('action')
+        
+        try:
+            # エージェント削除アクション
+            if action == 'reduce' and 'target' in diagnosis:
+                target = diagnosis['target']
+                agent_id = target.get('agent_id')
+                if agent_id:
+                    # AgentPoolManagerの削除メソッドを呼び出す
+                    if hasattr(self.agent_pool, 'remove_agent'):
+                        self.agent_pool.remove_agent(agent_id)
+                        if self.config.get('debug', False):
+                            print(f"エージェント {agent_id} を削除しました: {target.get('reason', '')}")
+                
+            # エージェント追加アクション（Contrarian）
+            elif action == 'add_contrarian':
+                if hasattr(self.agent_pool, 'add_agent') and hasattr(self.agent_pool, 'agent_factory'):
+                    # Contrarianエージェントを生成して追加
+                    new_agent = self.agent_pool.agent_factory.create_contrarian_agent()
+                    if new_agent:
+                        self.agent_pool.add_agent(new_agent)
+                        if self.config.get('debug', False):
+                            print(f"Contrarianエージェントを追加しました: {new_agent.get('role', '不明')}")
+                            
+            # エージェント追加アクション（Mediator）
+            elif action == 'add_mediator':
+                if hasattr(self.agent_pool, 'add_agent') and hasattr(self.agent_pool, 'agent_factory'):
+                    # Mediatorエージェントを生成して追加
+                    new_agent = self.agent_pool.agent_factory.create_mediator_agent()
+                    if new_agent:
+                        self.agent_pool.add_agent(new_agent)
+                        if self.config.get('debug', False):
+                            print(f"Mediatorエージェントを追加しました: {new_agent.get('role', '不明')}")
+                            
+            # エージェント追加アクション（Aligning）
+            elif action == 'add_aligning':
+                if hasattr(self.agent_pool, 'add_agent') and hasattr(self.agent_pool, 'agent_factory'):
+                    # Aligningエージェントを生成して追加
+                    new_agent = self.agent_pool.agent_factory.create_aligning_agent()
+                    if new_agent:
+                        self.agent_pool.add_agent(new_agent)
+                        if self.config.get('debug', False):
+                            print(f"Aligningエージェントを追加しました: {new_agent.get('role', '不明')}")
+                            
+            # エージェント追加アクション（Explorer）
+            elif action == 'add_explorer':
+                if hasattr(self.agent_pool, 'add_agent') and hasattr(self.agent_pool, 'agent_factory'):
+                    # Explorerエージェントを生成して追加
+                    new_agent = self.agent_pool.agent_factory.create_explorer_agent()
+                    if new_agent:
+                        self.agent_pool.add_agent(new_agent)
+                        if self.config.get('debug', False):
+                            print(f"Explorerエージェントを追加しました: {new_agent.get('role', '不明')}")
+                            
+            # バランス型エージェント追加
+            elif action == 'add_balanced' and 'role' in diagnosis:
+                role = diagnosis.get('role')
+                if hasattr(self.agent_pool, 'add_agent') and hasattr(self.agent_pool, 'agent_factory'):
+                    # 指定された役割のエージェントを生成して追加
+                    new_agent = self.agent_pool.agent_factory.create_agent_with_role(role)
+                    if new_agent:
+                        self.agent_pool.add_agent(new_agent)
+                        if self.config.get('debug', False):
+                            print(f"バランス型エージェント({role})を追加しました")
+                    
+            # なにもしない
+            elif action == 'none':
+                pass
+                
+        except Exception as e:
+            if self.config.get('debug', False):
+                print(f"診断結果適用エラー: {e}")
+                import traceback
+                traceback.print_exc()
     
     async def _run_agents_parallel(self) -> None:
         """エージェントを並列実行する（内部メソッド）"""
@@ -1024,12 +1039,12 @@ class DistributedSLM:
             if agent_output:
                 agent_role = self.blackboard.read(f"agent_{i}_role") or f"エージェント{i}"
                 entries.append({"type": "agent", "agent": i, "role": agent_role, "text": agent_output})
-                
-        # Boids型自己増殖機構の情報を収集（デバッグ用）
-        if self.use_boids and self.config.get('debug'):
+                  # Boids型自己増殖機構の情報を収集（デバッグ用）
+        if self.use_boids and self._should_log("verbose"):
             boids_info = self._collect_boids_information()
             self.blackboard.write('boids_info', boids_info)
-            self.logger.debug(f"Collected Boids information: {len(boids_info.get('active_agents', []))} active agents")
+            if self._should_log("verbose"):
+                self.logger.debug(f"Boids情報収集: アクティブエージェント {len(boids_info.get('active_agents', []))}体")
                 
         # 7. 最終応答生成
         final_response = self.output_agent.generate(self.blackboard, entries)
@@ -1041,7 +1056,8 @@ class DistributedSLM:
                 user_input=input_text, 
                 system_response=final_response
             )
-            self.logger.debug("Updated conversation memory")
+            if self._should_log("normal"):
+                self.logger.debug("会話履歴を更新しました")
         
         return final_response
         
@@ -1090,9 +1106,7 @@ class DistributedSLM:
             return filepath
         except Exception as e:
             self.logger.error(f"Failed to save log: {str(e)}")
-            return ""
-
-    # バッチ処理関連の追加
+            return ""    # バッチ処理関連の追加
     def _setup_batch_processor(self):
         """バッチ処理のためのモデル呼び出しプールを設定（内部メソッド）"""
         self._batch_processor = {
@@ -1115,7 +1129,7 @@ class DistributedSLM:
                 'processing_time': 0.0
             }
             
-        if self.config.get('debug'):
+        if self._should_log("normal"):
             self.logger.info("バッチ処理機能を初期化しました")
     
     async def _process_batch(self):
@@ -1127,11 +1141,10 @@ class DistributedSLM:
         # 再帰呼び出しの深さを追跡
         if not hasattr(thread_local, 'processing_depth'):
             thread_local.processing_depth = 0
-        
-        # 再帰呼び出し検出
+          # 再帰呼び出し検出
         thread_local.processing_depth += 1
         if thread_local.processing_depth > 2:  # 再帰深度の上限
-            if self.config.get('debug'):
+            if self._should_log("important"):
                 self.logger.warning("再帰呼び出し検出: バッチ処理を中断します")
             thread_local.processing_depth -= 1
             self._batch_processor['is_processing'] = False
@@ -1167,7 +1180,7 @@ class DistributedSLM:
                 
             start_time = time.time()
                 
-            if self.config.get('debug'):
+            if self._should_log("verbose"):
                 self.logger.debug(f"バッチ処理開始: {batch_size}個のプロンプト, キュー残り: {len(self._batch_processor['queue'])}")
             
             # ループで1つずつ処理

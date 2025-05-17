@@ -11,6 +11,7 @@ Boidsアルゴリズムの原則に基づき、自己増殖型エージェント
 
 import random
 import numpy as np
+import time
 from typing import Dict, Any, List, Optional, Union, Tuple
 
 class BoidsAgentFactory:
@@ -597,13 +598,18 @@ SF的な空想ではなく、論理的に考えられる未来像を描写して
         # 意見空間マネージャが設定されていなければ通常のMediator
         if not self.opinion_space:
             return self.create_agent('mediator', blackboard)
-            
-        # 調停エージェントをベースに生成
+              # 調停エージェントをベースに生成
         agent = self.create_agent('mediator', blackboard)
         
         try:
-            # クラスタリングを実行
-            clusters = self.opinion_space.cluster_opinions(n_clusters=min(3, len(self.opinion_space.latest_vectors)))
+            # クラスタリングを実行（エラーハンドリング強化）
+            latest_vectors = getattr(self.opinion_space, 'latest_vectors', {})
+            num_vectors = len(latest_vectors) if latest_vectors else 0
+            
+            if num_vectors > 0:
+                clusters = self.opinion_space.cluster_opinions(n_clusters=min(3, num_vectors))
+            else:
+                clusters = None
             
             if clusters and len(clusters) > 1:
                 # 強化されたシステムプロンプト
@@ -662,3 +668,184 @@ SF的な空想ではなく、論理的に考えられる未来像を描写して
         """
         import time
         return int(time.time())
+    
+    def create_contrarian_agent(self) -> Dict[str, Any]:
+        """
+        Contrarian（反対意見）エージェントの生成
+        - Separation原則: 既存の意見から距離を取る
+        
+        戻り値:
+            エージェント定義辞書
+        """
+        # Contrarian用のテンプレート一覧からランダム選択
+        template = random.choice(self.contrarian_templates)
+        
+        # エージェントを作成
+        agent_id = f"agent_{self.agent_counter}"
+        self.agent_counter += 1
+        
+        agent = {
+            'id': agent_id,
+            'role': template['role'],
+            'system': template['system'],
+            'temperature': template.get('temperature', 0.8),
+            'created_at': time.time(),
+            'generation': 1,
+            'lifespan': self.config.get('agent_lifespan', 5),
+            'position': np.random.rand(self.config.get('vector_dim', 384)),
+            'velocity': np.zeros(self.config.get('vector_dim', 384)),
+            'contribution_score': 0.0,
+            'active': True,
+            'principle': 'separation',
+            'strategy': template.get('strategy', '反対意見')
+        }
+        
+        if self.debug:
+            print(f"Contrarian（反対意見）エージェントを生成: {agent['role']}")
+            
+        return agent
+        
+    def create_mediator_agent(self) -> Dict[str, Any]:
+        """
+        Mediator（調停）エージェントの生成
+        - Cohesion原則: 意見をまとめる方向に動く
+        
+        戻り値:
+            エージェント定義辞書
+        """
+        # Mediator用テンプレートからランダム選択
+        template = random.choice(self.mediator_templates)
+        
+        # エージェントを作成
+        agent_id = f"agent_{self.agent_counter}"
+        self.agent_counter += 1
+        
+        agent = {
+            'id': agent_id,
+            'role': template['role'],
+            'system': template['system'],
+            'temperature': template.get('temperature', 0.6),
+            'created_at': time.time(),
+            'generation': 1,
+            'lifespan': self.config.get('agent_lifespan', 5),
+            'position': np.random.rand(self.config.get('vector_dim', 384)),
+            'velocity': np.zeros(self.config.get('vector_dim', 384)),
+            'contribution_score': 0.0,
+            'active': True,
+            'principle': 'cohesion',
+            'strategy': template.get('strategy', '意見統合')
+        }
+        
+        if self.debug:
+            print(f"Mediator（調停）エージェントを生成: {agent['role']}")
+            
+        return agent
+        
+    def create_aligning_agent(self) -> Dict[str, Any]:
+        """
+        Aligning（同調・深化）エージェントの生成
+        - Alignment原則: 議論の流れに沿って発展させる
+        
+        戻り値:
+            エージェント定義辞書
+        """
+        # Aligning用テンプレートからランダム選択
+        template = random.choice(self.aligning_templates)
+        
+        # エージェントを作成
+        agent_id = f"agent_{self.agent_counter}"
+        self.agent_counter += 1
+        
+        agent = {
+            'id': agent_id,
+            'role': template['role'],
+            'system': template['system'],
+            'temperature': template.get('temperature', 0.7),
+            'created_at': time.time(),
+            'generation': 1,
+            'lifespan': self.config.get('agent_lifespan', 5),
+            'position': np.random.rand(self.config.get('vector_dim', 384)),
+            'velocity': np.zeros(self.config.get('vector_dim', 384)),
+            'contribution_score': 0.0,
+            'active': True,
+            'principle': 'alignment',
+            'strategy': template.get('strategy', '意見深化')
+        }
+        
+        if self.debug:
+            print(f"Aligning（同調・深化）エージェントを生成: {agent['role']}")
+            
+        return agent
+        
+    def create_explorer_agent(self) -> Dict[str, Any]:
+        """
+        Explorer（探索）エージェントの生成
+        - 新しい視点を探索する特殊役割
+        
+        戻り値:
+            エージェント定義辞書
+        """
+        # Explorer用テンプレートからランダム選択
+        template = random.choice(self.explorer_templates)
+        
+        # エージェントを作成
+        agent_id = f"agent_{self.agent_counter}"
+        self.agent_counter += 1
+        
+        agent = {
+            'id': agent_id,
+            'role': template['role'],
+            'system': template['system'],
+            'temperature': template.get('temperature', 0.9),
+            'created_at': time.time(),
+            'generation': 1,
+            'lifespan': self.config.get('agent_lifespan', 4),  # Explorerは寿命短め
+            'position': np.random.rand(self.config.get('vector_dim', 384)),
+            'velocity': np.zeros(self.config.get('vector_dim', 384)),
+            'contribution_score': 0.0,
+            'active': True,
+            'principle': 'explore',
+            'strategy': template.get('strategy', '新視点探索')
+        }
+        
+        if self.debug:
+            print(f"Explorer（探索）エージェントを生成: {agent['role']}")
+            
+        return agent
+        
+    def create_agent_with_role(self, role: str) -> Dict[str, Any]:
+        """
+        指定された役割に基づくエージェントを生成
+        
+        引数:
+            role: エージェントの役割
+            
+        戻り値:
+            エージェント定義辞書（該当する役割がない場合はNone）
+        """
+        # 役割名に基づいて適切なエージェントタイプを選択
+        role_lower = role.lower() if role else ""
+        
+        if "批判" in role_lower or "反対" in role_lower or "critic" in role_lower:
+            return self.create_contrarian_agent()
+            
+        elif "調停" in role_lower or "統合" in role_lower or "要約" in role_lower or "mediator" in role_lower:
+            return self.create_mediator_agent()
+            
+        elif "詳細" in role_lower or "深化" in role_lower or "補完" in role_lower or "align" in role_lower:
+            return self.create_aligning_agent()
+            
+        elif "探索" in role_lower or "創造" in role_lower or "発想" in role_lower or "explor" in role_lower:
+            return self.create_explorer_agent()
+            
+        else:
+            # マッチしない場合はバランスよく選択
+            agent_types = [
+                self.create_contrarian_agent,
+                self.create_mediator_agent,
+                self.create_aligning_agent,
+                self.create_explorer_agent
+            ]
+            # ランダムに1つ選択
+            create_func = random.choice(agent_types)
+            return create_func()

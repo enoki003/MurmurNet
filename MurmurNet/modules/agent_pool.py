@@ -763,6 +763,34 @@ class AgentPool:
                 print(f"意見ベクトル処理エラー: {str(e)}")
                 import traceback
                 traceback.print_exc()
+                
+    def _should_log(self, importance: str = "normal"):
+        """
+        ログ出力が必要かどうか判断する
+        
+        引数:
+            importance: ログの重要度 ("critical", "important", "normal", "verbose")
+        戻り値:
+            bool: ログ出力すべきかどうか
+        """
+        if not self.debug:
+            return False
+            
+        # 重要度に応じた出力制御
+        verbose_logging = self.config.get('verbose_logging', False)
+        
+        if importance == "critical":
+            # 重大なエラーは常にログ
+            return True
+        elif importance == "important":
+            # 重要な情報は常にデバッグモードでログ
+            return True
+        elif importance == "normal":
+            # 通常情報はverbose_loggingがTrueの場合のみ
+            return verbose_logging
+        else:  # "verbose"
+            # 詳細情報は更に厳しく制限
+            return verbose_logging and self.config.get('extra_verbose', False)
 
 class AgentPoolManager:
     """
@@ -1187,8 +1215,7 @@ class AgentPoolManager:
         """
         if "contrarian" in role.lower() or "批判" in role or "反対" in role:
             return "あなたは会議でのデビルズアドボケート（あえて反対意見を述べる役）です。他の発言者の意見に疑問を呈し、代替案や潜在的な問題点を指摘してください。"
-        
-        elif "mediator" in role.lower() or "調停" in role or "調整" in role:
+          elif "mediator" in role.lower() or "調停" in role or "調整" in role:
             return "あなたは議論の調停者です。各発言者の主張を要約し、共通点を見つけて統合案を提案してください。対立がある場合は妥協点を示してください。"
         
         elif "align" in role.lower() or "同調" in role or "深掘り" in role:
@@ -1529,8 +1556,7 @@ class AgentPoolManager:
         discussion_count = sum(1 for kw in discussion_keywords if kw in question_lower)
         planning_count = sum(1 for kw in planning_keywords if kw in question_lower)
         info_count = sum(1 for kw in info_keywords if kw in question_lower)
-        
-        # 疑問文の特徴も確認
+          # 疑問文の特徴も確認
         has_question_mark = "?" in question or "？" in question
         ends_with_question = any(question.endswith(q) for q in ["か", "の", "でしょうか", "ですか"])
         
@@ -1546,7 +1572,7 @@ class AgentPoolManager:
             return "informational"
         else:
             return "conversational"  # デフォルト
-
+            
     async def run_agents(self, blackboard) -> List[Dict[str, Any]]:
         """
         すべてのエージェントを実行して応答を生成する
@@ -1560,37 +1586,68 @@ class AgentPoolManager:
         if self.debug:
             print(f"エージェント実行中...")
             
-        # 再帰呼び出し防止用のグローバルフラグ
-        # スレッドIDとコールIDでユニークなキーを作成
+        # 再帰呼び出し防止用のスレッドローカルストレージの使用
         import threading
-        import uuid
+        import inspect
         
-        # グローバル実行状態管理用の辞書がなければ作成
-        if not hasattr(AgentPoolManager, '_run_agents_status'):
-            AgentPoolManager._run_agents_status = {}
+        # スレッドローカル変数がまだ初期化されていない場合は初期化
+        if not hasattr(threading, '_run_agents_call_info'):
+            threading._run_agents_call_info = threading.local()
             
-        # 現在のスレッドID
-        thread_id = threading.get_ident()
+        # 現在のスレッドのコールスタックを初期化
+        if not hasattr(threading._run_agents_call_info, 'stack'):
+            threading._run_agents_call_info.stack = set()
+            
+        if not hasattr(threading._run_agents_call_info, 'running'):
+            threading._run_agents_call_info.running = False
+            
+        # 現在のフレーム情報を取得して一意のIDを生成
+        current_frame = inspect.currentframe()
+        frame_id = id(current_frame)
+        call_source = f"{current_frame.f_code.co_filename}:{current_frame.f_lineno}"
+        call_signature = f"{frame_id}:{call_source}"
         
-        # 現在のコールスタックに既存の実行がないか確認
-        if thread_id in AgentPoolManager._run_agents_status:
+        # 既に実行中の場合は早期リターン
+        if threading._run_agents_call_info.running:
             if self.debug:
-                print(f"警告: run_agentsはすでにスレッド {thread_id} で実行中です。再帰呼び出しを防止します。")
+                print(f"警告: run_agentsは既に実行中です。重複実行を防止します。")
             return []
-
-        # 実行状態を記録
-        call_id = str(uuid.uuid4())
-        AgentPoolManager._run_agents_status[thread_id] = {
-            'call_id': call_id,
-            'start_time': time.time()
-        }
-        
-        try:
-            use_parallel = self.config.get('use_parallel', False)
-            responses = []
             
-            # 入力を取得
-            input_data = blackboard.read('input')
+        # このフレームがすでにスタックにある場合は再帰呼び出しと判断
+        if call_signature in threading._run_agents_call_info.stack:
+            if self.debug:
+                print(f"警告: run_agentsの再帰呼び出しを検出しました。スキップします。")
+            return []            # スタックにフレーム情報を追加して実行中フラグを設定
+        threading._run_agents_call_info.stack.add(call_signature)
+        threading._run_agents_call_info.running = True
+        
+        # スレッドセーフ実装のため開始時間を記録
+        start_time = time.time()
+        if hasattr(self, '_should_log') and self._should_log("verbose"):
+            print(f"エージェント実行開始時刻: {start_time}")
+        elif self.debug:
+            print(f"エージェント実行開始")
+            
+        try:
+            use_parallel = self.config.get('use_parallel', True)  # デフォルトで並列化を有効に変更
+            use_thread_pool = self.config.get('use_thread_pool', True)  # ThreadPoolExecutorを使用
+            responses = []
+              # 黒板のスナップショットを作成（読み取り専用コピー）
+            # 深いコピーを使用して競合状態を避ける
+            import copy
+            blackboard_snapshot = {}
+            blackboard_keys = ['input', 'system_prompt', 'conversation_context', 'agent_responses']
+            
+            for key in blackboard_keys:
+                value = blackboard.read(key)
+                if value is not None:
+                    blackboard_snapshot[key] = copy.deepcopy(value)
+            
+            if self.debug:
+                print(f"黒板のスナップショットを作成: {len(blackboard_snapshot)} 項目")
+            
+            # 入力を取得（スナップショットから）
+            input_data = blackboard_snapshot.get('input')
             if not input_data:
                 if self.debug:
                     print("警告: 入力データがありません")
@@ -1604,19 +1661,18 @@ class AgentPoolManager:
                 input_text = input_data
                 
             # システムプロンプト（あれば）
-            system_prompt = blackboard.read('system_prompt') or ""
+            system_prompt = blackboard_snapshot.get('system_prompt', "")
             
             # 会話コンテキスト（あれば）- 過去の会話履歴を制限
-            conversation_context = blackboard.read('conversation_context') or ""
+            conversation_context = blackboard_snapshot.get('conversation_context', "")
             if len(conversation_context) > 1000:  # 1000文字を超える場合は最新部分のみを使用
                 conversation_context = "...(過去の会話は省略)...\n" + conversation_context[-1000:]
-                # 黒板の内容も更新
-                blackboard.write('conversation_context', conversation_context)
+                # 黒板のスナップショットを更新（元の黒板は変更しない）
+                blackboard_snapshot['conversation_context'] = conversation_context
                 if self.debug:
                     print(f"会話コンテキストを短縮: {len(conversation_context)} 文字")
-            
-            # 前のエージェント応答（あれば）- 最新の3つのみを使用
-            prev_responses = blackboard.read('agent_responses') or []
+              # 前のエージェント応答（あれば）- 最新の3つのみを使用
+            prev_responses = blackboard_snapshot.get('agent_responses', [])
             if len(prev_responses) > 3:
                 prev_responses = prev_responses[-3:]
                 
@@ -1631,9 +1687,85 @@ class AgentPoolManager:
                 
             if self.debug:
                 print(f"実行するエージェント数: {num_agents}")
+            
+            # ThreadPoolExecutorによる並列実行（新実装）
+            if use_thread_pool and num_agents > 1:
+                try:
+                    from concurrent.futures import ThreadPoolExecutor, as_completed
+                    
+                    # 最大ワーカー数の設定（CPUコア数か最大エージェント数のいずれか小さい方）
+                    import os
+                    max_workers = min(os.cpu_count() or 4, num_agents)
+                    
+                    if self.debug:
+                        print(f"ThreadPoolExecutorを使用: max_workers={max_workers}")
+                    
+                    # 各エージェントの処理をサブミット
+                    agent_futures = []
+                    
+                    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                        # スナップショットを渡す関数をラップ
+                        def process_agent(agent_id):
+                            # 非同期関数をブロッキング呼び出しに変換
+                            import asyncio
+                            try:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                
+                                coro = self._generate_agent_response(
+                                    agent_id, input_text, system_prompt, 
+                                    conversation_context, prev_responses
+                                )
+                                response = loop.run_until_complete(coro)
+                                loop.close()
+                                return response
+                            except Exception as e:
+                                if self.debug:
+                                    print(f"エージェント処理エラー (agent_id={agent_id}): {str(e)}")
+                                    import traceback
+                                    traceback.print_exc()
+                                return None
+                        
+                        # エージェントをプールに投入
+                        if isinstance(self.agents, dict):
+                            for agent_id in self.agents:
+                                future = executor.submit(process_agent, agent_id)
+                                agent_futures.append(future)
+                        elif isinstance(self.agents, list):
+                            for i, agent_info in enumerate(self.agents):
+                                agent_id = f"agent_{i}"
+                                future = executor.submit(process_agent, agent_id)
+                                agent_futures.append(future)
+                        else:
+                            # デフォルトのエージェント数
+                            for i in range(self.num_agents):
+                                agent_id = f"agent_{i}"
+                                future = executor.submit(process_agent, agent_id)
+                                agent_futures.append(future)
+                        
+                        # 結果を収集
+                        for future in as_completed(agent_futures):
+                            try:
+                                response = future.result()
+                                if response:
+                                    responses.append(response)
+                            except Exception as e:
+                                if self.debug:
+                                    print(f"エージェント結果取得エラー: {str(e)}")
+                    
+                    if self.debug:
+                        print(f"ThreadPoolExecutor処理完了: {len(responses)}/{num_agents}個の応答")
                 
-            # 並列実行
-            if use_parallel and num_agents > 1:
+                except Exception as e:
+                    if self.debug:
+                        print(f"ThreadPoolExecutor並列実行エラー: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                    # 他の並列/逐次処理にフォールバック
+                    use_thread_pool = False
+            
+            # asyncioを使った並列実行（既存実装）
+            elif use_parallel and num_agents > 1:
                 try:
                     import asyncio
                     
@@ -1718,21 +1850,34 @@ class AgentPoolManager:
                         )
                         if response:
                             responses.append(response)
-                        
-            # 応答結果を黒板に書き込む
+                          # 応答結果を黒板に書き込む
             blackboard.write('agent_responses', responses)
             
             if self.debug:
                 print(f"{len(responses)}個のエージェント応答を生成")
-                
-            return responses
+                  return responses
         finally:
             # 必ず実行されるクリーンアップ処理
-            # 実行状態をクリア
-            if thread_id in AgentPoolManager._run_agents_status:
-                del AgentPoolManager._run_agents_status[thread_id]
+            # 経過時間を計測
+            elapsed = time.time() - start_time
+            if hasattr(self, '_should_log') and self._should_log("normal"):
+                print(f"エージェント実行完了: 処理時間={elapsed:.2f}秒")
+            elif self.debug:
+                print(f"エージェント実行完了")
                 
-    async def _generate_agent_response(self, agent_id, input_text, 
+            # スレッドローカル変数のクリーンアップ
+            if hasattr(threading, '_run_agents_call_info'):
+                # スタックからフレーム情報を削除
+                if hasattr(threading._run_agents_call_info, 'stack'):
+                    threading._run_agents_call_info.stack.discard(call_signature)
+                # 実行中フラグをリセット
+                if hasattr(threading._run_agents_call_info, 'running'):
+                    threading._run_agents_call_info.running = False
+                    
+            # 下位互換性維持のための処理
+            if hasattr(threading, '_run_agents_call_stack') and hasattr(threading._run_agents_call_stack, 'stack'):
+                threading._run_agents_call_stack.stack.discard(frame_id)
+                  async def _generate_agent_response(self, agent_id, input_text, 
                                      system_prompt="", conversation_context="", 
                                      prev_responses=None, max_retries=2) -> Dict[str, Any]:
         """
@@ -1752,6 +1897,9 @@ class AgentPoolManager:
         # 再帰呼び出し防止用セーフガード
         # スレッドローカル変数を使用してコールスタックを追跡
         import threading
+        import time
+        
+        agent_call_id = f"response_gen_{time.time()}"
         
         # スレッドローカルストレージが初期化されていなければ初期化
         if not hasattr(threading.current_thread(), '_agent_call_stack'):
@@ -1768,6 +1916,9 @@ class AgentPoolManager:
         
         # コールスタックに追加
         threading.current_thread()._agent_call_stack.add(agent_id_str)
+        
+        # 実行時間計測開始
+        start_time = time.time()
         
         try:
             # エージェント情報を取得

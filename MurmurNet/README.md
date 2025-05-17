@@ -19,7 +19,31 @@ python murmurnet/test_script.py
 python murmurnet/distributed_slm.py
 ```
 
-## 注意## モジュール詳細設計書: 分散型SLMアーキテクチャ（モジュール版）
+## 最新の最適化と改善点（2025年5月17日更新）
+
+当プロジェクトに対して以下の最適化と改善が実施されました：
+
+### パフォーマンス最適化
+1. **ログ出力の最適化**
+   - 重要度に応じたログ出力制御を実装（`_should_log()` メソッド）
+   - 不要なデバッグログの削減によるパフォーマンス向上
+   - "important", "normal", "verbose" の3段階によるログレベル制御
+
+2. **再帰呼び出し問題の修正**
+   - `agent_pool.py` の `run_agents` メソッドの再帰呼び出し防止機能強化
+   - `opinion_space_manager.py` のクラスタリング処理を内部メソッドに分離
+   - スレッドローカル変数による再帰検出と防止
+
+3. **スレッドセーフ実装の強化**
+   - ベクトル追加処理などの競合状態を防止
+   - 適切なロック機構の導入
+   - エラーハンドリングの統一と強化
+
+### その他の改善
+- クラスタリング関数のパラメータ不整合を修正
+- バッチ処理の安定性向上
+- Boids型自己増殖機能のスレッドセーフな実装
+- 全モジュールでの一貫したログ出力条件制御## モジュール詳細設計書: 分散型SLMアーキテクチャ（モジュール版）
 
 **目的**：
 
@@ -165,6 +189,9 @@ print(result)
 ### DistributedSLMの主な引数・設定項目
 - `num_agents` : 並列で動作させるエージェント数（int）
 - `rag_top_k`  : RAG Knowledge Baseから取得する知識数（int）
+- `debug` : デバッグモードを有効化（bool）
+- `debug_verbose` : 詳細なデバッグログを有効化（bool）
+- `verbose_logging` : 通常の詳細ログを有効化（bool）
 - その他、各モジュール（AgentPool, RAGRetriever, OutputAgent等）の詳細設定もconfigで渡せます
 
 #### 例: カスタム設定
@@ -172,6 +199,8 @@ print(result)
 config = {
     "num_agents": 4,
     "rag_top_k": 5,
+    "debug": True,                  # デバッグ情報を表示
+    "verbose_logging": True,        # 通常の詳細ログを有効化
     "output": {"max_tokens": 256},
     # ...他の詳細設定も可
 }

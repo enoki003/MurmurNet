@@ -14,7 +14,7 @@ import logging
 import os
 import re
 import textwrap
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional, ClassVar
 
 import numpy as np
 
@@ -60,6 +60,74 @@ def _html_to_text(html: str) -> str:
 
 
 # ───────────────────────────────────────────────────────────────────────────
+# 共有リソース管理
+# ───────────────────────────────────────────────────────────────────────────
+
+class SharedModels:
+    """モデルやリソースを共有するためのクラス変数ホルダー"""
+    # 共有ZIMアーカイブとパス
+    _zim_archives: Dict[str, Archive] = {}
+    # 共有埋め込みモデル
+    _embedding_models: Dict[str, Any] = {}
+    # ロック用
+    _is_loading: bool = False
+    
+    @classmethod
+    def get_zim_archive(cls, path: str) -> Optional[Archive]:
+        """ZIMアーカイブを取得（なければロード）"""
+        if path in cls._zim_archives:
+            return cls._zim_archives[path]
+        
+        # ロードを試みる
+        if not HAS_LIBZIM or not os.path.exists(path):
+            return None
+            
+        # ダブルチェックロック
+        if cls._is_loading:
+            return None
+            
+        cls._is_loading = True
+        try:
+            # 新しいアーカイブを開く
+            archive = Archive(path)
+            cls._zim_archives[path] = archive
+            logger.info(f"ZIM共有アーカイブをロードしました: {path}")
+            return archive
+        except Exception as e:
+            logger.error(f"ZIMアーカイブ開封エラー: {e}")
+            return None
+        finally:
+            cls._is_loading = False
+    
+    @classmethod
+    def get_embedding_model(cls, model_name: str) -> Optional[Any]:
+        """埋め込みモデルを取得（なければロード）"""
+        if model_name in cls._embedding_models:
+            return cls._embedding_models[model_name]
+            
+        # ロードを試みる
+        if SentenceTransformer is None:
+            return None
+            
+        # ダブルチェックロック
+        if cls._is_loading:
+            return None
+            
+        cls._is_loading = True
+        try:
+            # 新しいモデルをロード
+            model = SentenceTransformer(model_name)
+            cls._embedding_models[model_name] = model
+            logger.info(f"埋め込みモデルを共有ロードしました: {model_name}")
+            return model
+        except Exception as e:
+            logger.error(f"埋め込みモデルロードエラー: {e}")
+            return None
+        finally:
+            cls._is_loading = False
+
+
+# ───────────────────────────────────────────────────────────────────────────
 # Main class
 # ───────────────────────────────────────────────────────────────────────────
 
@@ -72,42 +140,70 @@ class RAGRetriever:
         self.debug: bool = bool(config.get("debug", False))
         self.knowledge_base: List[Dict[str, Any]] = config.get("knowledge_base", [])
 
+        # ZIMと埋め込みモデルを初期化
         if self.mode == "zim":
             self._init_zim()
             self._init_embedding()
 
         if self.debug:
             logger.setLevel(logging.DEBUG)
+            if self.mode == "zim":
+                logger.debug("RAGモード: ZIM, スコア閾値: %f, 上位K: %d", 
+                             self.score_threshold, self.top_k)
 
     # ───────────────────── init helpers ─────────────────────
     def _init_zim(self) -> None:
+        """共有ZIMアーカイブを初期化"""
         if not HAS_LIBZIM:
             logger.warning("libzim absent → dummy mode")
             self.mode = "dummy"; return
+            
         path = self.config.get("zim_path")
         if not path or not os.path.exists(path):
             logger.warning("ZIM not found: %s → dummy", path)
             self.mode = "dummy"; return
-        try:
-            self.zim_archive = Archive(path)
-            logger.info("Loaded ZIM: %s", path)
-        except Exception as e:
-            logger.exception("Archive open failed: %s", e)
-            self.mode = "dummy"
+        
+        # 共有ZIMアーカイブを取得
+        start_time = None
+        if self.debug:
+            import time
+            start_time = time.time()
+            
+        self.zim_archive = SharedModels.get_zim_archive(path)
+        
+        if self.zim_archive is None:
+            logger.warning("ZIMアーカイブの取得に失敗しました: %s → dummy", path)
+            self.mode = "dummy"; return
+            
+        if self.debug and start_time:
+            import time
+            logger.debug("ZIMアーカイブ取得時間: %.3f秒", time.time() - start_time)
 
     def _init_embedding(self) -> None:
+        """共有埋め込みモデルを初期化"""
         if self.mode != "zim":
             return
+            
         if SentenceTransformer is None:
             logger.warning("embedding lib absent → no embeddings")
             self.embedding_model = None; return
+            
         model_name = self.config.get("embedding_model", "all-MiniLM-L6-v2")
-        try:
-            self.embedding_model = SentenceTransformer(model_name)
-            logger.info("Embedding model: %s", model_name)
-        except Exception as e:
-            logger.exception("Embedding load fail: %s", e)
-            self.embedding_model = None
+        
+        # 共有埋め込みモデルを取得
+        start_time = None
+        if self.debug:
+            import time
+            start_time = time.time()
+            
+        self.embedding_model = SharedModels.get_embedding_model(model_name)
+        
+        if self.embedding_model is None:
+            logger.warning("埋め込みモデルの取得に失敗しました: %s", model_name)
+            
+        if self.debug and start_time:
+            import time
+            logger.debug("埋め込みモデル取得時間: %.3f秒", time.time() - start_time)
 
     # ───────────────────── public ─────────────────────
     def retrieve(self, query: Union[str, Dict[str, Any]]) -> str:

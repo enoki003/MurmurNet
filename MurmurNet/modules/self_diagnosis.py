@@ -12,6 +12,8 @@ import numpy as np
 from typing import Dict, Any, List, Tuple, Optional, Union
 import time
 import random
+import threading
+import traceback
 
 class SelfDiagnosis:
     """
@@ -100,6 +102,22 @@ class SelfDiagnosis:
             if current_time - self.last_diagnosis_time < self.diagnosis_interval and self.last_diagnosis:
                 return self.last_diagnosis
                 
+            # 議論状態の包括的な分析を実行
+            discussion_analysis = self._analyze_discussion_state(agents)
+            
+            # 分析結果に基づいて推奨アクションを決定
+            recommendation = self._determine_recommended_action(discussion_analysis, agents)
+              # 診断結果を作成
+            result = {
+                **recommendation,
+                'timestamp': current_time,
+                'analysis': discussion_analysis
+            }
+            
+            # 結果をキャッシュし、返却
+            self.last_diagnosis = result
+            self.last_diagnosis_time = current_time
+                
             # 意見空間マネージャがない場合はデフォルト診断
             if not self.opinion_space:
                 result = self._default_diagnosis(agents)
@@ -113,7 +131,7 @@ class SelfDiagnosis:
                 result = {
                     'action': 'reduce',
                     'reason': f'エージェント数が上限({self.max_agents})を超えています',
-                    'target': self._select_agent_for_reduction(agents),
+                    'target': self._select_agent_for_reduction_with_details(agents),
                     'timestamp': current_time
                 }
                 self.last_diagnosis = result
@@ -149,15 +167,14 @@ class SelfDiagnosis:
                         'centroid_movement': 0.05,
                         'average_agent_movement': 0.05,
                         'opinion_convergence': 0.0
-                    }
-                
-                # 3. クラスタリングの実行（安全に）
+                    }                # 3. クラスタリングの実行（安全に）
                 clusters = None
                 if hasattr(self.opinion_space, 'cluster_opinions'):
                     try:
+                        # n_clustersパラメータを使用
                         clusters = self.opinion_space.cluster_opinions(n_clusters=min(3, num_agents))
                     except Exception as e:
-                        if self.debug:
+                        if self.debug and self.config.get('verbose_logging', False):
                             print(f"クラスタリングエラー: {str(e)}")
                 
                 # 4. クラスタ間距離（安全に）
@@ -351,12 +368,12 @@ class SelfDiagnosis:
                 
                 # 収束が連続して検出された場合のみ
                 if self._check_repeated_diagnosis('convergence', 2):
-                    target_id = self._select_agent_for_reduction(agents)
+                    target_details = self._select_agent_for_reduction_with_details(agents)
                     
                     result = {
                         'action': 'reduce',
                         'reason': '議論が十分に収束したため',
-                        'target': target_id,
+                        'target': target_details,
                         'metrics': {
                             'diversity': diversity_metrics,
                             'change': change_metrics
@@ -501,9 +518,8 @@ class SelfDiagnosis:
         current_principles = [agent.get('principle', '') for agent in agents if 'principle' in agent]
         
         # 意見ベクトル空間があれば中心から最も遠い位置を計算
-        if self.opinion_space:
-            try:
-                # クラスタリング実行
+        if self.opinion_space:            try:
+                # クラスタリング実行 - 修正済みメソッドを使用
                 clusters = self.opinion_space.cluster_opinions()
                 
                 # 最大の意見クラスタを特定
@@ -639,6 +655,93 @@ class SelfDiagnosis:
             'strategy': new_strategy,
             'principle': new_principle
         }
+    def _select_agent_for_reduction_with_details(self, agents: List[Dict]) -> Dict:
+        """
+        削減すべきエージェントを選択し、詳細な理由を返す（内部メソッド）
+        
+        引数:
+            agents: エージェントリスト
+            
+        戻り値:
+            削減すべきエージェント情報（詳細な理由を含む）
+        """
+        if not agents:
+            return None
+            
+        # 意見ベクトル空間がある場合、類似度の高いエージェントペアを特定
+        if self.opinion_space:
+            try:
+                # 最新の意見空間分析を取得
+                space_analysis = self.opinion_space.analyze_opinion_space()
+                
+                if space_analysis.get('valid', False) and 'distances' in space_analysis:
+                    # 距離行列を取得
+                    distances = np.array(space_analysis['distances'])
+                    
+                    if distances.size > 0:
+                        n = distances.shape[0]
+                        
+                        # 最も類似度が高い（距離が小さい）ペアを見つける
+                        min_dist = float('inf')
+                        similar_pair = None
+                        
+                        for i in range(n):
+                            for j in range(i+1, n):
+                                if distances[i, j] < min_dist and distances[i, j] < self.similarity_threshold:
+                                    min_dist = distances[i, j]
+                                    similar_pair = (i, j)
+                        
+                        if similar_pair:
+                            i, j = similar_pair
+                            # ペアのうちいずれかを選択（より貢献度が低いほう）
+                            agent_i = agents[i] if i < len(agents) else None
+                            agent_j = agents[j] if j < len(agents) else None
+                            
+                            if agent_i and agent_j:
+                                # 貢献度や生存期間で比較
+                                target = agent_i if (agent_i.get('contribution_score', 0) < 
+                                                   agent_j.get('contribution_score', 0)) else agent_j
+                                return {
+                                    'agent_id': target.get('id'),
+                                    'reason': '他のエージェントと意見が類似しており冗長です'
+                                }
+            except Exception as e:
+                if self.debug:
+                    print(f"エージェント選択エラー: {e}")
+        
+        # 類似性による選択ができない場合は、最も古いエージェントを選択
+        oldest_agent = None
+        oldest_time = float('inf')
+        
+        for agent in agents:
+            created_at = agent.get('created_at', float('inf'))
+            if created_at < oldest_time:
+                oldest_time = created_at
+                oldest_agent = agent
+                
+        if oldest_agent:
+            return {
+                'agent_id': oldest_agent.get('id'),
+                'reason': '最も長く議論に参加している古参エージェントです'
+            }
+            
+        # それもダメならランダム選択
+        target = random.choice(agents)
+        return {
+            'agent_id': target.get('id'),
+            'reason': 'リソース削減のためランダムに選択されました'
+        }
+    
+    def _select_role_for_balanced_team(self) -> str:
+        """
+        バランスの取れたチーム構成のための役割を選択（内部メソッド）
+        
+        戻り値:
+            推奨される役割
+        """
+        # 基本的な役割セットからランダム選択
+        roles = ['アナリスト', '質問者', '批判者', '総合者', '詳細化']
+        return random.choice(roles)
     
     def _select_agent_for_reduction(self, agents: List[Dict]) -> Union[int, str]:
         """
@@ -721,3 +824,124 @@ class SelfDiagnosis:
                 
         # 条件チェック
         return self.repeat_counter[diagnosis_type] >= required_repeats
+
+    def _analyze_discussion_state(self, agents: List[Dict]) -> Dict[str, Any]:
+        """
+        議論状態の包括的な分析を行う（内部メソッド）
+        
+        引数:
+            agents: エージェントリスト
+            
+        戻り値:
+            分析結果
+        """
+        # 意見空間の分析
+        if self.opinion_space:
+            try:
+                # 最新の意見空間分析を取得
+                space_analysis = self.opinion_space.analyze_opinion_space()
+                
+                if space_analysis.get('valid', False):
+                    # 多様性・収束性を取得
+                    diversity = space_analysis.get('diversity', 0)
+                    convergence = space_analysis.get('convergence', 0) 
+                    clusters = space_analysis.get('clusters', 1)
+                    max_distance = space_analysis.get('max_distance', 0)
+                    
+                    # 多様性フラグ
+                    low_diversity = diversity < self.diversity_threshold
+                    high_convergence = convergence > self.convergence_threshold
+                    
+                    # 多クラスタフラグ（意見が割れている状態）
+                    opinion_divergence = clusters >= 2 and max_distance > 0.5
+                    
+                    # 停滞検知
+                    stagnation = False
+                    
+                    return {
+                        'space_valid': True,
+                        'diversity': diversity,
+                        'convergence': convergence,
+                        'clusters': clusters,
+                        'max_distance': max_distance,
+                        'low_diversity': low_diversity,
+                        'high_convergence': high_convergence,
+                        'opinion_divergence': opinion_divergence,
+                        'stagnation': stagnation
+                    }
+            except Exception as e:
+                if self.debug:
+                    print(f"意見空間分析エラー: {e}")
+        
+        # 意見空間分析ができない場合はデフォルト値
+        return {
+            'space_valid': False,
+            'diversity': 0.5,
+            'convergence': 0.5,
+            'clusters': 1,            'max_distance': 0.0,
+            'low_diversity': False,
+            'high_convergence': False,
+            'opinion_divergence': False,
+            'stagnation': False
+        }
+        
+    def _determine_recommended_action(self, analysis: Dict[str, Any], agents: List[Dict]) -> Dict[str, Any]:
+        """
+        分析結果に基づいて推奨アクションを決定する（内部メソッド）
+        
+        引数:
+            analysis: 議論状態分析結果
+            agents: エージェントリスト
+            
+        戻り値:
+            推奨アクションを含む辞書
+        """
+        # 分析が有効でない場合はデフォルト推奨（何もしない）
+        if not analysis.get('space_valid', False):
+            return {
+                'action': 'none',
+                'reason': '十分な情報がなく診断できません'
+            }
+        
+        num_agents = len(agents)
+        
+        # 多様性が低い場合は新しいエージェントを追加
+        if analysis.get('low_diversity', False) and num_agents < self.max_agents:
+            return {
+                'action': 'add',
+                'reason': '意見の多様性が不足しています'
+            }
+        
+        # 収束性が高い場合はエージェントを削減
+        if analysis.get('high_convergence', False) and num_agents > self.min_agents:
+            return {
+                'action': 'reduce',
+                'reason': '意見が十分に収束しています'
+            }
+        
+        # 意見が分散しすぎている場合は調停エージェントを追加
+        if analysis.get('opinion_divergence', False) and num_agents < self.max_agents:
+            return {
+                'action': 'add_mediator',
+                'reason': '意見が過度に分散しています'
+            }
+        
+        # 停滞している場合は反対意見エージェントを追加
+        if analysis.get('stagnation', False):
+            if num_agents < self.max_agents:
+                return {
+                    'action': 'add_contrarian',
+                    'reason': '議論が停滞しています'
+                }
+            else:
+                # エージェント数上限に達している場合は既存エージェントを修正
+                return {
+                    'action': 'modify',
+                    'reason': '議論が停滞しています（エージェント数上限）'
+                }
+        
+        # 特に問題がなければ何もしない
+        return {
+            'action': 'none',
+            'reason': '議論は良好に進行中です'
+        }
