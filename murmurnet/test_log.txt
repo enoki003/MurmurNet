@@ -1,376 +1,74 @@
-2025-05-24 10:51:07,955 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 10:51:07,958 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 10:51:07,960 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 10:51:07,963 [ERROR] 履歴要約エラー: 'MockModel' object has no attribute 'create_chat_completion'
-2025-05-24 10:51:07,966 [DEBUG] Traceback (most recent call last):
-  File "C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\MurmurNet\modules\conversation_memory.py", line 179, in _update_summary
-    resp = self.llm.create_chat_completion(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'MockModel' object has no attribute 'create_chat_completion'
+2025-05-24 22:50:50,097 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 22:50:50,102 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
+2025-05-24 22:50:50,104 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
+2025-05-24 22:50:53,110 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
+2025-05-24 22:51:00,557 [DEBUG] 会話履歴要約を更新しました (110文字)
+2025-05-24 22:51:04,421 [DEBUG] 重要情報を抽出しました
+2025-05-24 22:51:04,422 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
+2025-05-24 22:51:04,423 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
+2025-05-24 22:51:04,488 [DEBUG] 黒板から会話履歴を読み込みました (4件)
+2025-05-24 22:51:04,488 [DEBUG] 黒板から履歴要約を読み込みました
+2025-05-24 22:51:04,489 [DEBUG] 黒板から重要情報を読み込みました
+2025-05-24 22:51:04,489 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 22:51:04,886 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:51:04,886 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:51:15,118 [INFO] 設定されたモデルを使用します: llama
+2025-05-24 22:52:21,930 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:52:21,931 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:53:24,662 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:53:24,662 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:55:34,865 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:55:34,866 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:55:37,823 [INFO] 統合テスト開始
+2025-05-24 22:55:37,825 [INFO] 初期化時間: 0.00秒
+2025-05-24 22:55:37,826 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-24 22:55:57,305 [INFO] 生成時間: 19.48秒
+2025-05-24 22:55:57,305 [INFO] 応答: **最終回答:**
 
-2025-05-24 10:51:07,966 [ERROR] 情報抽出エラー: 'MockModel' object has no attribute 'create_chat_completion'
-2025-05-24 10:51:07,967 [DEBUG] Traceback (most recent call last):
-  File "C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\MurmurNet\modules\conversation_memory.py", line 237, in _extract_key_facts
-    resp = self.llm.create_chat_completion(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'MockModel' object has no attribute 'create_chat_completion'
-
-2025-05-24 10:51:07,968 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 10:51:07,971 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 10:53:01,353 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 10:53:01,354 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 10:53:01,357 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 10:53:01,358 [ERROR] 履歴要約エラー: 'MockModel' object has no attribute 'create_chat_completion'
-2025-05-24 10:53:01,360 [DEBUG] Traceback (most recent call last):
-  File "C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\MurmurNet\modules\conversation_memory.py", line 179, in _update_summary
-    resp = self.llm.create_chat_completion(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'MockModel' object has no attribute 'create_chat_completion'
-
-2025-05-24 10:53:01,361 [ERROR] 情報抽出エラー: 'MockModel' object has no attribute 'create_chat_completion'
-2025-05-24 10:53:01,363 [DEBUG] Traceback (most recent call last):
-  File "C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\MurmurNet\modules\conversation_memory.py", line 237, in _extract_key_facts
-    resp = self.llm.create_chat_completion(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'MockModel' object has no attribute 'create_chat_completion'
-
-2025-05-24 10:53:01,364 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 10:53:01,366 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 10:53:01,370 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 10:53:01,372 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 10:53:01,375 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 11:00:48,083 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 11:00:48,085 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 11:00:48,087 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 11:00:48,099 [DEBUG] 会話履歴要約を更新しました (35文字)
-2025-05-24 11:00:48,099 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 11:00:48,100 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 11:00:48,102 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 11:00:48,102 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 11:00:48,102 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 11:00:48,103 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 11:00:48,140 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:00:48,141 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:00:53,651 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:00:53,651 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:33,940 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 11:03:33,941 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 11:03:33,942 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 11:03:33,943 [DEBUG] 会話履歴要約を更新しました (35文字)
-2025-05-24 11:03:33,943 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 11:03:33,944 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 11:03:33,945 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 11:03:33,945 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 11:03:33,946 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 11:03:33,946 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 11:03:33,981 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:33,981 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:37,943 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:37,944 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:40,615 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:40,615 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:43,215 [INFO] 統合テスト開始
-2025-05-24 11:03:43,215 [INFO] 初期化時間: 0.00秒
-2025-05-24 11:03:43,215 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 11:03:43,252 [INFO] 生成時間: 0.04秒
-2025-05-24 11:03:43,252 [INFO] 応答: こんにちは！よろしくお願いします。何かお手伝いできることはありますか？...
-2025-05-24 11:03:43,252 [INFO] 黒板エントリ数: 70
-2025-05-24 11:03:43,253 [INFO] 統合テスト終了
-2025-05-24 11:03:43,436 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:43,436 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:45,826 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:45,827 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:48,597 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:48,598 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 11:03:51,191 [INFO] Use pytorch device_name: cpu
-2025-05-24 11:03:51,192 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:09,483 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:18:09,488 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:18:09,490 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:18:09,491 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:18:09,492 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:18:09,493 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:18:09,495 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:18:09,495 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:18:09,497 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:18:09,498 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:18:09,536 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:09,537 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:14,099 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:14,099 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:16,799 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:16,799 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:19,468 [INFO] 統合テスト開始
-2025-05-24 12:18:19,468 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:18:19,469 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:18:19,495 [INFO] 生成時間: 0.03秒
-2025-05-24 12:18:19,495 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:18:19,496 [INFO] 黒板エントリ数: 70
-2025-05-24 12:18:19,496 [INFO] 統合テスト終了
-2025-05-24 12:18:19,662 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:19,663 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:22,397 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:22,397 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:25,008 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:25,009 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:18:27,588 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:18:27,588 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:44,170 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:20:44,173 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:20:44,174 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:20:44,176 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:20:44,176 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:20:44,177 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:20:44,180 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:20:44,181 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:20:44,181 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:20:44,182 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:20:44,222 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:44,223 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:47,559 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:47,560 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:50,536 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:50,536 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:53,363 [INFO] 統合テスト開始
-2025-05-24 12:20:53,363 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:20:53,364 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:20:53,391 [INFO] 生成時間: 0.03秒
-2025-05-24 12:20:53,391 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:20:53,392 [INFO] 黒板エントリ数: 70
-2025-05-24 12:20:53,392 [INFO] 統合テスト終了
-2025-05-24 12:20:53,553 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:53,554 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:56,211 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:56,211 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:20:58,940 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:20:58,940 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:21:01,490 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:21:01,491 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:29,094 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:23:29,095 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:23:29,096 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:23:29,097 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:23:29,097 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:23:29,098 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:23:29,099 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:23:29,100 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:23:29,100 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:23:29,100 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:23:29,128 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:29,128 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:33,975 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:33,976 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:36,645 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:36,646 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:39,404 [INFO] 統合テスト開始
-2025-05-24 12:23:39,405 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:23:39,405 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:23:39,432 [INFO] 生成時間: 0.03秒
-2025-05-24 12:23:39,432 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:23:39,432 [INFO] 黒板エントリ数: 70
-2025-05-24 12:23:39,432 [INFO] 統合テスト終了
-2025-05-24 12:23:39,620 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:39,620 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:42,009 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:42,009 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:44,594 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:44,594 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:23:46,703 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:23:46,704 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:19,781 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:25:19,781 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:25:19,782 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:25:19,782 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:25:19,783 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:25:19,783 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:25:19,784 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:25:19,784 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:25:19,784 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:25:19,785 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:25:19,816 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:19,817 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:23,245 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:23,245 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:26,089 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:26,089 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:28,718 [INFO] 統合テスト開始
-2025-05-24 12:25:28,718 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:25:28,718 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:25:28,744 [INFO] 生成時間: 0.03秒
-2025-05-24 12:25:28,744 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:25:28,744 [INFO] 黒板エントリ数: 70
-2025-05-24 12:25:28,744 [INFO] 統合テスト終了
-2025-05-24 12:25:28,916 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:28,917 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:31,404 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:31,404 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:33,989 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:33,989 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:25:36,241 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:25:36,241 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:27:59,887 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:27:59,888 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:27:59,889 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:27:59,891 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:27:59,891 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:27:59,892 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:27:59,893 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:27:59,893 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:27:59,894 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:27:59,894 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:27:59,929 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:27:59,930 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:03,502 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:03,502 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:06,433 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:06,434 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:09,075 [INFO] 統合テスト開始
-2025-05-24 12:28:09,075 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:28:09,075 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:28:09,100 [INFO] 生成時間: 0.03秒
-2025-05-24 12:28:09,100 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:28:09,100 [INFO] 黒板エントリ数: 70
-2025-05-24 12:28:09,101 [INFO] 統合テスト終了
-2025-05-24 12:28:09,244 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:09,244 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:12,218 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:12,219 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:14,998 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:14,999 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:17,606 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:17,606 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:54,468 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:28:54,468 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 12:28:54,469 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 12:28:54,470 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 12:28:54,471 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 12:28:54,473 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 12:28:54,474 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 12:28:54,474 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 12:28:54,474 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 12:28:54,474 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 12:28:54,501 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:54,501 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:28:58,333 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:28:58,333 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:29:00,913 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:29:00,914 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:29:03,651 [INFO] 統合テスト開始
-2025-05-24 12:29:03,651 [INFO] 初期化時間: 0.00秒
-2025-05-24 12:29:03,651 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 12:29:03,678 [INFO] 生成時間: 0.03秒
-2025-05-24 12:29:03,678 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 12:29:03,678 [INFO] 黒板エントリ数: 70
-2025-05-24 12:29:03,678 [INFO] 統合テスト終了
-2025-05-24 12:29:03,819 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:29:03,819 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:29:06,581 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:29:06,582 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:29:09,301 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:29:09,301 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 12:29:12,190 [INFO] Use pytorch device_name: cpu
-2025-05-24 12:29:12,191 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:12,142 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:22:12,145 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 13:22:12,146 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 13:22:12,148 [ERROR] モデルファイルが見つかりません: c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\gemma-3-1b-it-q4_0.gguf
-2025-05-24 13:22:12,148 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 13:22:12,149 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 13:22:12,150 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 13:22:12,152 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 13:22:12,154 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 13:22:12,154 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 13:22:12,155 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:22:12,196 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:12,197 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:16,555 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:16,556 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:19,176 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:19,176 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:22,128 [INFO] 統合テスト開始
-2025-05-24 13:22:22,128 [INFO] 初期化時間: 0.00秒
-2025-05-24 13:22:22,129 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 13:22:22,155 [INFO] 生成時間: 0.03秒
-2025-05-24 13:22:22,155 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 13:22:22,155 [INFO] 黒板エントリ数: 70
-2025-05-24 13:22:22,156 [INFO] 統合テスト終了
-2025-05-24 13:22:22,314 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:22,314 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:24,836 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:24,837 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:27,337 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:27,337 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:22:29,763 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:22:29,764 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:05,329 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:25:05,331 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 13:25:05,332 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 13:25:05,334 [ERROR] モデルファイルが見つかりません: C:\\Users\\admin\\Desktop\\課題研究\\gemma-3-1b-it-q4_0.gguf
-2025-05-24 13:25:05,335 [DEBUG] 会話履歴要約を更新しました (17文字)
-2025-05-24 13:25:05,336 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 13:25:05,337 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 13:25:05,340 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 13:25:05,341 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 13:25:05,341 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 13:25:05,341 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:25:05,379 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:05,379 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:09,053 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:09,054 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:11,897 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:11,897 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:14,596 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:14,596 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:17,361 [INFO] 統合テスト開始
-2025-05-24 13:25:17,361 [INFO] 初期化時間: 0.00秒
-2025-05-24 13:25:17,361 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 13:25:17,384 [INFO] 生成時間: 0.02秒
-2025-05-24 13:25:17,384 [INFO] 応答: Llamaモデルが利用できません。...
-2025-05-24 13:25:17,384 [INFO] 黒板エントリ数: 70
-2025-05-24 13:25:17,385 [INFO] 統合テスト終了
-2025-05-24 13:25:17,537 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:17,538 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:20,238 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:20,238 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:22,943 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:22,943 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:25:25,445 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:25:25,446 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:26:33,730 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:26:33,730 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 13:26:33,731 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 13:26:35,438 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
-2025-05-24 13:26:41,400 [DEBUG] 会話履歴要約を更新しました (110文字)
-2025-05-24 13:26:45,132 [DEBUG] 重要情報を抽出しました
-2025-05-24 13:26:45,133 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 13:26:45,134 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 13:26:45,142 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 13:26:45,142 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 13:26:45,142 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 13:26:45,143 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 13:26:45,390 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:26:45,390 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:28:48,477 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:28:48,479 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:30:28,507 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:30:28,507 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:34:42,625 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:34:42,626 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:34:46,789 [INFO] 統合テスト開始
-2025-05-24 13:34:46,794 [INFO] 初期化時間: 0.00秒
-2025-05-24 13:34:46,795 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 13:35:48,004 [INFO] 生成時間: 61.21秒
-2025-05-24 13:35:48,004 [INFO] 応答: AIは、教育において以下の様々な変革をもたらす可能性があります。
-
-* **個別化された学習:** AIは、生徒の学習進度、理解度、学習スタイルに合わせてカスタマイズされた学習体験を提供できます。
-*...
-2025-05-24 13:35:48,079 [INFO] 黒板エントリ数: 70
-2025-05-24 13:35:48,093 [INFO] 統合テスト終了
-2025-05-24 13:35:49,203 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:35:49,203 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:36:50,010 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:36:50,010 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:38:13,627 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:38:13,627 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 13:38:43,249 [INFO] Use pytorch device_name: cpu
-2025-05-24 13:38:43,250 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+AIは教育のあり方を大きく変える可能性を秘めています。学習方法の多様化と個別最適化を実現し、生徒一人ひとりの理解度やペースに合わせた教育を支援します。AIチューターによる質問応答...
+2025-05-24 22:55:57,305 [INFO] 黒板エントリ数: 65
+2025-05-24 22:55:57,305 [INFO] 統合テスト終了
+2025-05-24 22:55:57,670 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:55:57,671 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:56:15,148 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:56:15,149 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:56:39,125 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:56:39,126 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 22:56:59,340 [INFO] Use pytorch device_name: cpu
+2025-05-24 22:56:59,341 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:21:52,431 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 23:21:52,438 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
+2025-05-24 23:21:52,439 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
+2025-05-24 23:21:54,042 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
+2025-05-24 23:21:59,670 [DEBUG] 会話履歴要約を更新しました (110文字)
+2025-05-24 23:22:03,305 [DEBUG] 重要情報を抽出しました
+2025-05-24 23:22:03,306 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
+2025-05-24 23:22:03,307 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
+2025-05-24 23:22:03,322 [DEBUG] 黒板から会話履歴を読み込みました (4件)
+2025-05-24 23:22:03,322 [DEBUG] 黒板から履歴要約を読み込みました
+2025-05-24 23:22:03,322 [DEBUG] 黒板から重要情報を読み込みました
+2025-05-24 23:22:03,322 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 23:22:03,579 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:22:03,579 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:22:09,417 [INFO] 設定されたモデルを使用します: llama
+2025-05-24 23:23:52,294 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:23:52,295 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:25:27,407 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:25:27,407 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:28:54,073 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:28:54,073 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:28:57,321 [INFO] 統合テスト開始
+2025-05-24 23:28:57,322 [INFO] 初期化時間: 0.00秒
+2025-05-24 23:28:57,323 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-24 23:29:36,399 [INFO] 生成時間: 39.08秒
+2025-05-24 23:29:36,399 [INFO] 応答: AIは教育を大きく変える可能性を秘めている。生徒の学習履歴を分析し、個々のニーズに合わせた学習プランを提案したり、課題解決をサポートすることで、個別最適化された学習を可能にし、学習を促進する。一方で、...
+2025-05-24 23:29:36,403 [INFO] 黒板エントリ数: 85
+2025-05-24 23:29:36,403 [INFO] 統合テスト終了
+2025-05-24 23:29:36,737 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:29:36,737 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:30:16,883 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:30:16,884 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:31:19,190 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:31:19,190 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 23:31:46,158 [INFO] Use pytorch device_name: cpu
+2025-05-24 23:31:46,158 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2

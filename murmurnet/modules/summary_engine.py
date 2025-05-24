@@ -11,7 +11,7 @@ Summary Engine モジュール
 
 import logging
 from typing import Dict, Any, List, Optional
-from MurmurNet.modules.model_factory import ModelFactory
+from MurmurNet.modules.model_factory import get_shared_model
 
 logger = logging.getLogger('MurmurNet.SummaryEngine')
 
@@ -23,11 +23,11 @@ class SummaryEngine:
     - 複数エージェントの出力を統合
     - 長いテキストを簡潔に要約
     - 一貫性のある出力生成
-    
-    属性:
+      属性:
         config: 設定辞書
         max_summary_tokens: 要約の最大トークン数
     """
+    
     def __init__(self, config: Dict[str, Any] = None):
         """
         要約エンジンの初期化
@@ -38,12 +38,11 @@ class SummaryEngine:
         self.config = config or {}
         self.debug = self.config.get('debug', False)
         self.max_summary_tokens = self.config.get('max_summary_tokens', 200)  # 話し言葉に適した要約の最大トークン数
-        
         if self.debug:
             logger.setLevel(logging.DEBUG)
         
-        # ModelFactoryからモデルを取得
-        self.llm = ModelFactory.create_model(self.config)
+        # 共有モデルインスタンスを取得（シングルトンパターン）
+        self.llm = get_shared_model(self.config)
         
         logger.info("要約エンジンを初期化しました")
 

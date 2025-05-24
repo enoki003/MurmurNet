@@ -13,6 +13,7 @@ import os
 import yaml
 import logging
 import asyncio
+import threading
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Union
@@ -64,23 +65,24 @@ class DistributedSLM:
         )
         
         # 初期メモリスナップショット
-        self.performance.take_memory_snapshot("distributed_slm_init_start")
-        
-        # 動作パラメータ
+        self.performance.take_memory_snapshot("distributed_slm_init_start")        # 動作パラメータ
         self.num_agents = self.config.get('num_agents', 2)
         self.iterations = self.config.get('iterations', 1)  # 反復回数
         self.use_summary = self.config.get('use_summary', True)  # 要約を使うか
         self.use_parallel = self.config.get('use_parallel', False)  # 並列処理を使うか
-        self.use_memory = self.config.get('use_memory', True)  # 会話履歴を使うか
+        self.use_memory = self.config.get('use_memory', True)  # 会話履歴を使うか        # 遅延初期化フラグとロック
+        self._modules_initialized = False
+        self._initialization_lock = threading.Lock()
         
-        # 各モジュールの初期化
+        # 基本モジュールのみ即座に初期化
         self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
         self.input_reception = InputReception(self.config)
-        self.agent_pool = AgentPoolManager(self.config, self.blackboard)
-        self.rag_retriever = RAGRetriever(self.config)
-        self.summary_engine = SummaryEngine(self.config)
-        self.output_agent = OutputAgent(self.config)
-        self.conversation_memory = ConversationMemory(self.config, self.blackboard)
+          # 重いモジュールは遅延初期化用にNoneで初期化
+        self._agent_pool = None
+        self._rag_retriever = None
+        self._summary_engine = None
+        self._output_agent = None
+        self._conversation_memory = None
         
         # パフォーマンスステータスを黒板に記録
         self.blackboard.write('performance_enabled', self.performance.enabled)
@@ -88,7 +90,7 @@ class DistributedSLM:
         # 初期化完了時のメモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
         
-        self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
+        self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復 (遅延初期化)")
         
     @time_async_function
     async def _run_iteration(self, iteration: int) -> None:
@@ -181,7 +183,7 @@ class DistributedSLM:
                 except Exception as inner_e:
                     self.logger.error(f"エージェント {i} フォールバック実行エラー: {str(inner_e)}")
                     self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-    
+
     def _is_memory_related_question(self, text: str) -> bool:
         """
         入力テキストが会話記憶に関連する質問かどうかを判定
@@ -208,19 +210,17 @@ class DistributedSLM:
         for pattern in memory_patterns:
             if re.search(pattern, text, re.IGNORECASE):
                 return True
-                
         return False
         
     async def generate(self, input_text: str) -> str:
         """
-        外部公開API: 入力文字列から最終応答を生成
+        外部公開API: 入力文字列から最終応答を生成（キャッシュ対応）
         
         引数：
             input_text: ユーザー入力文字列
             
         戻り値：
-            生成された応答文字列
-        """
+            生成された応答文字列        """
         self.logger.info("応答生成プロセスを開始")
         
         # 新しいターンのために黒板をクリア（会話履歴は保持）
@@ -284,13 +284,9 @@ class DistributedSLM:
         for i in range(self.num_agents):
             agent_output = self.blackboard.read(f"agent_{i}_output")
             if agent_output:
-                entries.append({"type": "agent", "agent": i, "text": agent_output})
-                
-        # 7. 最終応答生成
+                entries.append({"type": "agent", "agent": i, "text": agent_output})        # 7. 最終応答生成
         final_response = self.output_agent.generate(self.blackboard, entries)
-        self.blackboard.write('final_response', final_response)
-        
-        # 8. 会話履歴に追加（使用する場合）
+        self.blackboard.write('final_response', final_response)        # 9. 会話履歴に追加（使用する場合）
         if self.use_memory:
             self.conversation_memory.add_conversation_entry(
                 user_input=input_text, 
@@ -300,7 +296,7 @@ class DistributedSLM:
         
         self.logger.info(f"応答生成完了: {len(final_response)}文字")
         return final_response
-        
+    
     def reset_memory(self) -> None:
         """
         会話履歴をリセット
@@ -310,10 +306,9 @@ class DistributedSLM:
         if hasattr(self, 'conversation_memory'):
             self.conversation_memory.clear_memory()
             self.logger.info("会話記憶をクリアしました")
-            
-        # 黒板のターン関連データもクリア
+              # 黒板のターン関連データもクリア
         self.blackboard.clear_current_turn()
-        
+    
     def get_stats(self) -> Dict[str, Any]:
         """
         システムの統計情報を取得
@@ -321,7 +316,7 @@ class DistributedSLM:
         戻り値:
             システム統計情報を含む辞書
         """
-        return {
+        stats = {
             "agents": self.num_agents,
             "iterations": self.iterations,
             "memory_enabled": self.use_memory,
@@ -329,3 +324,62 @@ class DistributedSLM:
             "parallel_enabled": self.use_parallel,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
         }
+        
+        return stats
+    
+    def _ensure_modules_initialized(self):
+        """重いモジュールの遅延初期化を確実に実行（内部メソッド）"""
+        if not self._modules_initialized:
+            with self._initialization_lock:
+                # ダブルチェックロッキング
+                if not self._modules_initialized:
+                    self.logger.info("重いモジュールの遅延初期化を開始...")
+                    
+                    try:
+                        # 共有モデルを先に初期化（最も重い処理）
+                        from MurmurNet.modules.model_factory import get_shared_model
+                        get_shared_model(self.config)  # 初回呼び出しで初期化
+                        
+                        # 各モジュールを順次初期化
+                        self._agent_pool = AgentPoolManager(self.config, self.blackboard)
+                        self._rag_retriever = RAGRetriever(self.config)
+                        self._summary_engine = SummaryEngine(self.config)
+                        self._output_agent = OutputAgent(self.config)
+                        self._conversation_memory = ConversationMemory(self.config, self.blackboard)
+                        
+                        self._modules_initialized = True
+                        self.logger.info("遅延初期化が完了しました")
+                        
+                    except Exception as e:
+                        self.logger.error(f"モジュール初期化エラー: {e}")
+                        raise RuntimeError(f"重要なモジュールの初期化に失敗しました: {e}")
+    
+    @property
+    def agent_pool(self):
+        """エージェントプールマネージャー（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._agent_pool
+    
+    @property
+    def rag_retriever(self):
+        """RAG検索エンジン（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._rag_retriever
+    
+    @property
+    def summary_engine(self):
+        """要約エンジン（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._summary_engine
+    
+    @property
+    def output_agent(self):
+        """出力エージェント（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._output_agent
+    
+    @property
+    def conversation_memory(self):
+        """会話記憶（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._conversation_memory

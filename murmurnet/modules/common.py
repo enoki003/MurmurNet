@@ -49,11 +49,20 @@ def setup_logger(config: Optional[Dict[str, Any]] = None) -> logging.Logger:
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
-    
-    # コンソールハンドラー
+      # コンソールハンドラー（UTF-8エンコーディング対応）
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(level)
     console_handler.setFormatter(formatter)
+    
+    # Windowsでのコンソール出力文字化け対策
+    if sys.platform.startswith('win'):
+        try:
+            # Windows環境でのUTF-8出力設定
+            sys.stdout.reconfigure(encoding='utf-8')
+        except (AttributeError, OSError):
+            # 古いPythonバージョンや設定変更不可の場合
+            pass
+    
     logger.addHandler(console_handler)
     
     # ファイルハンドラー（設定されている場合）

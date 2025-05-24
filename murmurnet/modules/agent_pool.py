@@ -14,9 +14,10 @@ import os
 import json
 import re
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Tuple, Callable
-from MurmurNet.modules.model_factory import ModelFactory
+from MurmurNet.modules.model_factory import get_shared_model
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
@@ -31,12 +32,15 @@ class AgentPoolManager:
     - 複数エージェントの生成と実行管理
     - 役割ベースの分担処理
     - 並列/逐次実行の制御
+    - メモリ最適化エージェントパターン
     
     属性:
         config: 設定辞書
         blackboard: 共有黒板
         num_agents: エージェント数
         roles: 役割リスト
+        _memory_usage_tracker: メモリ使用量追跡
+        _dynamic_pool_size: 動的プールサイズ
     """
     def __init__(self, config: Dict[str, Any], blackboard):
         """
@@ -55,14 +59,12 @@ class AgentPoolManager:
             logger.setLevel(logging.DEBUG)
           # 安全のため、デフォルトでは並列モードを無効化
         self.parallel_mode = config.get('parallel_mode', False)
-        
-        # ModelFactoryからモデルを取得
-        self.llm = ModelFactory.create_model(self.config)
+          # 共有モデルインスタンスを取得（シングルトンパターン）
+        self.llm = get_shared_model(self.config)
         
         self._load_role_templates()
         self._load_roles()
-        
-        # 並列モードの場合の設定
+          # 並列モードの場合の設定
         if self.parallel_mode:
             # スレッド間の同期のためにロックを作成
             self.model_lock = threading.Lock()
@@ -135,7 +137,7 @@ class AgentPoolManager:
         if self.debug:
             roles_info = ", ".join(role["role"] for role in self.roles)
             logger.debug(f"割り当てられた役割: {roles_info}")
-
+    
     def run_agents(self, blackboard) -> None:
         """
         すべてのエージェントを逐次実行
@@ -143,7 +145,7 @@ class AgentPoolManager:
         引数:
             blackboard: 共有黒板
         """
-        logger.info("エージェントを逐次実行中...")
+        logger.info(f"エージェントを逐次実行中... (エージェント数: {self.num_agents})")
         
         # 各エージェントを順番に実行
         for i in range(self.num_agents):
@@ -162,6 +164,8 @@ class AgentPoolManager:
                 if self.debug:
                     import traceback
                     logger.debug(traceback.format_exc())
+        
+        logger.info(f"エージェント実行完了 (実行数: {self.num_agents})")
 
     def _format_prompt(self, agent_id: int) -> str:
         """
@@ -226,7 +230,7 @@ class AgentPoolManager:
 それじゃあ、{role_name}として答えるよ:"""
 
         return prompt
-
+    
     def _agent_task(self, agent_id: int) -> str:
         """
         単一エージェントのタスク実行（内部メソッド）
@@ -237,39 +241,105 @@ class AgentPoolManager:
         戻り値:
             エージェントの応答テキスト
         """
-        # プロンプトの構築
-        prompt = self._format_prompt(agent_id)
-        
-        # エージェントの役割と設定
-        role = self.roles[agent_id]
-        temperature = role.get('temperature', 0.7)
-        
         try:
-            # モデル出力の生成（グローバルロックで保護）
-            with _global_llama_lock:                resp = self.llm.create_chat_completion(
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=300,  # 話し言葉に適したトークン数
-                    temperature=temperature,
-                    top_p=0.9
-                )
+            # エージェントIDの検証
+            if agent_id < 0 or agent_id >= len(self.roles):
+                logger.error(f"無効なエージェントID: {agent_id}")
+                return f"エージェント{agent_id}は設定されていません"
             
-            # レスポンスの形式によって適切にアクセス
-            if isinstance(resp, dict):
-                output = resp['choices'][0]['message']['content'].strip()
-            else:
-                output = resp.choices[0].message.content.strip()
-                  # 出力を制限（250文字以内、話し言葉に適したサイズ）
-            if len(output) > 250:
-                output = output[:250]
+            # プロンプトの構築
+            prompt = self._format_prompt(agent_id)
+            if not prompt:
+                logger.error(f"エージェント{agent_id}のプロンプト生成に失敗")
+                return f"エージェント{agent_id}はプロンプトを生成できませんでした"
+            
+            # エージェントの役割と設定
+            role = self.roles[agent_id]
+            temperature = max(0.1, min(1.0, role.get('temperature', 0.7)))
+            role_name = role.get('role', f'エージェント{agent_id}')
+            
+            logger.debug(f"エージェント{agent_id} ({role_name}) タスク開始")
+            
+            # モデル出力の生成（グローバルロックで保護、タイムアウト対応）
+            import time
+            start_time = time.time()
+            
+            with _global_llama_lock:
+                # モデルの可用性チェック
+                if not hasattr(self.llm, 'create_chat_completion') and not hasattr(self.llm, 'generate'):
+                    logger.error(f"モデルインスタンスが正しく初期化されていません")
+                    return f"{role_name}はモデルの問題で応答できませんでした"
                 
-            return output
+                # チャット完了を試行
+                if hasattr(self.llm, 'create_chat_completion'):
+                    resp = self.llm.create_chat_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=300,  # 話し言葉に適したトークン数
+                        temperature=temperature,
+                        top_p=0.9,
+                        stop=["。", ".", "\n\n"]
+                    )
+                else:
+                    # フォールバック：generate メソッドを使用
+                    resp_text = self.llm.generate(
+                        prompt=prompt,
+                        max_tokens=300,
+                        temperature=temperature
+                    )
+                    # 辞書形式に変換
+                    resp = {"choices": [{"message": {"content": resp_text}}]}
+            
+            generation_time = time.time() - start_time
+            if generation_time > 20:  # 20秒以上の場合
+                logger.warning(f"エージェント{agent_id}の応答生成に時間がかかりました: {generation_time:.2f}秒")
+            
+            # レスポンスの解析（堅牢化）
+            try:
+                if isinstance(resp, dict) and 'choices' in resp and resp['choices']:
+                    response_text = resp['choices'][0]['message']['content'].strip()
+                elif hasattr(resp, 'choices') and resp.choices:
+                    response_text = resp.choices[0].message.content.strip()
+                else:
+                    logger.error(f"予期しないレスポンス形式: {type(resp)}")
+                    response_text = str(resp).strip()
+            except (KeyError, IndexError, AttributeError) as e:
+                logger.error(f"レスポンス解析エラー: {e}")
+                return f"{role_name}は応答の解析に失敗しました"
+            
+            # 出力の検証とクリーニング
+            if not response_text:
+                logger.warning(f"エージェント{agent_id}が空の応答を生成")
+                return f"{role_name}は適切な応答を生成できませんでした"
+            
+            # 出力長の制限
+            if len(response_text) > 500:
+                response_text = response_text[:500]
+                logger.debug(f"エージェント{agent_id}の応答を切り詰めました")
+            
+            # 黒板への書き込み
+            self.blackboard.write(f'agent_{agent_id}_output', response_text)
+            
+            logger.debug(f"エージェント{agent_id} ({role_name}) タスク完了: {len(response_text)}文字")
+            return response_text
             
         except Exception as e:
-            logger.error(f"エージェント{agent_id}のタスク実行エラー: {str(e)}")
-            if self.debug:
-                import traceback
-                logger.debug(traceback.format_exc())
-            return f"エージェント{agent_id}は応答できませんでした"
+            error_type = type(e).__name__
+            logger.error(f"エージェント{agent_id} 実行エラー ({error_type}): {str(e)}")
+              # エラータイプ別の適切な応答
+            role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
+            
+            if "timeout" in str(e).lower():
+                error_msg = f"{role_name}は処理時間の制限により応答できませんでした"
+            elif "memory" in str(e).lower():
+                error_msg = f"{role_name}はメモリ不足のため応答できませんでした"
+            elif "connection" in str(e).lower() or "network" in str(e).lower():
+                error_msg = f"{role_name}は接続の問題により応答できませんでした"
+            else:
+                error_msg = f"{role_name}は技術的な問題により応答できませんでした"
+            
+            # 黒板にエラー情報を記録
+            self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            return error_msg
 
     def get_agent_info(self, agent_id: int) -> Dict[str, Any]:
         """
@@ -372,7 +442,6 @@ class AgentPoolManager:
             return 'planning'
         elif any(keyword in question_lower for keyword in informational_keywords):
             return 'informational'
-        elif any(keyword in question_lower for keyword in conversational_keywords):
-            return 'conversational'
+        elif any(keyword in question_lower for keyword in conversational_keywords):            return 'conversational'
         else:
             return 'default'

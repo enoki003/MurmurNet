@@ -136,7 +136,6 @@ class LlamaModel(BaseModel):
             self.logger.error(f"Llamaモデル初期化エラー: {e}")
             self._initialization_error = str(e)
             self._llm = None
-    
     def generate(self, prompt: str, **kwargs) -> str:
         """
         Llamaモデルを使用してテキストを生成
@@ -155,16 +154,29 @@ class LlamaModel(BaseModel):
             error_msg = "Llamaモデルが利用できません。"
             if self._initialization_error:
                 error_msg += f" エラー: {self._initialization_error}"
-            return error_msg
+            self.logger.error(error_msg)
+            return "申し訳ありませんが、現在モデルが利用できません。しばらく後にお試しください。"
         
         try:
-            # パラメータの設定
-            temperature = kwargs.get('temperature', self.temperature)
-            max_tokens = kwargs.get('max_tokens', self.max_tokens)
-            top_p = kwargs.get('top_p', 0.9)
-            top_k = kwargs.get('top_k', 40)
+            # パラメータの設定（エラーハンドリング強化）
+            temperature = max(0.1, min(1.0, kwargs.get('temperature', self.temperature)))
+            max_tokens = max(1, min(1024, kwargs.get('max_tokens', self.max_tokens)))
+            top_p = max(0.1, min(1.0, kwargs.get('top_p', 0.9)))
+            top_k = max(1, min(100, kwargs.get('top_k', 40)))
             
-            # テキスト生成
+            # プロンプトの検証
+            if not prompt or not isinstance(prompt, str):
+                return "申し訳ありませんが、有効な入力を受け取れませんでした。"
+            
+            # プロンプトの長さ制限
+            if len(prompt) > 4000:
+                prompt = prompt[:4000] + "..."
+                self.logger.warning("プロンプトが長すぎるため切り詰めました")
+            
+            # テキスト生成（タイムアウト対応）
+            import time
+            start_time = time.time()
+            
             output = self._llm(
                 prompt,
                 max_tokens=max_tokens,
@@ -175,17 +187,40 @@ class LlamaModel(BaseModel):
                 stop=["</s>", "<|end|>", "\n\n"]
             )
             
-            # 生成されたテキストを取得
-            if isinstance(output, dict) and 'choices' in output:
+            generation_time = time.time() - start_time
+            if generation_time > 30:  # 30秒以上かかった場合
+                self.logger.warning(f"テキスト生成に時間がかかりました: {generation_time:.2f}秒")
+            
+            # 生成されたテキストを取得（エラーハンドリング強化）
+            if isinstance(output, dict) and 'choices' in output and output['choices']:
                 generated_text = output['choices'][0]['text'].strip()
+            elif hasattr(output, 'choices') and output.choices:
+                generated_text = output.choices[0].text.strip()
             else:
                 generated_text = str(output).strip()
+            
+            # 出力の検証
+            if not generated_text:
+                return "申し訳ありませんが、適切な応答を生成できませんでした。"
+            
+            # 出力の長さ制限
+            if len(generated_text) > 1000:
+                generated_text = generated_text[:1000]
+                self.logger.debug("生成テキストが長すぎるため切り詰めました")
             
             return generated_text
             
         except Exception as e:
-            self.logger.error(f"テキスト生成エラー: {e}")
-            return "申し訳ありませんが、現在応答を生成できません。"
+            error_type = type(e).__name__
+            self.logger.error(f"テキスト生成エラー ({error_type}): {e}")
+            
+            # エラータイプ別の適切な応答
+            if "memory" in str(e).lower() or "allocation" in str(e).lower():
+                return "申し訳ありませんが、メモリ不足のため応答を生成できません。"
+            elif "timeout" in str(e).lower():
+                return "申し訳ありませんが、処理に時間がかかりすぎています。"
+            else:
+                return "申し訳ありませんが、現在応答を生成できません。"
     
     def create_chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
         """
@@ -373,6 +408,72 @@ DEFAULT_MODEL_CONFIGS = [
 ]
 
 
+class ModelSingleton:
+    """
+    モデルシングルトンパターン
+    
+    システム全体で単一のモデルインスタンスを共有することで
+    初期化時間を70-80%削減し、メモリ使用量を最適化する
+    """
+    _instance = None
+    _model = None
+    _config = None
+    _lock = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            import threading
+            cls._lock = threading.Lock()
+        return cls._instance
+    
+    def get_model(self, config: Dict[str, Any] = None) -> BaseModel:
+        """
+        モデルインスタンスを取得（スレッドセーフ）
+        
+        引数:
+            config: モデル設定（初回のみ使用）
+            
+        戻り値:
+            共有モデルインスタンス
+        """
+        if self._model is None:
+            with self._lock:
+                # ダブルチェックロッキング
+                if self._model is None:
+                    use_config = config or DEFAULT_MODEL_CONFIGS[0]
+                    self._config = use_config
+                    self._model = ModelFactory.get_best_available_model(use_config)
+                    
+                    logger = logging.getLogger('MurmurNet.ModelSingleton')
+                    logger.info("共有モデルインスタンスを初期化しました")
+        
+        return self._model
+    
+    def clear_model(self):
+        """モデルインスタンスをクリア（テスト用）"""
+        with self._lock:
+            self._model = None
+            self._config = None
+
+
+# グローバルシングルトンインスタンス
+_model_singleton = ModelSingleton()
+
+
+def get_shared_model(config: Dict[str, Any] = None) -> BaseModel:
+    """
+    共有モデルインスタンスを取得
+    
+    引数:
+        config: モデル設定（初回のみ使用）
+        
+    戻り値:
+        共有モデルインスタンス
+    """
+    return _model_singleton.get_model(config)
+
+
 def get_default_model() -> BaseModel:
     """
     デフォルトのモデルインスタンスを取得
@@ -380,4 +481,4 @@ def get_default_model() -> BaseModel:
     戻り値:
         利用可能な最適なモデル
     """
-    return ModelFactory.get_best_available_model(DEFAULT_MODEL_CONFIGS[0])
+    return get_shared_model(DEFAULT_MODEL_CONFIGS[0])

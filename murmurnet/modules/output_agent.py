@@ -12,7 +12,7 @@ Output Agent モジュール
 import logging
 import re
 from typing import Dict, Any, List, Optional
-from MurmurNet.modules.model_factory import ModelFactory
+from MurmurNet.modules.model_factory import get_shared_model
 
 logger = logging.getLogger('MurmurNet.OutputAgent')
 
@@ -40,12 +40,11 @@ class OutputAgent:
         self.config = config or {}
         self.debug = self.config.get('debug', False)
         self.max_output_tokens = self.config.get('max_output_tokens', 400)  # 話し言葉に適した最大トークン数
-        
         if self.debug:
             logger.setLevel(logging.DEBUG)
             
-        # ModelFactoryからモデルを取得
-        self.llm = ModelFactory.create_model(self.config)
+        # 共有モデルインスタンスを取得（シングルトンパターン）
+        self.llm = get_shared_model(self.config)
         
         logger.info("出力エージェントを初期化しました")
 
