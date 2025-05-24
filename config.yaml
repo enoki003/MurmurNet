@@ -1,0 +1,38 @@
+num_agents: 2
+iterations: 1
+use_summary: true
+use_parallel: false
+use_memory: true
+performance_monitoring: true
+memory_tracking: true
+debug: false
+
+# ログ設定
+log_level: INFO
+log_file: logs/murmurnet.log
+
+# モデル設定
+model_type: llama
+model_path: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf"
+chat_template: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma3_template.txt"
+n_ctx: 2048
+n_threads: 4
+temperature: 0.7
+max_tokens: 256
+
+# エージェント設定
+role_type: default
+
+# RAG設定
+rag_enabled: true
+rag_mode: zim
+zim_path: "C:\\Users\\admin\\Desktop\\課題研究\\KNOWAGE_DATABASE\\wikipedia_en_top_nopic_2025-03.zim"
+rag_score_threshold: 0.5
+rag_top_k: 3
+embedding_model: "all-MiniLM-L6-v2"
+
+# 要約設定
+summary_max_length: 200
+
+# 会話記憶設定
+conversation_memory_limit: 10

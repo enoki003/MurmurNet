@@ -1,0 +1,74 @@
+2025-05-24 15:50:12,256 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 15:50:12,261 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
+2025-05-24 15:50:12,262 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
+2025-05-24 15:50:13,741 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
+2025-05-24 15:50:18,711 [DEBUG] 会話履歴要約を更新しました (110文字)
+2025-05-24 15:50:22,095 [DEBUG] 重要情報を抽出しました
+2025-05-24 15:50:22,105 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
+2025-05-24 15:50:22,106 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
+2025-05-24 15:50:22,118 [DEBUG] 黒板から会話履歴を読み込みました (4件)
+2025-05-24 15:50:22,119 [DEBUG] 黒板から履歴要約を読み込みました
+2025-05-24 15:50:22,119 [DEBUG] 黒板から重要情報を読み込みました
+2025-05-24 15:50:22,120 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 15:50:22,363 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:50:22,364 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:52:02,869 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:52:02,870 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:53:45,941 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:53:45,941 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:57:01,538 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:57:01,539 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:57:04,148 [INFO] 統合テスト開始
+2025-05-24 15:57:04,150 [INFO] 初期化時間: 0.00秒
+2025-05-24 15:57:04,151 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-24 15:57:56,355 [INFO] 生成時間: 52.20秒
+2025-05-24 15:57:56,356 [INFO] 応答: ## AIは教育をどのように変えますか？
+
+AIは、教育のあり方を大きく変える可能性を秘めています。AIは、個人の学習ペースや得意不得意に合わせて教材を自動的に調整し、生徒の自主性を高める手助けになり...
+2025-05-24 15:57:56,356 [INFO] 黒板エントリ数: 70
+2025-05-24 15:57:56,356 [INFO] 統合テスト終了
+2025-05-24 15:57:57,125 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:57:57,126 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:58:35,167 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:58:35,168 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 15:59:42,707 [INFO] Use pytorch device_name: cpu
+2025-05-24 15:59:42,707 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:00:17,055 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:00:17,056 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:00:54,956 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 16:00:54,959 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
+2025-05-24 16:00:54,959 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
+2025-05-24 16:00:55,809 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
+2025-05-24 16:01:00,303 [DEBUG] 会話履歴要約を更新しました (110文字)
+2025-05-24 16:01:03,735 [DEBUG] 重要情報を抽出しました
+2025-05-24 16:01:03,736 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
+2025-05-24 16:01:03,736 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
+2025-05-24 16:01:03,738 [DEBUG] 黒板から会話履歴を読み込みました (4件)
+2025-05-24 16:01:03,738 [DEBUG] 黒板から履歴要約を読み込みました
+2025-05-24 16:01:03,738 [DEBUG] 黒板から重要情報を読み込みました
+2025-05-24 16:01:03,738 [INFO] 会話記憶モジュールを初期化しました
+2025-05-24 16:01:03,973 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:01:03,973 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:02:44,340 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:02:44,340 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:04:22,563 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:04:22,563 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:07:49,939 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:07:49,939 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:07:53,065 [INFO] 統合テスト開始
+2025-05-24 16:07:53,067 [INFO] 初期化時間: 0.00秒
+2025-05-24 16:07:53,067 [INFO] テストクエリ: AIは教育をどのように変えますか？
+2025-05-24 16:08:49,912 [INFO] 生成時間: 56.84秒
+2025-05-24 16:08:49,912 [INFO] 応答: ## AIは教育をどのように変えますか？
+
+AIは、教育のあり方を大きく変える可能性を秘めています。AIは、個人の学習ペースや得意不得意に合わせて教材を自動的に調整し、生徒の自主性を高める手助けになり...
+2025-05-24 16:08:49,913 [INFO] 黒板エントリ数: 70
+2025-05-24 16:08:49,913 [INFO] 統合テスト終了
+2025-05-24 16:08:51,198 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:08:51,198 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:09:33,744 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:09:33,744 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:10:43,156 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:10:43,156 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-24 16:11:18,113 [INFO] Use pytorch device_name: cpu
+2025-05-24 16:11:18,114 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2

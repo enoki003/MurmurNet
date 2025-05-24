@@ -9,48 +9,64 @@ Output Agent モジュール
 作者: Yuhi Sonoki
 """
 
-# output_agent.py
-from llama_cpp import Llama
-import os
+import logging
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from MurmurNet.modules.model_factory import ModelFactory
+
+logger = logging.getLogger('MurmurNet.OutputAgent')
 
 class OutputAgent:
-    def __init__(self, config: dict = None):
-        config = config or {}
-        model_path = config.get('model_path') or os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '../../models/gemma-3-1b-it-q4_0.gguf')
-        )
+    """
+    最終応答を生成するエージェント
+    
+    責務:
+    - 黒板情報の統合
+    - 要約と個別エージェント出力の統合
+    - 一貫性のある最終応答の生成
+    - 言語検出と応答言語の適応
+      属性:
+        config: 設定辞書
+        max_output_tokens: 最終出力の最大トークン数
+    """
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        """
+        出力エージェントの初期化
         
-        # 親設定から値を取得（もしくはデフォルト値を使用）
-        llama_kwargs = dict(
-            model_path=model_path,
-            n_ctx=config.get('n_ctx', 2048),  # 親設定から受け取る  
-            n_threads=config.get('n_threads', 4),  # 親設定から受け取る
-            use_mmap=True,
-            use_mlock=False,
-            n_gpu_layers=0,
-            seed=42,
-            chat_format="gemma",
-            verbose=False  # ログ出力抑制
-        )
-        
-        chat_template = config.get('chat_template')
-        if chat_template and os.path.exists(chat_template):
-            try:
-                with open(chat_template, 'r', encoding='utf-8') as f:
-                    llama_kwargs['chat_template'] = f.read()
-            except Exception as e:
-                if config.get('debug'):
-                    print(f"テンプレートロードエラー: {e}")
-
-        self.llm = Llama(**llama_kwargs)
-        self.config = config
-        self.debug = config.get('debug', False)
-        self.max_output_tokens = config.get('max_output_tokens', 512)  # 最終出力の最大トークン数
+        引数:
+            config: 設定辞書（省略時は空の辞書）
+        """
+        self.config = config or {}
+        self.debug = self.config.get('debug', False)
+        self.max_output_tokens = self.config.get('max_output_tokens', 400)  # 話し言葉に適した最大トークン数
         
         if self.debug:
-            print(f"出力エージェント: モデル設定 n_ctx={llama_kwargs['n_ctx']}, n_threads={llama_kwargs['n_threads']}")
+            logger.setLevel(logging.DEBUG)
+            
+        # ModelFactoryからモデルを取得
+        self.llm = ModelFactory.create_model(self.config)
+        
+        logger.info("出力エージェントを初期化しました")
+
+    def _detect_language(self, text: str) -> str:
+        """
+        テキストの言語を検出する（内部メソッド）
+        
+        引数:
+            text: 言語を検出するテキスト
+            
+        戻り値:
+            検出された言語コード ('ja', 'en' など)
+        """
+        # 日本語の文字が含まれているかチェック
+        if re.search(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', text):
+            return 'ja'
+        # 英語の文字が主に含まれているかチェック
+        elif re.search(r'[a-zA-Z]', text) and not re.search(r'[^\x00-\x7F]', text):
+            return 'en'
+        # その他の言語（デフォルトは英語）
+        return 'en'
 
     def generate(self, blackboard, entries: List[Dict[str, Any]]) -> str:
         """
@@ -76,6 +92,7 @@ class OutputAgent:
 
             # 2) 言語検出
             lang = self._detect_language(user_input)
+            logger.debug(f"検出された言語: {lang}")
             
             # 3) 要約とエージェント出力の整理
             summaries = []
@@ -83,130 +100,88 @@ class OutputAgent:
             
             for entry in entries:
                 entry_type = entry.get('type', 'agent')  # デフォルトはagent
+                text = entry.get('text', '')[:200]  # テキスト制限
                 
                 if entry_type == 'summary':
                     iteration = entry.get('iteration', 0)
-                    text = entry.get('text', '')[:200]  # テキスト制限
                     summaries.append(f"要約 {iteration+1}: {text}")
                 else:  # agent
                     agent_id = entry.get('agent', 0)
-                    text = entry.get('text', '')[:200]  # テキスト制限
                     agent_outputs.append(f"エージェント {agent_id+1}: {text}")
-            
-            # 4) システムプロンプト作成 - 改善点：より具体的な指示
+              # 4) システムプロンプト作成 - 話し言葉重視の改善
             if lang == 'ja':
                 sys_prompt = (
-                    "あなたは日本語話者向けの多言語アシスタントです。以下の点に注意して回答してください：\n"
-                    "1. 質問に直接答えること。質問の主題から外れないこと。\n"
-                    "2. 具体的で明確な情報を提供すること。\n"
-                    "3. 回答は300文字以内で簡潔にまとめること。\n"
-                    "4. 質問がない場合は対話を促す回答をすること。"
+                    "あなたは親しみやすい日本語アシスタントです。話し言葉で自然に会話してください：\n"
+                    "1. 質問にまっすぐ答えてね。話題から外れないように。\n"
+                    "2. 具体的で分かりやすく説明するよ。\n"
+                    "3. 日本語で自然に話してね。\n"
+                    "4. みんなの意見をまとめて、筋の通った答えにするよ。\n"
+                    "5. 情報の出どころがあるときははっきりと示すね。\n"
+                    "6. 確実じゃない情報は「〜かもしれない」「〜の可能性があるよ」と伝えるね。\n"
+                    "7. 長いときは段落分けや箇条書きで見やすくするよ。\n"
+                    "8. 150〜300文字くらいで話し言葉で答えてね。短すぎず長すぎず、ちょうどいい感じで。"
                 )
-            else:
-                sys_prompt = (
-                    "You are a general-purpose AI assistant. Please follow these guidelines:\n"
-                    "1. Answer directly to the question. Stay on topic.\n"
-                    "2. Provide specific and clear information.\n"
-                    "3. Be concise, maximum 50 words.\n"
-                    "4. If there's no question, engage the user in conversation."
+            else:                sys_prompt = (
+                    "You are a friendly English assistant. Please use conversational language:\n"
+                    "1. Answer the question directly and stay on topic.\n"
+                    "2. Explain things clearly and specifically.\n"
+                    "3. Always respond in conversational English.\n"
+                    "4. Combine everyone's input into a coherent, natural response.\n"
+                    "5. Clearly mention sources when citing information.\n"
+                    "6. Use phrases like 'it's possible that' or 'it may be' for uncertain information.\n"
+                    "7. Structure your response using paragraphs or bullet points when appropriate.\n"
+                    "8. Keep responses around 150-300 characters, conversational but not too short or long."
                 )
             
-            # 5) プロンプト内容作成 - 改善点：質問の要点を強調
-            # 質問の解析と重要キーワード抽出
-            question_emphasis = f"ユーザーの質問要点: '{user_input}'\n質問の核心に答えることが最も重要です。\n\n"
+            # 5) ユーザープロンプト作成（黒板情報を統合）
+            user_prompt = f"質問: {user_input}\n\n"
             
-            prompt_content = question_emphasis
-            
+            # RAG情報があれば追加
             if rag:
-                prompt_content += f"参考情報: {rag}\n\n"
-            
-            # 入力量が多すぎる場合は選択
-            total_length = len(prompt_content)
-            max_prompt_length = 1000  # プロンプトの最大長さ
-            
-            # 要約情報（優先）
-            if summaries:
-                summary_text = "要約情報:\n" + "\n\n".join(summaries) + "\n\n"
-                if total_length + len(summary_text) <= max_prompt_length:
-                    prompt_content += summary_text
-                    total_length += len(summary_text)
-            
-            # エージェント出力（2番目に優先）
-            if agent_outputs and total_length < max_prompt_length:
-                # 残りの長さに合わせて調整
-                if len(agent_outputs) > 2 and total_length + len("\n\n".join(agent_outputs)) > max_prompt_length:
-                    # 重要なエージェントだけ選択（前半2つ）
-                    agent_text = "エージェントの意見:\n" + "\n\n".join(agent_outputs[:2]) + "\n\n"
-                else:
-                    agent_text = "エージェントの意見:\n" + "\n\n".join(agent_outputs) + "\n\n"
+                user_prompt += f"参考情報: {rag}\n\n"
                 
-                if total_length + len(agent_text) <= max_prompt_length:
-                    prompt_content += agent_text
+            # 要約情報があれば追加
+            if summaries:
+                user_prompt += "要約情報:\n" + "\n".join(summaries) + "\n\n"
+                
+            # エージェント出力があれば追加
+            if agent_outputs:
+                user_prompt += "エージェント出力:\n" + "\n".join(agent_outputs) + "\n\n"
+                
+            user_prompt += "以上の情報を統合して、質問に対する最終的な回答を生成してください。"
             
-            # 明確な指示を追加
-            if lang == 'ja':
-                prompt_content += (
-                    "上記の情報を総合的に考慮して以下の点に注意して回答してください：\n"
-                    "1. 質問「" + user_input + "」に対する具体的な回答を提供する\n"
-                    "2. 質問の主題から外れない\n"
-                    "3. 情報が不足している場合はその旨を述べる\n"
-                    "4. 簡潔に回答する"
-                )
-            else:
-                prompt_content += (
-                    "Consider all the information above and follow these instructions:\n"
-                    "1. Provide a specific answer to the question: \"" + user_input + "\"\n"
-                    "2. Stay on topic\n"
-                    "3. Acknowledge if information is insufficient\n"
-                    "4. Be concise"
-                )
-            
-            # 6) プロンプト設定とAPI呼び出し
-            messages = [
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": prompt_content}
-            ]
-            
-            if self.debug:
-                print(f"[Debug] 出力エージェント: プロンプト長={len(prompt_content)}文字")
-            
+            # 6) 出力生成
             resp = self.llm.create_chat_completion(
-                messages=messages,
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 max_tokens=self.max_output_tokens,
-                temperature=0.7
+                temperature=0.7,
+                top_p=0.9
             )
             
-            # レスポンス取得
+            # レスポンスの形式によって適切にアクセス
             if isinstance(resp, dict):
-                answer = resp['choices'][0]['message']['content'].strip()
+                final_output = resp['choices'][0]['message']['content'].strip()
             else:
-                answer = resp.choices[0].message.content.strip()
+                final_output = resp.choices[0].message.content.strip()
                 
             if self.debug:
-                print(f"[Debug] 最終応答: {len(answer)}文字")
-
-            return answer
+                logger.debug(f"最終出力生成: {len(final_output)}文字")
+                
+            return final_output
             
         except Exception as e:
             error_msg = f"出力生成エラー: {str(e)}"
-            if self.debug:
-                print(error_msg)
-                import traceback
-                traceback.print_exc()
-            return "申し訳ありません、応答の生成中にエラーが発生しました。"
-        
-    def _detect_language(self, text: str) -> str:
-        """
-        テキストの言語を検出する内部メソッド
-        
-        引数:
-            text: 検出対象テキスト
+            logger.error(error_msg)
             
-        戻り値:
-            言語コード（'ja'または'en'）
-        """
-        if re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', text):
-            return 'ja'
-        if re.search(r'[A-Za-z]', text):
-            return 'en'
-        return 'ja'  # デフォルトは日本語
+            if self.debug:
+                import traceback
+                logger.debug(traceback.format_exc())
+                
+            # エラー時のフォールバック
+            if lang == 'ja':
+                return "申し訳ありませんが、応答の生成中にエラーが発生しました。後でもう一度お試しください。"
+            else:
+                return "I apologize, but an error occurred while generating the response. Please try again later."

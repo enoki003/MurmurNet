@@ -9,13 +9,15 @@ MurmurNet 分散SLMシステム
 作者: Yuhi Sonoki
 """
 
-# distributed_slm.py
 import os
 import yaml
 import logging
 import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Any, List, Optional, Union
+from MurmurNet.modules.common import setup_logger, PerformanceError
+from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
 from MurmurNet.modules.input_reception import InputReception
 from MurmurNet.modules.blackboard import Blackboard
 from MurmurNet.modules.agent_pool import AgentPoolManager
@@ -27,22 +29,42 @@ from MurmurNet.modules.conversation_memory import ConversationMemory
 class DistributedSLM:
     """
     分散創発型言語モデルメインクラス
-    単一の関数呼び出しで高度な対話生成機能を提供するブラックボックス型モジュール
+    
+    複数の小規模な言語モデルが協調的に動作する分散型アーキテクチャを通じて
+    高度な対話生成機能を提供する中枢システム。
     
     特徴:
-    - 複数の小規模モデルが協調的に動作
+    - 複数の小規模モデルが協調動作
     - 黒板を通じた情報共有
     - 反復的な知識交換で知性を創発
+    
+    属性:
+        config: 設定辞書
+        blackboard: 共有黒板
+        num_agents: エージェント数
+        iterations: 反復回数
     """
-    def __init__(self, config: dict = None, blackboard=None):
+    def __init__(self, config: Dict[str, Any] = None, blackboard=None):
         """
-        各モジュール初期化
+        分散SLMシステムの初期化
         
         引数:
-            config: 設定辞書
+            config: 設定辞書（省略時は空の辞書）
             blackboard: Blackboardインスタンス（省略時は内部で作成）
         """
         self.config = config or {}
+        
+        # ロガー設定
+        self.logger = setup_logger(self.config)
+        
+        # パフォーマンスモニタリング設定
+        self.performance = PerformanceMonitor(
+            enabled=self.config.get('performance_monitoring', True),
+            memory_tracking=self.config.get('memory_tracking', True)
+        )
+        
+        # 初期メモリスナップショット
+        self.performance.take_memory_snapshot("distributed_slm_init_start")
         
         # 動作パラメータ
         self.num_agents = self.config.get('num_agents', 2)
@@ -58,25 +80,28 @@ class DistributedSLM:
         self.rag_retriever = RAGRetriever(self.config)
         self.summary_engine = SummaryEngine(self.config)
         self.output_agent = OutputAgent(self.config)
-        self.conversation_memory = ConversationMemory(self.config)
+        self.conversation_memory = ConversationMemory(self.config, self.blackboard)
         
-        # ロガー設定
-        self._setup_logger()
-        self.logger.info(f"Initialized with {self.num_agents} agents, {self.iterations} iterations")
+        # パフォーマンスステータスを黒板に記録
+        self.blackboard.write('performance_enabled', self.performance.enabled)
         
-    def _setup_logger(self):
-        """ロガー初期化（内部メソッド）"""
-        self.logger = logging.getLogger('DistributedSLM')
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-        self.logger.setLevel(logging.INFO if not self.config.get('debug') else logging.DEBUG)
-
+        # 初期化完了時のメモリスナップショット
+        self.performance.take_memory_snapshot("distributed_slm_init_complete")
+        
+        self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
+        
+    @time_async_function
     async def _run_iteration(self, iteration: int) -> None:
-        """単一の反復サイクルを実行（内部メソッド）"""
-        self.logger.info(f"Starting iteration {iteration}")
+        """
+        単一の反復サイクルを実行（内部メソッド）
+        
+        複数エージェントによる協調的な対話生成処理の一連のサイクルを実行する
+        
+        引数:
+            iteration: 現在の反復インデックス
+        """
+        self.logger.info(f"反復 {iteration+1}/{self.iterations} を開始")
+        self.performance.take_memory_snapshot(f"iteration_{iteration+1}_start")
         
         # 1. エージェント実行（並列または逐次）
         if self.use_parallel:
@@ -93,56 +118,69 @@ class DistributedSLM:
         
         # 3. 出力の要約（使用する場合）
         if self.use_summary and agent_entries:
+            summary_start = self.performance.start_timer(f"summary_iteration_{iteration+1}")
             summary = self.summary_engine.summarize_blackboard(agent_entries)
             self.blackboard.write(f'summary_{iteration}', summary)
-            self.logger.debug(f"Created summary for iteration {iteration}")
+            summary_time = self.performance.end_timer(f"summary_iteration_{iteration+1}", summary_start)
+            self.logger.debug(f"反復 {iteration+1} の要約を作成しました (実行時間: {summary_time:.4f}秒)")
+        
+        self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
     
     async def _run_agents_parallel(self) -> None:
-        """エージェントを並列実行（内部メソッド）"""
-        self.logger.info("Running agents in parallel")
+        """
+        エージェントを並列実行（内部メソッド）
+        
+        複数のエージェントを並列に実行し、結果を黒板に書き込む
+        """
+        self.logger.info("エージェントを並列実行中...")
         
         # スレッドプール内でエージェントタスクを実行するラッパー
-        def run_agent_task(agent_id):
+        def run_agent_task(agent_id: int) -> str:
+            """エージェントタスクのスレッドプールラッパー"""
             try:
                 # 共有モデルを使って実行（グローバルロックはagent_task内で使用）
-                # すでに保護されているので各エージェントは安全に実行できる
                 return self.agent_pool._agent_task(agent_id)
             except Exception as e:
-                self.logger.error(f"Agent {agent_id} execution failed: {str(e)}")
+                self.logger.error(f"エージェント {agent_id} 実行エラー: {str(e)}")
                 import traceback
                 self.logger.debug(traceback.format_exc())
                 return f"エージェント{agent_id}は応答できませんでした"
-        
-        # 実行するエージェント数を調整（最大2つに制限）
-        num_agents = self.num_agents
-        max_parallel = 1  # 1つずつ処理するよう制限（安全のため）
         
         # イベントループを取得
         loop = asyncio.get_event_loop()
         
         try:
-            # エージェントを1つずつ実行
-            for i in range(num_agents):
-                try:
-                    # 同期関数を非同期実行
-                    result = await loop.run_in_executor(None, run_agent_task, i)
-                    if result:
-                        self.blackboard.write(f'agent_{i}_output', result)
-                    else:
-                        self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
-                except Exception as e:
-                    self.logger.error(f"Agent {i} execution error: {str(e)}")
+            # 真の並列実行：すべてのエージェントを同時に実行
+            tasks = []
+            for i in range(self.num_agents):
+                # 各エージェントのタスクを作成
+                task = loop.run_in_executor(None, run_agent_task, i)
+                tasks.append(task)
+            
+            # すべてのタスクを同時に実行して結果を取得
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # 結果を黒板に書き込み
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
                     self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                elif result:
+                    self.blackboard.write(f'agent_{i}_output', result)
+                else:
+                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
                     
         except Exception as e:
-            self.logger.error(f"Parallel execution error: {str(e)}")
+            self.logger.error(f"並列実行エラー: {str(e)}")
             # エラーが発生した場合は逐次実行にフォールバック
+            self.logger.info("逐次実行にフォールバックします")
             for i in range(self.num_agents):
                 try:
                     result = self.agent_pool._agent_task(i)
                     self.blackboard.write(f'agent_{i}_output', result)
                 except Exception as inner_e:
-                    self.logger.error(f"Agent {i} fallback execution failed: {str(inner_e)}")
+                    self.logger.error(f"エージェント {i} フォールバック実行エラー: {str(inner_e)}")
+                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
     
     def _is_memory_related_question(self, text: str) -> bool:
         """
@@ -176,12 +214,14 @@ class DistributedSLM:
     async def generate(self, input_text: str) -> str:
         """
         外部公開API: 入力文字列から最終応答を生成
+        
         引数：
             input_text: ユーザー入力文字列
+            
         戻り値：
             生成された応答文字列
         """
-        self.logger.info("Starting generation process")
+        self.logger.info("応答生成プロセスを開始")
         
         # 新しいターンのために黒板をクリア（会話履歴は保持）
         self.blackboard.clear_current_turn()
@@ -191,14 +231,14 @@ class DistributedSLM:
             # 会話記憶から回答を取得
             memory_answer = self.conversation_memory.get_answer_for_question(input_text)
             if memory_answer:
-                self.logger.info("Found answer from conversation memory")
+                self.logger.info("会話記憶から回答を取得しました")
                 # 会話記憶を更新
                 self.conversation_memory.add_conversation_entry(
                     user_input=input_text,
                     system_response=memory_answer
                 )
                 return memory_answer
-        
+                
         # 1. 入力受付・前処理
         processed = self.input_reception.process(input_text)
         self.blackboard.write('input', processed)
@@ -209,7 +249,7 @@ class DistributedSLM:
             if conversation_context and conversation_context != "過去の会話はありません。":
                 # 会話コンテキストを黒板に書き込む
                 self.blackboard.write('conversation_context', conversation_context)
-                self.logger.debug(f"Added conversation context: {len(conversation_context)} chars")
+                self.logger.debug(f"会話コンテキストを追加: {len(conversation_context)}文字")
                 
                 # 会話コンテキストを入力処理に統合
                 if isinstance(processed, dict) and 'normalized' in processed:
@@ -222,7 +262,7 @@ class DistributedSLM:
         
         # 4. 初期要約の実行（オプション）
         if self.use_summary:
-            initial_summary = f"ユーザー入力: {processed['normalized']}\n\n検索情報: {rag_result}"
+            initial_summary = f"ユーザー入力: {processed['normalized'] if isinstance(processed, dict) else processed}\n\n検索情報: {rag_result}"
             if self.use_memory and 'conversation_context' in self.blackboard.memory:
                 initial_summary += f"\n\n会話コンテキスト: {self.blackboard.read('conversation_context')}"
             self.blackboard.write('initial_summary', initial_summary)
@@ -256,12 +296,36 @@ class DistributedSLM:
                 user_input=input_text, 
                 system_response=final_response
             )
-            self.logger.debug("Updated conversation memory")
+            self.logger.debug("会話記憶を更新しました")
         
+        self.logger.info(f"応答生成完了: {len(final_response)}文字")
         return final_response
         
-    def reset_memory(self):
-        """会話履歴をリセット"""
+    def reset_memory(self) -> None:
+        """
+        会話履歴をリセット
+        
+        システムの会話記憶を完全にクリアする
+        """
         if hasattr(self, 'conversation_memory'):
             self.conversation_memory.clear_memory()
-            self.logger.info("Conversation memory cleared")
+            self.logger.info("会話記憶をクリアしました")
+            
+        # 黒板のターン関連データもクリア
+        self.blackboard.clear_current_turn()
+        
+    def get_stats(self) -> Dict[str, Any]:
+        """
+        システムの統計情報を取得
+        
+        戻り値:
+            システム統計情報を含む辞書
+        """
+        return {
+            "agents": self.num_agents,
+            "iterations": self.iterations,
+            "memory_enabled": self.use_memory,
+            "summary_enabled": self.use_summary,
+            "parallel_enabled": self.use_parallel,
+            "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
+        }

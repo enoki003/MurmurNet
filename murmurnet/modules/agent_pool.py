@@ -9,13 +9,16 @@ Agent Pool モジュール
 作者: Yuhi Sonoki
 """
 
-from concurrent.futures import ThreadPoolExecutor
-from llama_cpp import Llama
+import logging
 import os
 import json
-from typing import Dict, Any, List
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Any, List, Optional, Tuple, Callable
+from MurmurNet.modules.model_factory import ModelFactory
+
+logger = logging.getLogger('MurmurNet.AgentPool')
 
 # クラス外にグローバルロックを定義
 _global_llama_lock = threading.Lock()
@@ -23,143 +26,56 @@ _global_llama_lock = threading.Lock()
 class AgentPoolManager:
     """
     分散SLMにおけるエージェントプールの管理
+    
+    責務:
     - 複数エージェントの生成と実行管理
     - 役割ベースの分担処理
+    - 並列/逐次実行の制御
+    
+    属性:
+        config: 設定辞書
+        blackboard: 共有黒板
+        num_agents: エージェント数
+        roles: 役割リスト
     """
     def __init__(self, config: Dict[str, Any], blackboard):
+        """
+        エージェントプールの初期化
+        
+        引数:
+            config: 設定辞書
+            blackboard: 共有黒板インスタンス
+        """
         self.config = config
         self.blackboard = blackboard
         self.debug = config.get('debug', False)
         self.num_agents = config.get('num_agents', 2)
-        self.model_lock = None  # 並列処理用のローカルロック
         
-        # 安全のため、デフォルトでは並列モードを無効化
+        if self.debug:
+            logger.setLevel(logging.DEBUG)
+          # 安全のため、デフォルトでは並列モードを無効化
         self.parallel_mode = config.get('parallel_mode', False)
         
-        self._load_model()
+        # ModelFactoryからモデルを取得
+        self.llm = ModelFactory.create_model(self.config)
+        
         self._load_role_templates()
         self._load_roles()
         
         # 並列モードの場合の設定
         if self.parallel_mode:
-            try:
-                # スレッド間の同期のためにロックを作成
-                self.model_lock = threading.Lock()
-                
-                if self.debug:
-                    print("並列処理モードを初期化しています...")
-                    
-                # 現在の実装では並列モードでも1つのモデルインスタンスを共有
-                # 各リクエストはグローバルロックで保護され、1つずつ処理される
-                self.agent_models = []
-            except Exception as e:
-                if self.debug:
-                    print(f"並列モード初期化エラー: {e}")
-                self.parallel_mode = False
-                self.agent_models = []
+            # スレッド間の同期のためにロックを作成
+            self.model_lock = threading.Lock()
+            logger.info("並列処理モードを初期化しました")
+        
+        logger.info(f"エージェントプールを初期化しました (エージェント数: {self.num_agents})")
 
-    def _load_model(self):
-        """モデルの初期化（内部メソッド）"""
-        model_path = self.config.get('model_path')
-        if not model_path:
-            model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 
-                                        '../../models/gemma-3-1b-it-q4_0.gguf'))
-            
-        chat_template = self.config.get('chat_template')
-        params_path = self.config.get('params')
+    def _load_role_templates(self) -> None:
+        """
+        役割テンプレートの初期化（内部メソッド）
         
-        # モデルパラメータのロード
-        llama_kwargs = {
-            'model_path': model_path,
-            'n_ctx': self.config.get('n_ctx', 1024),  # 親設定から受け取る
-            'n_threads': self.config.get('n_threads', 4),  # 親設定から受け取る
-            'use_mmap': True,
-            'use_mlock': False,
-            'n_gpu_layers': 0,
-            'seed': 42,
-            'chat_format': "gemma",
-            'verbose': False  # ログ出力抑制
-        }
-        
-        # JSONパラメータがあれば追加ロード
-        if params_path and os.path.exists(params_path):
-            try:
-                with open(params_path, 'r') as f:
-                    params = json.load(f)
-                    llama_kwargs.update(params)
-            except Exception as e:
-                if self.debug:
-                    print(f"パラメータロードエラー: {e}")
-        
-        # チャットテンプレートがあれば設定
-        if chat_template and os.path.exists(chat_template):
-            try:
-                with open(chat_template, 'r', encoding='utf-8') as f:
-                    llama_kwargs['chat_template'] = f.read()
-            except Exception as e:
-                if self.debug:
-                    print(f"テンプレートロードエラー: {e}")
-        
-        # デバッグログ
-        if self.debug:
-            print(f"エージェントプール: モデル設定 n_ctx={llama_kwargs['n_ctx']}, n_threads={llama_kwargs['n_threads']}")
-                    
-        self.llm = Llama(**llama_kwargs)
-
-    def _create_model_instance(self, agent_id=0):
-        """各エージェント用の独立したモデルインスタンスを作成（内部メソッド）"""
-        model_path = self.config.get('model_path')
-        if not model_path:
-            model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 
-                                      '../../models/gemma-3-1b-it-q4_0.gguf'))
-            
-        chat_template = self.config.get('chat_template')
-        params_path = self.config.get('params')
-        
-        # モデルパラメータのロード - エージェントごとに異なるシードを使用
-        llama_kwargs = {
-            'model_path': model_path,
-            'n_ctx': self.config.get('n_ctx', 1024),
-            'n_threads': max(1, self.config.get('n_threads', 4) // self.num_agents),  # スレッド数を分散
-            'use_mmap': True,
-            'use_mlock': False,
-            'n_gpu_layers': 0,
-            'seed': 42 + agent_id,  # 各エージェントに固有のシード
-            'chat_format': "gemma",
-            'verbose': False
-        }
-        
-        # JSONパラメータがあれば追加ロード
-        if params_path and os.path.exists(params_path):
-            try:
-                with open(params_path, 'r') as f:
-                    params = json.load(f)
-                    llama_kwargs.update(params)
-                    # シードは上書きしない
-                    llama_kwargs['seed'] = 42 + agent_id
-            except Exception as e:
-                if self.debug:
-                    print(f"エージェント{agent_id}のパラメータロードエラー: {e}")
-        
-        # チャットテンプレートがあれば設定
-        if chat_template and os.path.exists(chat_template):
-            try:
-                with open(chat_template, 'r', encoding='utf-8') as f:
-                    llama_kwargs['chat_template'] = f.read()
-            except Exception as e:
-                if self.debug:
-                    print(f"エージェント{agent_id}のテンプレートロードエラー: {e}")
-                
-        try:
-            # モデルインスタンスを作成
-            return Llama(**llama_kwargs)
-        except Exception as e:
-            if self.debug:
-                print(f"エージェント{agent_id}のモデル初期化エラー: {e}")
-            return None
-
-    def _load_role_templates(self):
-        """役割テンプレートの初期化（内部メソッド）"""
+        質問タイプ別の役割テンプレートを定義
+        """
         # 質問タイプ別の役割テンプレート定義
         self.role_templates = {
             # 議論型質問用の役割
@@ -198,382 +114,265 @@ class AgentPoolManager:
             ]
         }
 
-    def _load_roles(self):
-        """エージェント役割の初期化（内部メソッド）"""
-        # デフォルトの役割定義
-        self.agent_roles = [
-            {"role": "レポートまとめAI", "system": "あなたは経済の専門家です。経済的観点から手短に意見を述べてください。", "temperature": 0.7},
-            {"role": "批判的評価AI", "system": "あなたは倫理の専門家です。倫理的観点から手短に意見を述べてください。", "temperature": 0.9},
-            {"role": "技術視点", "system": "あなたは技術の専門家です。技術的観点から簡潔に答えてください。", "temperature": 0.6},
-            {"role": "社会視点", "system": "あなたは社会学の専門家です。社会的観点から簡潔に答えてください。", "temperature": 0.8}
-        ]
+    def _load_roles(self) -> None:
+        """役割の割り当て（内部メソッド）"""
+        # 役割の選択（設定またはランダム）
+        self.roles = []
         
-        # カスタム役割があれば上書き
-        custom_roles = self.config.get('agent_roles')
-        if custom_roles:
-            self.agent_roles = custom_roles
-    
-    def _classify_question(self, question: str) -> str:
-        """
-        質問内容を分類し、適切なタイプを判断する（内部メソッド）
+        # 設定から役割タイプを取得
+        role_type = self.config.get('role_type', 'default')
+        if role_type not in self.role_templates:
+            role_type = 'default'
+            
+        # 利用可能な役割テンプレート
+        available_roles = self.role_templates[role_type]
         
-        引数:
-            question: 分類する質問文字列
+        # エージェント数に合わせて役割を割り当て
+        for i in range(self.num_agents):
+            role_index = i % len(available_roles)  # 循環させる
+            self.roles.append(available_roles[role_index])
             
-        戻り値:
-            質問タイプ: "discussion", "planning", "informational", "conversational", "default"のいずれか
-        """
-        try:
-            # 入力文が短すぎる場合は一般会話とみなす
-            if len(question) < 10:
-                return "conversational"
-            
-            # LLMを使用して質問タイプを分類
-            prompt = f"""
-以下の質問文を分析し、最も合致するタイプを1つだけ選んでください:
-1. 議論型(discussion): 多角的な見方、批判的思考、価値観や意見が問われる質問
-2. 計画・構想型(planning): アイデア、計画、戦略、将来の可能性に関する質問
-3. 情報提供型(informational): 事実、定義、解説を求める質問
-4. 一般会話型(conversational): 雑談、挨拶、個人的な意見や好みを尋ねる質問
-
-質問文: {question}
-
-選択結果 (discussion/planning/informational/conversational):
-"""
-
-            # 温度を低く設定して決定論的な分類を促進
-            response = self.llm.create_chat_completion(
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=20,
-                temperature=0.2,
-                stop=["\n", " "]
-            )
-            
-            if isinstance(response, dict):
-                classification = response['choices'][0]['message']['content'].strip().lower()
-            else:
-                classification = response.choices[0].message.content.strip().lower()
-            
-            # 分類結果の正規化
-            if "discussion" in classification:
-                result = "discussion"
-            elif "planning" in classification:
-                result = "planning"
-            elif "informational" in classification:
-                result = "informational"
-            elif "conversational" in classification:
-                result = "conversational"
-            else:
-                result = "default"
-                
-            if self.debug:
-                print(f"質問分類: {result} (元出力: {classification})")
-                
-            return result
-            
-        except Exception as e:
-            if self.debug:
-                print(f"質問分類エラー: {str(e)}")
-            return "default"  # エラー時はデフォルト分類を返す
-    
-    def update_roles_based_on_question(self, question: str) -> None:
-        """
-        質問内容に基づいて最適な役割セットを選択
-        
-        引数:
-            question: ユーザーの質問文字列
-        """
-        # 質問を分類
-        question_type = self._classify_question(question)
-        
-        # 質問タイプに基づいて役割テンプレートを選択
-        selected_roles = self.role_templates.get(question_type, self.role_templates["default"])
-        
-        # エージェント数に合わせて役割を調整
-        if len(selected_roles) > self.num_agents:
-            # 役割が多すぎる場合は先頭から必要な数だけ使用
-            self.agent_roles = selected_roles[:self.num_agents]
-        elif len(selected_roles) < self.num_agents:
-            # 役割が足りない場合はデフォルト役割で補完
-            additional_roles = self.role_templates["default"]
-            needed = self.num_agents - len(selected_roles)
-            self.agent_roles = selected_roles + additional_roles[:needed]
-        else:
-            self.agent_roles = selected_roles
-            
-        # 黒板に選択された役割タイプを記録
-        self.blackboard.write('question_type', question_type)
-        
         if self.debug:
-            print(f"役割更新: 質問タイプ={question_type}, 役割数={len(self.agent_roles)}")
-            for i, role in enumerate(self.agent_roles):
-                print(f"  エージェント{i}: {role['role']}")
+            roles_info = ", ".join(role["role"] for role in self.roles)
+            logger.debug(f"割り当てられた役割: {roles_info}")
 
-    def _detect_language(self, text: str) -> str:
-        """入力テキストの言語を判定（内部メソッド）"""
-        if re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', text):
-            return 'ja'
-        elif re.search(r'[a-zA-Z]', text):
-            return 'en' 
-        return 'ja'  # デフォルトは日本語
-
-    def _agent_task(self, agent_id: int) -> str:
-        """単一エージェントの処理（内部メソッド）"""
-        try:
-            input_data = self.blackboard.read('input')
-            if not input_data:
-                return ""
-                
-            # エージェント役割の選択
-            role_idx = agent_id % len(self.agent_roles)
-            role = self.agent_roles[role_idx]
-            
-            # 入力データから正規化テキストのみを抽出（埋め込みを除外）
-            normalized_text = ""
-            if isinstance(input_data, dict) and 'normalized' in input_data:
-                normalized_text = input_data['normalized']
-            elif isinstance(input_data, str):
-                normalized_text = input_data
-            
-            # 会話コンテキストがあれば追加
-            context = ""
-            if isinstance(input_data, dict) and 'context' in input_data:
-                context = f"これまでの会話の要約: {input_data['context']}\n\n"
-            
-            # 入力言語に合わせた応答言語設定
-            lang = self._detect_language(normalized_text)
-            system_prompt = role['system']
-            if lang == 'ja':
-                system_prompt += " 必ず日本語で100〜200字で簡潔に返答してください。"
-            else:
-                system_prompt += " Always respond briefly in English, around 30-50 words maximum."
-                
-            # プロンプト生成 - トークン数を明示的に制限
-            prompt = f"{system_prompt}\n\n{context}問い: {normalized_text[:200]}"  # 入力も制限
-            
-            # エージェント入力の保存（埋め込みは除外）
-            self.blackboard.write(f'agent_{agent_id}_input', normalized_text[:200])
-            self.blackboard.write(f'agent_{agent_id}_role', role['role'])
-            
-            # LLMの実行 - グローバルロックで保護
-            messages = [{"role": "user", "content": prompt}]
-            temperature = role.get('temperature', 0.7)
-            max_tokens = min(self.config.get('max_tokens', 256), 256)  # トークン生成数制限
-            
-            # グローバルロックを使用して、LLaMA.cppの同時アクセスを防ぐ
-            with _global_llama_lock:
-                response = self.llm.create_chat_completion(
-                    messages=messages, 
-                    max_tokens=max_tokens, 
-                    temperature=temperature,
-                    stop=["。", ".", "\n\n"]  # 早めに停止
-                )
-            
-            # 応答の取得と保存
-            if isinstance(response, dict):
-                output = response["choices"][0]["message"]["content"].strip()
-            else:
-                output = response.choices[0].message.content.strip()
-                
-            # 出力を制限（長すぎる応答を防止）
-            output = output[:300]  # 最大300文字に制限
-            
-            self.blackboard.write(f'agent_{agent_id}_output', output)
-            
-            if self.debug:
-                print(f"エージェント{agent_id}({role['role']}): 出力長={len(output)}")
-            
-            return output
-            
-        except Exception as e:
-            error_msg = f"エージェント{agent_id}エラー: {str(e)}"
-            if self.debug:
-                print(error_msg)
-                import traceback
-                traceback.print_exc()
-            self.blackboard.write(f'agent_{agent_id}_error', error_msg)
-            return f"エージェント{agent_id}は応答できませんでした。"
-
-    def _parallel_agent_task(self, agent_id: int) -> str:
-        """並列処理モード用の単一エージェント処理（内部メソッド）"""
-        try:
-            input_data = self.blackboard.read('input')
-            if not input_data:
-                return ""
-                
-            # エージェント役割の選択
-            role_idx = agent_id % len(self.agent_roles)
-            role = self.agent_roles[role_idx]
-            model = self.agent_models[agent_id]  # 各エージェント専用のモデルを使用
-            
-            # 入力データから正規化テキストのみを抽出
-            normalized_text = ""
-            if isinstance(input_data, dict) and 'normalized' in input_data:
-                normalized_text = input_data['normalized']
-            elif isinstance(input_data, str):
-                normalized_text = input_data
-            
-            # 会話コンテキストがあれば追加
-            context = ""
-            if isinstance(input_data, dict) and 'context' in input_data:
-                context = f"これまでの会話の要約: {input_data['context']}\n\n"
-            
-            # 入力言語に合わせた応答言語設定
-            lang = self._detect_language(normalized_text)
-            system_prompt = role['system']
-            if lang == 'ja':
-                system_prompt += " 必ず日本語で100〜200字で簡潔に返答してください。"
-            else:
-                system_prompt += " Always respond briefly in English, around 30-50 words maximum."
-                
-            # プロンプト生成 - トークン数を制限
-            prompt = f"{system_prompt}\n\n{context}問い: {normalized_text[:200]}"
-            
-            # エージェント入力の保存
-            self.blackboard.write(f'agent_{agent_id}_input', normalized_text[:200])
-            self.blackboard.write(f'agent_{agent_id}_role', role['role'])
-            
-            # 専用モデルインスタンスでLLMを実行
-            messages = [{"role": "user", "content": prompt}]
-            temperature = role.get('temperature', 0.7)
-            max_tokens = min(self.config.get('max_tokens', 256), 256)
-            
-            with _global_llama_lock:  # グローバルロックで保護
-                response = model.create_chat_completion(
-                    messages=messages, 
-                    max_tokens=max_tokens, 
-                    temperature=temperature,
-                    stop=["。", ".", "\n\n"]
-                )
-            
-            # 応答の取得と保存
-            if isinstance(response, dict):
-                output = response["choices"][0]["message"]["content"].strip()
-            else:
-                output = response.choices[0].message.content.strip()
-                
-            # 出力を制限
-            output = output[:300]
-            
-            self.blackboard.write(f'agent_{agent_id}_output', output)
-            
-            if self.debug:
-                print(f"エージェント{agent_id}({role['role']}): 出力長={len(output)}")
-            
-            return output
-            
-        except Exception as e:
-            error_msg = f"並列エージェント{agent_id}エラー: {str(e)}"
-            if self.debug:
-                print(error_msg)
-                import traceback
-                traceback.print_exc()
-            self.blackboard.write(f'agent_{agent_id}_error', error_msg)
-            return f"エージェント{agent_id}は応答できませんでした。"
-
-    def run_agents(self, blackboard) -> List[str]:
-        """すべてのエージェントを実行し、結果を取得"""
-        self.blackboard = blackboard  # 黒板参照を更新
+    def run_agents(self, blackboard) -> None:
+        """
+        すべてのエージェントを逐次実行
         
-        # 質問に基づいて役割を更新
-        input_data = self.blackboard.read('input')
-        if input_data:
-            question = input_data.get('normalized') if isinstance(input_data, dict) else str(input_data)
-            self.update_roles_based_on_question(question)
+        引数:
+            blackboard: 共有黒板
+        """
+        logger.info("エージェントを逐次実行中...")
         
-        results = []
-        
-        # 並列モード実行の試行
-        if self.parallel_mode and len(self.agent_models) >= self.num_agents:
-            if self.debug:
-                print(f"並列処理モードでエージェントを実行します")
-                
+        # 各エージェントを順番に実行
+        for i in range(self.num_agents):
             try:
+                result = self._agent_task(i)
+                blackboard.write(f'agent_{i}_output', result)
+                
                 if self.debug:
-                    print("並列処理開始")
-                
-                # 同時実行するワーカー数を制限（CPUコア数に基づいて調整）
-                import multiprocessing
-                max_workers = min(self.num_agents, max(1, multiprocessing.cpu_count() - 1))
-                
-                # 並列タスク定義 - 例外はタスク内で処理
-                def parallel_agent_task(agent_id):
-                    try:
-                        # 各エージェントに専用のモデルを使用
-                        result = self._parallel_agent_task(agent_id)
-                        return result or f"エージェント{agent_id}の応答を取得できませんでした"
-                    except Exception as e:
-                        error_msg = f"並列エージェント{agent_id}エラー: {str(e)}"
-                        if self.debug:
-                            print(error_msg)
-                            import traceback
-                            traceback.print_exc()
-                        # エラーが発生しても空文字ではなくエラーメッセージを返す
-                        return f"エージェント{agent_id}は応答できませんでした：{str(e)[:100]}"
-                
-                # ThreadPoolExecutorで並列実行
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    # 各エージェントのタスクを投入
-                    futures = [executor.submit(parallel_agent_task, i) for i in range(self.num_agents)]
-                    
-                    # 結果を収集（例外は各タスク内で処理）
-                    results = []
-                    for i, future in enumerate(futures):
-                        try:
-                            # タイムアウト設定（30秒）
-                            result = future.result(timeout=30)
-                            results.append(result)
-                        except Exception as e:
-                            # タイムアウトやその他の例外
-                            error_msg = f"並列エージェント{i}の実行に失敗: {str(e)}"
-                            if self.debug:
-                                print(error_msg)
-                            results.append(f"エージェント{i}は時間内に応答できませんでした")
-                
-                # すべてのエージェントが結果を返したか確認
-                if len(results) == self.num_agents and all(results):
-                    if self.debug:
-                        print("並列処理で全エージェントが応答しました")
-                    return results
-                else:
-                    if self.debug:
-                        print(f"一部のエージェントが応答していません（{len(results)}/{self.num_agents}）")
-                    # 結果が不完全な場合は逐次実行にフォールバック
-                    self.blackboard.write('parallel_mode_failed', "応答が不完全なため逐次実行にフォールバックします")
-                    results = []  # リセット
+                    logger.debug(f"エージェント{i}の実行が完了しました")
                     
             except Exception as e:
-                # 並列実行全体の例外
+                error_msg = f"エージェント{i}の実行エラー: {str(e)}"
+                logger.error(error_msg)
+                blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                
                 if self.debug:
-                    print(f"並列処理エラー: {e}")
                     import traceback
-                    traceback.print_exc()
-                self.blackboard.write('parallel_mode_error', str(e))
-                results = []  # リセット
+                    logger.debug(traceback.format_exc())
+
+    def _format_prompt(self, agent_id: int) -> str:
+        """
+        エージェント用のプロンプトをフォーマット（内部メソッド）
         
-        # 並列モードが無効または失敗した場合は逐次実行
-        if not results:
-            if self.debug:
-                print("逐次処理モードでエージェントを実行します")
+        引数:
+            agent_id: エージェントID
             
-            # 逐次実行でエラーを慎重に処理
-            for agent_id in range(self.num_agents):
-                try:
-                    if self.model_lock:  # ロックがある場合は使用
-                        with self.model_lock:
-                            result = self._agent_task(agent_id)
-                    else:
-                        result = self._agent_task(agent_id)
+        戻り値:
+            フォーマットされたプロンプト
+        """
+        # 入力情報の取得
+        input_data = self.blackboard.read('input')
+        if isinstance(input_data, dict) and 'normalized' in input_data:
+            input_text = input_data['normalized']
+        else:
+            input_text = str(input_data)
+            
+        # RAG情報の取得
+        rag_info = self.blackboard.read('rag')
+        rag_text = str(rag_info) if rag_info else "関連情報はありません。"
+        
+        # 会話コンテキストの取得
+        conversation_context = self.blackboard.read('conversation_context')
+        context_text = str(conversation_context) if conversation_context else "過去の会話はありません。"
+        
+        # エージェントの役割情報
+        role = self.roles[agent_id]
+        role_name = role.get('role', f"エージェント{agent_id}")
+        role_desc = role.get('system', "あなたは質問に答えるAIアシスタントです。")
+        
+        # 他のエージェントの出力を収集
+        other_agents_output = []
+        for i in range(self.num_agents):
+            if i != agent_id:  # 自分以外のエージェント
+                output = self.blackboard.read(f'agent_{i}_output')
+                if output:
+                    other_role = self.roles[i].get('role', f"エージェント{i}")
+                    other_agents_output.append(f"{other_role}の回答: {output[:200]}...")
                     
-                    results.append(result or f"エージェント{agent_id}は空の応答を返しました")
-                except Exception as e:
-                    error_msg = f"エージェント{agent_id}実行エラー: {str(e)}"
-                    if self.debug:
-                        print(error_msg)
-                    results.append(f"エージェント{agent_id}は応答できませんでした")
+        other_agents_text = "\n\n".join(other_agents_output) if other_agents_output else "他のエージェントの出力はまだありません。"
+                  # プロンプトの構築（話し言葉重視）
+        prompt = f"""こんにちは！私は「{role_name}」だよ。
+
+{role_desc}
+
+質問: {input_text}
+
+参考になりそうな情報: {rag_text}
+
+これまでの会話: {context_text}
+
+仲間たちの意見:
+{other_agents_text}
+
+お願い:
+- 私らしい視点で話すね
+- わかりやすく具体的に説明するよ
+- みんなの意見も参考にして、より良い答えを考えてみる
+- 150〜250文字くらいで話し言葉でお答えするね
+
+それじゃあ、{role_name}として答えるよ:"""
+
+        return prompt
+
+    def _agent_task(self, agent_id: int) -> str:
+        """
+        単一エージェントのタスク実行（内部メソッド）
         
-        # 結果の長さがエージェント数と一致するか確認
-        while len(results) < self.num_agents:
-            results.append("エージェントは応答しませんでした")
+        引数:
+            agent_id: エージェントID
             
-        return results
+        戻り値:
+            エージェントの応答テキスト
+        """
+        # プロンプトの構築
+        prompt = self._format_prompt(agent_id)
+        
+        # エージェントの役割と設定
+        role = self.roles[agent_id]
+        temperature = role.get('temperature', 0.7)
+        
+        try:
+            # モデル出力の生成（グローバルロックで保護）
+            with _global_llama_lock:                resp = self.llm.create_chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=300,  # 話し言葉に適したトークン数
+                    temperature=temperature,
+                    top_p=0.9
+                )
+            
+            # レスポンスの形式によって適切にアクセス
+            if isinstance(resp, dict):
+                output = resp['choices'][0]['message']['content'].strip()
+            else:
+                output = resp.choices[0].message.content.strip()
+                  # 出力を制限（250文字以内、話し言葉に適したサイズ）
+            if len(output) > 250:
+                output = output[:250]
+                
+            return output
+            
+        except Exception as e:
+            logger.error(f"エージェント{agent_id}のタスク実行エラー: {str(e)}")
+            if self.debug:
+                import traceback
+                logger.debug(traceback.format_exc())
+            return f"エージェント{agent_id}は応答できませんでした"
+
+    def get_agent_info(self, agent_id: int) -> Dict[str, Any]:
+        """
+        エージェントの情報を取得
+        
+        引数:
+            agent_id: エージェントID
+            
+        戻り値:
+            エージェント情報の辞書
+        """
+        if agent_id < 0 or agent_id >= self.num_agents:
+            return {"error": "無効なエージェントID"}
+            
+        role = self.roles[agent_id]
+        
+        return {
+            "id": agent_id,
+            "role": role.get("role", f"エージェント{agent_id}"),
+            "description": role.get("system", "情報なし"),
+            "temperature": role.get("temperature", 0.7)
+        }
+
+    def update_roles_based_on_question(self, question: str) -> None:
+        """
+        質問の内容に基づいて適切な役割を動的に更新
+        
+        引数:
+            question: 入力された質問
+        """
+        # 質問タイプを判定
+        question_type = self._classify_question_type(question)
+        
+        # 黒板に質問タイプを書き込み
+        self.blackboard.write('question_type', question_type)
+        
+        # 質問タイプに基づいて役割を更新
+        if question_type in self.role_templates:
+            available_roles = self.role_templates[question_type]
+        else:
+            available_roles = self.role_templates['default']
+        
+        # エージェント数に合わせて役割を再割り当て
+        self.roles = []
+        for i in range(self.num_agents):
+            role_index = i % len(available_roles)
+            self.roles.append(available_roles[role_index])
+        
+        # agent_rolesという属性も設定（テストコードで使用されている）
+        self.agent_roles = self.roles
+        
+        if self.debug:
+            roles_info = ", ".join(role["role"] for role in self.roles)
+            logger.debug(f"質問タイプ '{question_type}' に基づいて役割を更新: {roles_info}")
+
+    def _classify_question_type(self, question: str) -> str:
+        """
+        質問のタイプを分類（内部メソッド）
+        
+        引数:
+            question: 分析する質問
+            
+        戻り値:
+            質問タイプ ('discussion', 'planning', 'informational', 'conversational', 'default')
+        """
+        question_lower = question.lower()
+        
+        # 議論型のキーワード
+        discussion_keywords = [
+            'について議論', '議論して', '賛成', '反対', '問題', '課題', '影響',
+            'どう思う', 'どう考える', 'メリット', 'デメリット', '比較',
+            'discuss', 'debate', 'argue', 'opinion', 'think', 'pros', 'cons'
+        ]
+        
+        # 計画・構想型のキーワード
+        planning_keywords = [
+            'どうすれば', 'どのように', '方法', '手順', '計画', '戦略',
+            '実現', '達成', '解決', '改善', '対策', '案', '提案',
+            'how to', 'plan', 'strategy', 'solve', 'achieve', 'implement'
+        ]
+        
+        # 情報提供型のキーワード
+        informational_keywords = [
+            'とは', 'なに', '何', '定義', '説明', '詳細', '仕組み',
+            '原因', '理由', 'なぜ', '歴史', '背景', '特徴',
+            'what is', 'define', 'explain', 'why', 'how', 'cause', 'reason'
+        ]
+        
+        # 会話型のキーワード
+        conversational_keywords = [
+            'こんにちは', 'はじめまして', 'おはよう', 'こんばんは',
+            'ありがとう', 'すみません', 'お疲れ', '元気',
+            'hello', 'hi', 'good morning', 'thank you', 'sorry'
+        ]
+        
+        # キーワードマッチング
+        if any(keyword in question_lower for keyword in discussion_keywords):
+            return 'discussion'
+        elif any(keyword in question_lower for keyword in planning_keywords):
+            return 'planning'
+        elif any(keyword in question_lower for keyword in informational_keywords):
+            return 'informational'
+        elif any(keyword in question_lower for keyword in conversational_keywords):
+            return 'conversational'
+        else:
+            return 'default'

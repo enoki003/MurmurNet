@@ -45,12 +45,13 @@ from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.conversation_memory import ConversationMemory
 
 # 標準設定（異なる環境でも動作するように絶対パス）
-MODELS_PATH = r"c:\\Users\\園木優陽\\OneDrive\\デスクトップ\\models\\"
+MODELS_PATH = r"C:\\Users\\admin\\Desktop\\課題研究\\models\\"
 DEFAULT_CONFIG = {
     "num_agents": 2,
     "iterations": 1,
     "use_summary": True,
     "use_parallel": False,
+    "model_type": "llama",  # ModelFactoryで適切なモデルを選択
     "rag_mode": "dummy",  # dummy モードなら外部ファイルなしで動作
     "rag_score_threshold": 0.5,
     "rag_top_k": 1,
@@ -264,7 +265,7 @@ async def test_rag_zim_mode():
     # 設定: ZIMモード有効
     config = DEFAULT_CONFIG.copy()
     config["rag_mode"] = "zim"
-    config["zim_path"] = r"C:\Users\園木優陽\AppData\Roaming\kiwix-desktop\wikipedia_en_top_nopic_2025-03.zim"
+    config["zim_path"] = "C:\\Users\\admin\\Desktop\\課題研究\\KNOWAGE_DATABASE\\wikipedia_en_top_nopic_2025-03.zim"
     config["rag_score_threshold"] = 0.5
     config["rag_top_k"] = 3
     config["debug"] = True
@@ -483,7 +484,7 @@ async def test_blackboard_conversation_memory():
     print(f"{context[:200]}...")
     
     # 重要情報の取得テスト
-    key_facts = conversation_memory.get_key_facts()
+    key_facts = conversation_memory.key_facts
     print("\n抽出された重要情報:")
     for category, items in key_facts.items():
         if items:
