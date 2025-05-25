@@ -13,6 +13,7 @@ import logging
 import re
 from typing import Dict, Any, List, Optional
 from MurmurNet.modules.model_factory import get_shared_model
+from MurmurNet.modules.config_manager import get_config
 
 logger = logging.getLogger('MurmurNet.OutputAgent')
 
@@ -29,17 +30,21 @@ class OutputAgent:
         config: 設定辞書
         max_output_tokens: 最終出力の最大トークン数
     """
-    
     def __init__(self, config: Dict[str, Any] = None):
         """
         出力エージェントの初期化
         
         引数:
-            config: 設定辞書（省略時は空の辞書）
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
         """
-        self.config = config or {}
-        self.debug = self.config.get('debug', False)
-        self.max_output_tokens = self.config.get('max_output_tokens', 400)  # 話し言葉に適した最大トークン数
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
+        
+        # ConfigManagerから直接設定値を取得
+        self.debug = self.config_manager.logging.debug
+        self.max_output_tokens = self.config_manager.model.max_tokens  # モデル設定から取得
+        
         if self.debug:
             logger.setLevel(logging.DEBUG)
             

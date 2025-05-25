@@ -1,0 +1,22 @@
+2025-05-26 00:33:20,778 [INFO] 設定ファイルを発見: C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\config.yaml
+2025-05-26 00:33:20,782 [INFO] 設定ファイルを読み込みました: C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\config.yaml
+2025-05-26 00:33:20,783 [INFO] 設定のバリデーションが完了しました
+2025-05-26 00:33:20,783 [INFO] 会話記憶モジュールを初期化しました
+2025-05-26 00:33:24,322 [INFO] Llamaモデルを初期化しました: C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf
+2025-05-26 00:33:34,112 [INFO] 会話記憶モジュールを初期化しました
+2025-05-26 00:33:34,537 [INFO] Use pytorch device_name: cpu
+2025-05-26 00:33:34,539 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-26 00:33:41,934 [INFO] 設定されたモデルを使用します: gemma3
+2025-05-26 00:33:41,966 [INFO] Use pytorch device_name: cpu
+2025-05-26 00:33:41,966 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-26 00:36:21,999 [INFO] 設定ファイルを発見: C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\config.yaml
+2025-05-26 00:36:22,003 [INFO] 設定ファイルを読み込みました: C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\config.yaml
+2025-05-26 00:36:22,005 [INFO] 設定のバリデーションが完了しました
+2025-05-26 00:36:22,005 [INFO] 会話記憶モジュールを初期化しました
+2025-05-26 00:36:22,998 [INFO] Llamaモデルを初期化しました: C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf
+2025-05-26 00:36:32,684 [INFO] 会話記憶モジュールを初期化しました
+2025-05-26 00:36:32,988 [INFO] Use pytorch device_name: cpu
+2025-05-26 00:36:32,988 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-26 00:36:38,790 [INFO] 設定されたモデルを使用します: gemma3
+2025-05-26 00:36:38,832 [INFO] Use pytorch device_name: cpu
+2025-05-26 00:36:38,834 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2

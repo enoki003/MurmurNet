@@ -15,22 +15,40 @@ import json
 import re
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Dict, Any, List, Optional, Tuple, Callable
 from MurmurNet.modules.model_factory import get_shared_model
+from MurmurNet.modules.common import AgentExecutionError, ThreadSafetyError
+from MurmurNet.modules.config_manager import get_config
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
-# クラス外にグローバルロックを定義
-_global_llama_lock = threading.Lock()
+# エージェント毎の個別ロック管理
+class AgentLockManager:
+    """エージェント毎の個別ロック管理"""
+    
+    def __init__(self, num_agents: int):
+        self._locks = {i: threading.Lock() for i in range(num_agents)}
+        self._global_lock = threading.RLock()  # 管理用のロック
+    
+    def get_agent_lock(self, agent_id: int) -> threading.Lock:
+        """指定エージェントのロックを取得"""
+        with self._global_lock:
+            if agent_id not in self._locks:
+                self._locks[agent_id] = threading.Lock()
+            return self._locks[agent_id]
+    
+    def cleanup(self):
+        """リソースクリーンアップ"""
+        with self._global_lock:
+            self._locks.clear()
 
 class AgentPoolManager:
     """
     分散SLMにおけるエージェントプールの管理
     
     責務:
-    - 複数エージェントの生成と実行管理
-    - 役割ベースの分担処理
+    - 複数エージェントの生成と実行管理    - 役割ベースの分担処理
     - 並列/逐次実行の制御
     - メモリ最適化エージェントパターン
     
@@ -39,36 +57,42 @@ class AgentPoolManager:
         blackboard: 共有黒板
         num_agents: エージェント数
         roles: 役割リスト
-        _memory_usage_tracker: メモリ使用量追跡
-        _dynamic_pool_size: 動的プールサイズ
+        lock_manager: エージェント毎のロック管理
     """
-    def __init__(self, config: Dict[str, Any], blackboard):
+    def __init__(self, config: Dict[str, Any] = None, blackboard=None):
         """
         エージェントプールの初期化
         
         引数:
-            config: 設定辞書
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
             blackboard: 共有黒板インスタンス
         """
-        self.config = config
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
         self.blackboard = blackboard
-        self.debug = config.get('debug', False)
-        self.num_agents = config.get('num_agents', 2)
+        
+        # ConfigManagerから直接設定値を取得
+        self.debug = self.config_manager.logging.debug
+        self.num_agents = self.config_manager.agent.num_agents
         
         if self.debug:
             logger.setLevel(logging.DEBUG)
-          # 安全のため、デフォルトでは並列モードを無効化
-        self.parallel_mode = config.get('parallel_mode', False)
-          # 共有モデルインスタンスを取得（シングルトンパターン）
+        
+        # ConfigManagerから並列モード設定を取得
+        self.parallel_mode = self.config_manager.agent.use_parallel
+        
+        # 共有モデルインスタンスを取得（シングルトンパターン）
         self.llm = get_shared_model(self.config)
         
+        # エージェント毎の個別ロック管理
+        self.lock_manager = AgentLockManager(self.num_agents)
         self._load_role_templates()
         self._load_roles()
-          # 並列モードの場合の設定
+        
+        # 並列モードの場合の設定
         if self.parallel_mode:
-            # スレッド間の同期のためにロックを作成
-            self.model_lock = threading.Lock()
-            logger.info("並列処理モードを初期化しました")
+            logger.info("並列処理モードを初期化しました（個別ロック使用）")
         
         logger.info(f"エージェントプールを初期化しました (エージェント数: {self.num_agents})")
 
@@ -120,9 +144,8 @@ class AgentPoolManager:
         """役割の割り当て（内部メソッド）"""
         # 役割の選択（設定またはランダム）
         self.roles = []
-        
-        # 設定から役割タイプを取得
-        role_type = self.config.get('role_type', 'default')
+          # 設定から役割タイプを取得
+        role_type = self.config_manager.agent.role_type
         if role_type not in self.role_templates:
             role_type = 'default'
             
@@ -153,13 +176,23 @@ class AgentPoolManager:
                 result = self._agent_task(i)
                 blackboard.write(f'agent_{i}_output', result)
                 
-                if self.debug:
-                    logger.debug(f"エージェント{i}の実行が完了しました")
+                if self.debug:                logger.debug(f"エージェント{i}の実行が完了しました")
                     
+            except AgentExecutionError as e:
+                # エージェント実行エラーの適切な処理
+                logger.error(f"エージェント実行エラー: {e}")
+                blackboard.write(f'agent_{e.agent_id}_output', f"エージェント{e.agent_id}は実行エラーにより応答できませんでした")
+                
+            except TimeoutError as e:
+                # タイムアウトエラーの処理
+                logger.error(f"エージェント{i}がタイムアウトしました: {e}")
+                blackboard.write(f'agent_{i}_output', f"エージェント{i}は処理時間制限により応答できませんでした")
+                
             except Exception as e:
-                error_msg = f"エージェント{i}の実行エラー: {str(e)}"
+                # その他の予期しないエラー
+                error_msg = f"エージェント{i}の予期しないエラー: {str(e)}"
                 logger.error(error_msg)
-                blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                blackboard.write(f'agent_{i}_output', f"エージェント{i}は技術的な問題により応答できませんでした")
                 
                 if self.debug:
                     import traceback
@@ -259,12 +292,13 @@ class AgentPoolManager:
             role_name = role.get('role', f'エージェント{agent_id}')
             
             logger.debug(f"エージェント{agent_id} ({role_name}) タスク開始")
-            
-            # モデル出力の生成（グローバルロックで保護、タイムアウト対応）
+              # モデル出力の生成（個別エージェントロックで保護、タイムアウト対応）
             import time
             start_time = time.time()
             
-            with _global_llama_lock:
+            # エージェント毎の個別ロックを使用
+            agent_lock = self.lock_manager.get_agent_lock(agent_id)
+            with agent_lock:
                 # モデルの可用性チェック
                 if not hasattr(self.llm, 'create_chat_completion') and not hasattr(self.llm, 'generate'):
                     logger.error(f"モデルインスタンスが正しく初期化されていません")
@@ -318,27 +352,43 @@ class AgentPoolManager:
             
             # 黒板への書き込み
             self.blackboard.write(f'agent_{agent_id}_output', response_text)
-            
             logger.debug(f"エージェント{agent_id} ({role_name}) タスク完了: {len(response_text)}文字")
             return response_text
             
+        except TimeoutError as e:
+            # タイムアウト専用処理
+            role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
+            error_msg = f"{role_name}は処理時間の制限により応答できませんでした"
+            logger.error(f"エージェント{agent_id} タイムアウト: {e}")
+            self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            raise AgentExecutionError(agent_id, "タイムアウト", e)
+            
+        except MemoryError as e:
+            # メモリ不足専用処理
+            role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
+            error_msg = f"{role_name}はメモリ不足のため応答できませんでした"
+            logger.error(f"エージェント{agent_id} メモリ不足: {e}")
+            self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            raise AgentExecutionError(agent_id, "メモリ不足", e)
+            
         except Exception as e:
+            # その他の例外
             error_type = type(e).__name__
             logger.error(f"エージェント{agent_id} 実行エラー ({error_type}): {str(e)}")
-              # エラータイプ別の適切な応答
+            
+            # エラータイプ別の適切な応答
             role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
             
-            if "timeout" in str(e).lower():
-                error_msg = f"{role_name}は処理時間の制限により応答できませんでした"
-            elif "memory" in str(e).lower():
-                error_msg = f"{role_name}はメモリ不足のため応答できませんでした"
-            elif "connection" in str(e).lower() or "network" in str(e).lower():
+            if "connection" in str(e).lower() or "network" in str(e).lower():
                 error_msg = f"{role_name}は接続の問題により応答できませんでした"
             else:
                 error_msg = f"{role_name}は技術的な問題により応答できませんでした"
             
             # 黒板にエラー情報を記録
             self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            
+            # カスタム例外として再発生
+            raise AgentExecutionError(agent_id, str(e), e)
             return error_msg
 
     def get_agent_info(self, agent_id: int) -> Dict[str, Any]:

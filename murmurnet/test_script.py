@@ -47,12 +47,11 @@ from MurmurNet.modules.conversation_memory import ConversationMemory
 # 標準設定（異なる環境でも動作するように絶対パス）
 MODELS_PATH = r"C:\\Users\\admin\\Desktop\\課題研究\\models\\"
 DEFAULT_CONFIG = {
-    "num_agents": 2,
-    "iterations": 1,
+    "num_agents": 2,    "iterations": 1,
     "use_summary": True,
     "use_parallel": False,
-    "model_type": "llama",  # ModelFactoryで適切なモデルを選択
-    "rag_mode": "dummy",  # dummy モードなら外部ファイルなしで動作
+    "model_type": "gemma3",  # gemma3モデルを使用
+    "rag_mode": "zim",  # ZIMファイルを使用
     "rag_score_threshold": 0.5,
     "rag_top_k": 1,
     "debug": True,
@@ -274,13 +273,11 @@ async def test_rag_zim_mode():
         # RAGリトリーバーの初期化
         print(f"ZIMファイル: {config['zim_path']}")
         print("RAGリトリーバー初期化中...")
-        rag = RAGRetriever(config)
-        
-        # モードの確認
+        rag = RAGRetriever(config)        # モードの確認
         print(f"実際の動作モード: {rag.mode}")
         
-        if (rag.mode == "dummy"):
-            print("警告: ZIMモードではなくdummyモードで動作しています。以下の理由が考えられます:")
+        if rag.mode != "zim":
+            print("警告: ZIMモードではなく他のモードで動作しています。以下の理由が考えられます:")
             print("- ZIMファイルが存在しない")
             print("- libzimがインストールされていない")
             print("- sentence-transformersがインストールされていない")

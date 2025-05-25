@@ -17,7 +17,7 @@ import threading
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Union
-from MurmurNet.modules.common import setup_logger, PerformanceError
+from MurmurNet.modules.common import setup_logger, PerformanceError, MurmurNetError, ConfigurationError
 from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
 from MurmurNet.modules.input_reception import InputReception
 from MurmurNet.modules.blackboard import Blackboard
@@ -26,6 +26,8 @@ from MurmurNet.modules.rag_retriever import RAGRetriever
 from MurmurNet.modules.output_agent import OutputAgent
 from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.conversation_memory import ConversationMemory
+from MurmurNet.modules.system_coordinator import SystemCoordinator
+from MurmurNet.modules.config_manager import get_config
 
 class DistributedSLM:
     """
@@ -45,44 +47,52 @@ class DistributedSLM:
         num_agents: エージェント数
         iterations: 反復回数
     """
+    
     def __init__(self, config: Dict[str, Any] = None, blackboard=None):
         """
         分散SLMシステムの初期化
         
         引数:
-            config: 設定辞書（省略時は空の辞書）
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
             blackboard: Blackboardインスタンス（省略時は内部で作成）
         """
-        self.config = config or {}
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
         
         # ロガー設定
         self.logger = setup_logger(self.config)
         
-        # パフォーマンスモニタリング設定
+        # ConfigManagerからパフォーマンスモニタリング設定を取得
         self.performance = PerformanceMonitor(
-            enabled=self.config.get('performance_monitoring', True),
-            memory_tracking=self.config.get('memory_tracking', True)
+            enabled=self.config_manager.logging.performance_monitoring,
+            memory_tracking=self.config_manager.logging.memory_tracking
         )
         
         # 初期メモリスナップショット
-        self.performance.take_memory_snapshot("distributed_slm_init_start")        # 動作パラメータ
-        self.num_agents = self.config.get('num_agents', 2)
-        self.iterations = self.config.get('iterations', 1)  # 反復回数
-        self.use_summary = self.config.get('use_summary', True)  # 要約を使うか
-        self.use_parallel = self.config.get('use_parallel', False)  # 並列処理を使うか
-        self.use_memory = self.config.get('use_memory', True)  # 会話履歴を使うか        # 遅延初期化フラグとロック
+        self.performance.take_memory_snapshot("distributed_slm_init_start")
+          # ConfigManagerから動作パラメータを取得
+        self.num_agents = self.config_manager.agent.num_agents
+        self.iterations = self.config_manager.agent.iterations
+        self.use_summary = self.config_manager.agent.use_summary
+        self.use_parallel = self.config_manager.agent.use_parallel
+        self.use_memory = self.config_manager.agent.use_memory
+        
+        # 遅延初期化フラグとロック
         self._modules_initialized = False
         self._initialization_lock = threading.Lock()
         
         # 基本モジュールのみ即座に初期化
         self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
         self.input_reception = InputReception(self.config)
-          # 重いモジュールは遅延初期化用にNoneで初期化
+        
+        # 重いモジュールは遅延初期化用にNoneで初期化
         self._agent_pool = None
         self._rag_retriever = None
         self._summary_engine = None
         self._output_agent = None
         self._conversation_memory = None
+        self._system_coordinator = None
         
         # パフォーマンスステータスを黒板に記録
         self.blackboard.write('performance_enabled', self.performance.enabled)
@@ -91,98 +101,7 @@ class DistributedSLM:
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
         
         self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復 (遅延初期化)")
-        
-    @time_async_function
-    async def _run_iteration(self, iteration: int) -> None:
-        """
-        単一の反復サイクルを実行（内部メソッド）
-        
-        複数エージェントによる協調的な対話生成処理の一連のサイクルを実行する
-        
-        引数:
-            iteration: 現在の反復インデックス
-        """
-        self.logger.info(f"反復 {iteration+1}/{self.iterations} を開始")
-        self.performance.take_memory_snapshot(f"iteration_{iteration+1}_start")
-        
-        # 1. エージェント実行（並列または逐次）
-        if self.use_parallel:
-            await self._run_agents_parallel()
-        else:
-            self.agent_pool.run_agents(self.blackboard)
-            
-        # 2. エージェント出力収集
-        agent_entries = []
-        for i in range(self.num_agents):
-            agent_output = self.blackboard.read(f"agent_{i}_output")
-            if agent_output:
-                agent_entries.append({"agent": i, "text": agent_output})
-        
-        # 3. 出力の要約（使用する場合）
-        if self.use_summary and agent_entries:
-            summary_start = self.performance.start_timer(f"summary_iteration_{iteration+1}")
-            summary = self.summary_engine.summarize_blackboard(agent_entries)
-            self.blackboard.write(f'summary_{iteration}', summary)
-            summary_time = self.performance.end_timer(f"summary_iteration_{iteration+1}", summary_start)
-            self.logger.debug(f"反復 {iteration+1} の要約を作成しました (実行時間: {summary_time:.4f}秒)")
-        
-        self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
-    
-    async def _run_agents_parallel(self) -> None:
-        """
-        エージェントを並列実行（内部メソッド）
-        
-        複数のエージェントを並列に実行し、結果を黒板に書き込む
-        """
-        self.logger.info("エージェントを並列実行中...")
-        
-        # スレッドプール内でエージェントタスクを実行するラッパー
-        def run_agent_task(agent_id: int) -> str:
-            """エージェントタスクのスレッドプールラッパー"""
-            try:
-                # 共有モデルを使って実行（グローバルロックはagent_task内で使用）
-                return self.agent_pool._agent_task(agent_id)
-            except Exception as e:
-                self.logger.error(f"エージェント {agent_id} 実行エラー: {str(e)}")
-                import traceback
-                self.logger.debug(traceback.format_exc())
-                return f"エージェント{agent_id}は応答できませんでした"
-        
-        # イベントループを取得
-        loop = asyncio.get_event_loop()
-        
-        try:
-            # 真の並列実行：すべてのエージェントを同時に実行
-            tasks = []
-            for i in range(self.num_agents):
-                # 各エージェントのタスクを作成
-                task = loop.run_in_executor(None, run_agent_task, i)
-                tasks.append(task)
-            
-            # すべてのタスクを同時に実行して結果を取得
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # 結果を黒板に書き込み
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-                elif result:
-                    self.blackboard.write(f'agent_{i}_output', result)
-                else:
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
-                    
-        except Exception as e:
-            self.logger.error(f"並列実行エラー: {str(e)}")
-            # エラーが発生した場合は逐次実行にフォールバック
-            self.logger.info("逐次実行にフォールバックします")
-            for i in range(self.num_agents):
-                try:
-                    result = self.agent_pool._agent_task(i)
-                    self.blackboard.write(f'agent_{i}_output', result)
-                except Exception as inner_e:
-                    self.logger.error(f"エージェント {i} フォールバック実行エラー: {str(inner_e)}")
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+      
 
     def _is_memory_related_question(self, text: str) -> bool:
         """
@@ -266,10 +185,21 @@ class DistributedSLM:
             if self.use_memory and 'conversation_context' in self.blackboard.memory:
                 initial_summary += f"\n\n会話コンテキスト: {self.blackboard.read('conversation_context')}"
             self.blackboard.write('initial_summary', initial_summary)
-            
-        # 5. 反復サイクルの実行
-        for i in range(self.iterations):
-            await self._run_iteration(i)
+              # 5. 反復サイクルの実行（SystemCoordinatorに委譲）
+        try:
+            for i in range(self.iterations):
+                self.performance.take_memory_snapshot(f"iteration_{i+1}_start")
+                
+                # SystemCoordinatorに反復処理を委譲
+                success = await self.system_coordinator.run_iteration(i)
+                if not success:
+                    self.logger.warning(f"反復 {i+1} でエラーが発生しましたが処理を継続します")
+                
+                self.performance.take_memory_snapshot(f"iteration_{i+1}_end")
+                
+        except Exception as e:
+            self.logger.error(f"反復処理中にエラーが発生しました: {e}")
+            # エラーが発生しても最終応答生成を試行
             
         # 6. 最終要約とエージェント出力の収集
         entries = []
@@ -339,13 +269,19 @@ class DistributedSLM:
                         # 共有モデルを先に初期化（最も重い処理）
                         from MurmurNet.modules.model_factory import get_shared_model
                         get_shared_model(self.config)  # 初回呼び出しで初期化
-                        
-                        # 各モジュールを順次初期化
+                          # 各モジュールを順次初期化
                         self._agent_pool = AgentPoolManager(self.config, self.blackboard)
                         self._rag_retriever = RAGRetriever(self.config)
                         self._summary_engine = SummaryEngine(self.config)
                         self._output_agent = OutputAgent(self.config)
                         self._conversation_memory = ConversationMemory(self.config, self.blackboard)
+                        
+                        # システム調整器を初期化（他のモジュールが初期化済みのため）
+                        self._system_coordinator = SystemCoordinator(
+                            self.config, 
+                            self.blackboard, 
+                            self._agent_pool, 
+                            self._summary_engine                        )
                         
                         self._modules_initialized = True
                         self.logger.info("遅延初期化が完了しました")
@@ -383,3 +319,9 @@ class DistributedSLM:
         """会話記憶（遅延初期化）"""
         self._ensure_modules_initialized()
         return self._conversation_memory
+    
+    @property
+    def system_coordinator(self):
+        """システム調整器（遅延初期化）"""
+        self._ensure_modules_initialized()
+        return self._system_coordinator

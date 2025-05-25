@@ -34,8 +34,8 @@ parser.add_argument('--agents', type=int, default=2, help='エージェント数
 parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
 parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
 # RAGモードのオプションを追加
-parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
-                    help='RAGモード（dummy: ダミーモード、zim: ZIMファイル使用）')
+parser.add_argument('--rag-mode', choices=['zim', 'embedding'], default='zim', 
+                    help='RAGモード（zim: ZIMファイル使用、embedding: 埋め込みベース検索）')
 parser.add_argument('--zim-path', type=str, 
                     default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
                     help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
@@ -70,7 +70,7 @@ except ImportError:
     print("ZIMモードを使用するには、以下のコマンドを実行してください:")
     print("pip install libzim")
     if args.rag_mode == "zim":
-        print("ZIMモードが指定されましたが、libzimがないためdummyモードにフォールバックします")
+        print("ZIMモードが指定されましたが、libzimがないため検索機能が制限されます")
 
 def print_debug(slm):
     """デバッグモード時の詳細情報表示"""
@@ -138,12 +138,11 @@ async def chat_loop():
     
     # SLMインスタンス作成
     slm = DistributedSLM(config)
-    
-    # RAGモードのチェック
+      # RAGモードのチェック
     from MurmurNet.modules.rag_retriever import RAGRetriever
     rag = RAGRetriever(config)
-    if args.rag_mode == "zim" and rag.mode == "dummy":
-        print("警告: ZIMモードを指定しましたが、dummyモードになっています")
+    if args.rag_mode == "zim" and rag.mode != "zim":
+        print("警告: ZIMモードを指定しましたが、ZIMモードになっていません")
         print("以下の理由が考えられます:")
         print("- libzimライブラリがインストールされていない")
         print("- ZIMファイルのパスが間違っている")

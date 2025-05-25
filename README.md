@@ -64,7 +64,7 @@ python Console/console_app.py --agents 3 --iter 2 --parallel
 - `--agents N`: エージェント数（デフォルト: 2）
 - `--no-summary`: 要約機能を無効化
 - `--parallel`: 並列処理を有効化
-- `--rag-mode {dummy|zim}`: RAGモードの選択
+- `--rag-mode {zim|embedding}`: RAGモードの選択
 - `--zim-path PATH`: ZIMファイルのパス
 
 ### プログラムからの使用
@@ -102,10 +102,9 @@ DistributedSLM
  ├─ AgentPoolManager - エージェント管理
  │    ├─ Agent 1
  │    ├─ Agent 2
- │    └─ ...
- ├─ RAGRetriever - 知識検索
- │    ├─ Dummy Mode - シンプル検索
- │    └─ ZIM Mode - Wikipedia検索
+ │    └─ ... ├─ RAGRetriever - 知識検索
+ │    ├─ ZIM Mode - Wikipedia検索
+ │    └─ Embedding Mode - 埋め込みベース検索
  └─ OutputAgent - 最終応答生成
 ```
 

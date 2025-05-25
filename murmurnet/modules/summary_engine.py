@@ -12,6 +12,7 @@ Summary Engine モジュール
 import logging
 from typing import Dict, Any, List, Optional
 from MurmurNet.modules.model_factory import get_shared_model
+from MurmurNet.modules.config_manager import get_config
 
 logger = logging.getLogger('MurmurNet.SummaryEngine')
 
@@ -27,17 +28,21 @@ class SummaryEngine:
         config: 設定辞書
         max_summary_tokens: 要約の最大トークン数
     """
-    
     def __init__(self, config: Dict[str, Any] = None):
         """
         要約エンジンの初期化
         
         引数:
-            config: 設定辞書（省略時は空の辞書）
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
         """
-        self.config = config or {}
-        self.debug = self.config.get('debug', False)
-        self.max_summary_tokens = self.config.get('max_summary_tokens', 200)  # 話し言葉に適した要約の最大トークン数
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
+        
+        # ConfigManagerから直接設定値を取得
+        self.debug = self.config_manager.logging.debug
+        self.max_summary_tokens = self.config_manager.memory.max_summary_tokens
+        
         if self.debug:
             logger.setLevel(logging.DEBUG)
         

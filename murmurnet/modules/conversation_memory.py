@@ -16,6 +16,7 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from MurmurNet.modules.model_factory import ModelFactory
+from MurmurNet.modules.config_manager import get_config
 
 logger = logging.getLogger('MurmurNet.ConversationMemory')
 
@@ -34,17 +35,20 @@ class ConversationMemory:
         conversation_history: 会話履歴のリスト
         key_facts: 抽出された重要な情報を保持する辞書
     """
-    
     def __init__(self, config: Dict[str, Any] = None, blackboard=None):
         """
         会話記憶モジュールの初期化
         
         引数:
-            config: 設定辞書（省略時は空の辞書）
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
             blackboard: 黒板インスタンス（省略可）
         """
-        self.config = config or {}
-        self.debug = self.config.get('debug', False)
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
+        
+        # ConfigManagerから直接設定値を取得
+        self.debug = self.config_manager.logging.debug
         
         if self.debug:
             logger.setLevel(logging.DEBUG)
@@ -63,15 +67,15 @@ class ConversationMemory:
             "context": {}       # 文脈情報（キーバリューペア）
         }
         
-        # 履歴管理設定
-        self.max_history_entries = self.config.get('max_history_entries', 10)  # 保持する会話数の上限
-        self.max_summary_tokens = self.config.get('max_summary_tokens', 256)  # 要約の最大トークン数
+        # ConfigManagerから履歴管理設定を取得
+        self.max_history_entries = self.config_manager.memory.max_history_entries
+        self.max_summary_tokens = self.config_manager.memory.max_summary_tokens
         
         # ModelFactoryからモデルを取得
         self.llm = ModelFactory.create_model(self.config)
         
-        # SentenceTransformerモデルのロード
-        self.embedding_model_name = self.config.get('embedding_model', 'all-MiniLM-L6-v2')
+        # ConfigManagerからembedding model設定を取得
+        self.embedding_model_name = self.config_manager.rag.embedding_model
         
         # 黒板から会話履歴を読み込む（存在する場合）
         if self.blackboard:

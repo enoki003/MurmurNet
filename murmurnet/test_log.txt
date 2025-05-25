@@ -1,74 +1,17 @@
-2025-05-24 22:50:50,097 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 22:50:50,102 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 22:50:50,104 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 22:50:53,110 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
-2025-05-24 22:51:00,557 [DEBUG] 会話履歴要約を更新しました (110文字)
-2025-05-24 22:51:04,421 [DEBUG] 重要情報を抽出しました
-2025-05-24 22:51:04,422 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 22:51:04,423 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 22:51:04,488 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 22:51:04,488 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 22:51:04,489 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 22:51:04,489 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 22:51:04,886 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:51:04,886 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:51:15,118 [INFO] 設定されたモデルを使用します: llama
-2025-05-24 22:52:21,930 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:52:21,931 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:53:24,662 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:53:24,662 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:55:34,865 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:55:34,866 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:55:37,823 [INFO] 統合テスト開始
-2025-05-24 22:55:37,825 [INFO] 初期化時間: 0.00秒
-2025-05-24 22:55:37,826 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 22:55:57,305 [INFO] 生成時間: 19.48秒
-2025-05-24 22:55:57,305 [INFO] 応答: **最終回答:**
-
-AIは教育のあり方を大きく変える可能性を秘めています。学習方法の多様化と個別最適化を実現し、生徒一人ひとりの理解度やペースに合わせた教育を支援します。AIチューターによる質問応答...
-2025-05-24 22:55:57,305 [INFO] 黒板エントリ数: 65
-2025-05-24 22:55:57,305 [INFO] 統合テスト終了
-2025-05-24 22:55:57,670 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:55:57,671 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:56:15,148 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:56:15,149 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:56:39,125 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:56:39,126 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 22:56:59,340 [INFO] Use pytorch device_name: cpu
-2025-05-24 22:56:59,341 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:21:52,431 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 23:21:52,438 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
-2025-05-24 23:21:52,439 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
-2025-05-24 23:21:54,042 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
-2025-05-24 23:21:59,670 [DEBUG] 会話履歴要約を更新しました (110文字)
-2025-05-24 23:22:03,305 [DEBUG] 重要情報を抽出しました
-2025-05-24 23:22:03,306 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
-2025-05-24 23:22:03,307 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
-2025-05-24 23:22:03,322 [DEBUG] 黒板から会話履歴を読み込みました (4件)
-2025-05-24 23:22:03,322 [DEBUG] 黒板から履歴要約を読み込みました
-2025-05-24 23:22:03,322 [DEBUG] 黒板から重要情報を読み込みました
-2025-05-24 23:22:03,322 [INFO] 会話記憶モジュールを初期化しました
-2025-05-24 23:22:03,579 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:22:03,579 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:22:09,417 [INFO] 設定されたモデルを使用します: llama
-2025-05-24 23:23:52,294 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:23:52,295 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:25:27,407 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:25:27,407 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:28:54,073 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:28:54,073 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:28:57,321 [INFO] 統合テスト開始
-2025-05-24 23:28:57,322 [INFO] 初期化時間: 0.00秒
-2025-05-24 23:28:57,323 [INFO] テストクエリ: AIは教育をどのように変えますか？
-2025-05-24 23:29:36,399 [INFO] 生成時間: 39.08秒
-2025-05-24 23:29:36,399 [INFO] 応答: AIは教育を大きく変える可能性を秘めている。生徒の学習履歴を分析し、個々のニーズに合わせた学習プランを提案したり、課題解決をサポートすることで、個別最適化された学習を可能にし、学習を促進する。一方で、...
-2025-05-24 23:29:36,403 [INFO] 黒板エントリ数: 85
-2025-05-24 23:29:36,403 [INFO] 統合テスト終了
-2025-05-24 23:29:36,737 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:29:36,737 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:30:16,883 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:30:16,884 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:31:19,190 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:31:19,190 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2025-05-24 23:31:46,158 [INFO] Use pytorch device_name: cpu
-2025-05-24 23:31:46,158 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-25 17:13:53,417 [INFO] 会話記憶モジュールを初期化しました
+2025-05-25 17:13:53,422 [DEBUG] 会話エントリを追加しました (履歴数: 1件)
+2025-05-25 17:13:53,424 [DEBUG] 会話エントリを追加しました (履歴数: 2件)
+2025-05-25 17:13:55,131 [INFO] Llamaモデルを初期化しました: C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf
+2025-05-25 17:14:00,740 [DEBUG] 会話履歴要約を更新しました (110文字)
+2025-05-25 17:14:04,263 [DEBUG] 重要情報を抽出しました
+2025-05-25 17:14:04,263 [DEBUG] 会話エントリを追加しました (履歴数: 3件)
+2025-05-25 17:14:04,264 [DEBUG] 会話エントリを追加しました (履歴数: 4件)
+2025-05-25 17:14:04,293 [DEBUG] 黒板から会話履歴を読み込みました (4件)
+2025-05-25 17:14:04,294 [DEBUG] 黒板から履歴要約を読み込みました
+2025-05-25 17:14:04,294 [DEBUG] 黒板から重要情報を読み込みました
+2025-05-25 17:14:04,295 [INFO] 会話記憶モジュールを初期化しました
+2025-05-25 17:14:04,599 [INFO] Use pytorch device_name: cpu
+2025-05-25 17:14:04,599 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-05-25 17:14:12,922 [INFO] 設定されたモデルを使用します: llama
+2025-05-25 17:15:47,254 [INFO] Use pytorch device_name: cpu
+2025-05-25 17:15:47,255 [INFO] Load pretrained SentenceTransformer: all-MiniLM-L6-v2

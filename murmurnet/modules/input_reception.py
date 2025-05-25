@@ -12,6 +12,7 @@ Input Reception モジュール
 import logging
 import numpy as np
 from typing import Dict, Any, List, Optional, Union
+from MurmurNet.modules.config_manager import get_config
 
 logger = logging.getLogger('MurmurNet.InputReception')
 
@@ -21,23 +22,27 @@ class InputReception:
     
     責務:
     - テキスト正規化
-    - トークン化
-    - 埋め込み生成（オプション）
+    - トークン化    - 埋め込み生成（オプション）
     
     属性:
         config: 設定辞書
         use_embeddings: 埋め込みを使用するかどうか
     """
-    def __init__(self, config: Dict[str, Any]):
+    
+    def __init__(self, config: Dict[str, Any] = None):
         """
         入力処理モジュールの初期化
         
         引数:
-            config: 設定辞書
+            config: 設定辞書（オプション、使用されない場合はConfigManagerから取得）
         """
-        self.config = config
-        self.debug = config.get('debug', False)
-        self.use_embeddings = config.get('use_embeddings', True)
+        # ConfigManagerから設定を取得
+        self.config_manager = get_config()
+        self.config = config or self.config_manager.to_dict()  # 後方互換性のため
+        
+        # ConfigManagerから直接設定値を取得
+        self.debug = self.config_manager.logging.debug
+        self.use_embeddings = True  # デフォルトで有効
         self._transformer = None  # 遅延ロード
         
         if self.debug:
@@ -53,7 +58,7 @@ class InputReception:
         if self._transformer is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                model_name = self.config.get('embedding_model', 'all-MiniLM-L6-v2')
+                model_name = self.config_manager.rag.embedding_model
                 
                 if self.debug:
                     logger.debug(f"埋め込みモデルをロード: {model_name}")

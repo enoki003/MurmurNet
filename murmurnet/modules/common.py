@@ -19,20 +19,107 @@ class PerformanceError(Exception):
     pass
 
 
+class MurmurNetError(Exception):
+    """MurmurNetの基底例外クラス"""
+    pass
+
+
+class AgentExecutionError(MurmurNetError):
+    """エージェント実行時のエラー"""
+    def __init__(self, agent_id: int, message: str, original_error: Exception = None):
+        self.agent_id = agent_id
+        self.original_error = original_error
+        super().__init__(f"Agent {agent_id}: {message}")
+
+
+class ModelInitializationError(MurmurNetError):
+    """モデル初期化エラー"""
+    pass
+
+
+class ConfigurationError(MurmurNetError):
+    """設定関連エラー"""
+    pass
+
+
+class ThreadSafetyError(MurmurNetError):
+    """スレッドセーフティ関連エラー"""
+    pass
+
+
+class BlackboardError(MurmurNetError):
+    """黒板操作エラー"""
+    pass
+
+
+class ResourceLimitError(MurmurNetError):
+    """リソース制限エラー"""
+    pass
+
+
+class MurmurNetError(Exception):
+    """MurmurNet基底例外クラス"""
+    pass
+
+
+class ModelInitializationError(MurmurNetError):
+    """モデル初期化エラー"""
+    pass
+
+
+class AgentExecutionError(MurmurNetError):
+    """エージェント実行エラー"""
+    pass
+
+
+class BlackboardError(MurmurNetError):
+    """黒板操作エラー"""
+    pass
+
+
+class ConfigurationError(MurmurNetError):
+    """設定エラー"""
+    pass
+
+
+class ResourceLimitError(MurmurNetError):
+    """リソース制限エラー"""
+    pass
+
+
+class SynchronizationError(MurmurNetError):
+    """同期処理エラー"""
+    pass
+
+
 def setup_logger(config: Optional[Dict[str, Any]] = None) -> logging.Logger:
     """
     プロジェクト用のロガーを設定
     
     引数:
-        config: 設定辞書（ログレベルやファイル出力設定など）
+        config: 設定辞書（ログレベルやファイル出力設定など、オプション）
         
     戻り値:
         設定されたロガーインスタンス
     """
-    config = config or {}
+    # ConfigManagerから設定を取得
+    try:
+        from .config_manager import get_config
+        config_manager = get_config()
+        if config is None:
+            # ConfigManagerから設定を取得
+            log_level = config_manager.logging.log_level.upper()
+            log_file = config_manager.logging.log_file
+        else:
+            # 従来通りの設定辞書を使用（後方互換性）
+            log_level = config.get('log_level', 'INFO').upper()
+            log_file = config.get('log_file')
+    except ImportError:
+        # ConfigManagerが利用できない場合は従来の方法
+        config = config or {}
+        log_level = config.get('log_level', 'INFO').upper()
+        log_file = config.get('log_file')
     
-    # ログレベルの設定
-    log_level = config.get('log_level', 'INFO').upper()
     level = getattr(logging, log_level, logging.INFO)
     
     # ロガーの作成
@@ -64,9 +151,7 @@ def setup_logger(config: Optional[Dict[str, Any]] = None) -> logging.Logger:
             pass
     
     logger.addHandler(console_handler)
-    
-    # ファイルハンドラー（設定されている場合）
-    log_file = config.get('log_file')
+      # ファイルハンドラー（設定されている場合）
     if log_file:
         try:
             # ログディレクトリの作成

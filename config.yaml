@@ -12,7 +12,7 @@ log_level: INFO
 log_file: logs/murmurnet.log
 
 # モデル設定
-model_type: llama
+model_type: gemma3
 model_path: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf"
 chat_template: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma3_template.txt"
 n_ctx: 2048

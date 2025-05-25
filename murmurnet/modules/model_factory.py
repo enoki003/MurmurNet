@@ -12,6 +12,7 @@ import logging
 import os
 from typing import Dict, Any, Optional, Union, List
 from abc import ABC, abstractmethod
+from MurmurNet.modules.config_manager import get_config
 
 # 条件付きインポート
 try:
@@ -56,9 +57,7 @@ class BaseModel(ABC):
     @abstractmethod
     def is_available(self) -> bool:
         """
-        モデルが利用可能かどうかをチェック
-        
-        戻り値:
+        モデルが利用可能かどうかをチェック        戻り値:
             利用可能ならTrue
         """        
         pass
@@ -68,15 +67,19 @@ class LlamaModel(BaseModel):
     """
     Llama.cpp を使用するローカルモデル
     """
-    
-    def __init__(self, config: Dict[str, Any]):
-        super().__init__(config)
-        self.model_path = config.get('model_path')
-        self.n_ctx = config.get('n_ctx', 2048)
-        self.n_threads = config.get('n_threads', 4)
-        self.temperature = config.get('temperature', 0.7)
-        self.max_tokens = config.get('max_tokens', 256)
-        self.chat_template = config.get('chat_template')
+    def __init__(self, config: Dict[str, Any] = None):
+        # ConfigManagerから設定を取得
+        config_manager = get_config()
+        self.config = config or config_manager.to_dict()  # 後方互換性のため
+        super().__init__(self.config)
+        
+        # ConfigManagerから直接設定値を取得
+        self.model_path = config_manager.model.model_path
+        self.n_ctx = config_manager.model.n_ctx
+        self.n_threads = config_manager.model.n_threads
+        self.temperature = config_manager.model.temperature
+        self.max_tokens = config_manager.model.max_tokens
+        self.chat_template = config_manager.model.chat_template
         
         # Llamaモデルの初期化
         self._llm = None
@@ -302,25 +305,27 @@ class ModelFactory:
     """
     言語モデルのファクトリクラス
     設定に基づいて適切なモデルインスタンスを作成
-    """
-      # 利用可能なモデルタイプ
+    """    # 利用可能なモデルタイプ
     MODEL_TYPES = {
         'llama': LlamaModel,
         'local': LlamaModel,  # localは LlamaModel にマッピング
+        'gemma3': LlamaModel,  # gemma3もLlamaModelを使用
     }
     
     @classmethod
-    def create_model(cls, config: Dict[str, Any]) -> BaseModel:
+    def create_model(cls, config: Dict[str, Any] = None) -> BaseModel:
         """
         設定に基づいてモデルインスタンスを作成
         
         引数:
-            config: モデル設定辞書
+            config: モデル設定辞書（オプション、使用されない場合はConfigManagerから取得）
             
         戻り値:
             作成されたモデルインスタンス
         """
-        model_type = config.get('model_type', 'llama').lower()
+        # ConfigManagerから設定を取得
+        config_manager = get_config()
+        model_type = config_manager.model.model_type.lower()
         
         # 未知のモデルタイプのハンドリング
         if model_type not in cls.MODEL_TYPES:
@@ -432,7 +437,7 @@ class ModelSingleton:
         モデルインスタンスを取得（スレッドセーフ）
         
         引数:
-            config: モデル設定（初回のみ使用）
+            config: モデル設定（オプション、使用されない場合はConfigManagerから取得）
             
         戻り値:
             共有モデルインスタンス
@@ -441,7 +446,9 @@ class ModelSingleton:
             with self._lock:
                 # ダブルチェックロッキング
                 if self._model is None:
-                    use_config = config or DEFAULT_MODEL_CONFIGS[0]
+                    # ConfigManagerから設定を取得
+                    config_manager = get_config()
+                    use_config = config or config_manager.to_dict()
                     self._config = use_config
                     self._model = ModelFactory.get_best_available_model(use_config)
                     
@@ -479,6 +486,6 @@ def get_default_model() -> BaseModel:
     デフォルトのモデルインスタンスを取得
     
     戻り値:
-        利用可能な最適なモデル
+        ConfigManagerから設定を取得した最適なモデル
     """
-    return get_shared_model(DEFAULT_MODEL_CONFIGS[0])
+    return get_shared_model()
