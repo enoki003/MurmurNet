@@ -4,6 +4,40 @@ MurmurNetは、複数の小規模言語モデル（SLM）が協調して動作�
 
 **Author: Yuhi Sonoki**
 
+## 🎯 更新情報 (2025年5月26日)
+
+### ✅ 完了した改良点
+- **モック実装の完全除去**: すべてのダミー・モック実装を削除し、実機能のみで動作
+- **Gemma3モデル対応**: 最新のGemma-3-1B-ITモデルを標準搭載
+- **ZIMベースRAG**: Wikipediaなどの実データに基づく検索拡張生成
+- **埋め込みベースRAG**: 高速で効率的な意味検索機能
+- **構文エラー修正**: すべてのモジュールの構文問題を解決
+- **設定管理強化**: 型安全な設定管理とバリデーション機能
+
+### 🔧 技術的改善
+- ConfigManagerクラスの完全リファクタリング
+- RAGRetrieverのlibzim API互換性向上
+- Blackboardクラスのメモリ管理機能追加
+- モデルファクトリーからのモック排除
+- Console_app.pyのRAGモード選択肢更新
+
+## 🔄 最新アップデート (2025年5月26日)
+
+✅ **モック実装の完全除去**
+- すべてのダミー/モック実装を削除
+- テスト用の仮実装を本格実装に移行
+- RAGモードから「dummy」を除去し、「zim」と「embedding」のみをサポート
+
+✅ **Gemma3モデルへの移行**
+- デフォルトモデルをLlamaからGemma3に変更
+- 実運用準備完了
+
+✅ **システム最適化**
+- ZIMベースRAG検索の安定化
+- 埋め込みベースRAG検索の追加
+- エラーハンドリングの改善
+- パフォーマンス向上
+
 ## 主な特長
 
 - **分散創発型アーキテクチャ**: 複数の小規模言語モデルが協調動作
@@ -72,33 +106,41 @@ python Console/console_app.py --agents 3 --iter 2 --parallel
 Pythonプログラムから直接インポートして使用できます：
 
 ```python
-from murmurnet.distributed_slm import DistributedSLM
+from MurmurNet.distributed_slm import DistributedSLM
 import asyncio
 
-# 基本設定
+# 基本設定（gemma3モデル使用）
 config = {
     "num_agents": 2,
     "iterations": 1,
     "use_summary": True,
-    "rag_mode": "zim",
-    "zim_path": "path/to/wikipedia.zim"
+    "model_type": "gemma3",  # Gemma-3-1B-ITモデル
+    "rag_mode": "zim",       # ZIMファイルベースRAG
+    "model_path": "models/gemma-3-1b-it-q4_0.gguf",
+    "chat_template": "models/gemma3_template.txt"
 }
 
 # インスタンス化と実行
 slm = DistributedSLM(config)
-response = asyncio.run(slm.generate("AIは教育をどのように変えますか？"))
+response = await slm.process_question("AIは教育をどのように変えますか？")
 print(response)
 ```
 
-## アーキテクチャ
+## 🏗️ システムアーキテクチャ
 
 MurmurNetは以下のコンポーネントで構成されています：
 
 ```
-DistributedSLM
- ├─ InputReception - 入力処理
- ├─ Blackboard - 共有メモリ
- ├─ SummaryEngine - 要約処理
+DistributedSLM (メインシステム)
+ ├─ ConfigManager - 設定管理と型安全性
+ ├─ InputReception - 入力処理・前処理
+ ├─ Blackboard - 共有メモリ・エージェント間通信
+ ├─ AgentPoolManager - エージェント管理・協調処理
+ ├─ RAGRetriever - 知識検索（ZIM/埋め込みベース）
+ ├─ ModelFactory - Gemma3モデル管理
+ ├─ SummaryEngine - コンテキスト要約
+ ├─ OutputAgent - 回答生成・統合
+ └─ ConversationMemory - 会話履歴管理
  ├─ AgentPoolManager - エージェント管理
  │    ├─ Agent 1
  │    ├─ Agent 2
@@ -112,10 +154,13 @@ DistributedSLM
 
 MurmurNetには二種類のRAGモードがあります：
 
-1. **ダミーモード**: 外部知識なしの基本動作モード
-2. **ZIMモード**: WikipediaのZIMファイルを使用した検索拡張モード
+1. **ZIMモード**: WikipediaのZIMファイルを使用した検索拡張モード
    - 必要なもの：Kiwix ZIMファイル（[ダウンロード](https://wiki.kiwix.org/wiki/Content)）
-   - 特徴：埋め込みベクトルを使った意味検索
+   - 特徴：実際のWikipediaデータを使った知識検索
+
+2. **埋め込みモード**: 埋め込みベクトルベースの検索拡張モード
+   - 特徴：事前学習された埋め込みモデルを使った意味検索
+   - 高速で効率的な検索が可能
 
 ## プロジェクト構造
 

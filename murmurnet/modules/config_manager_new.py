@@ -52,6 +52,7 @@ class ModelConfig:
     n_threads: int = 4
     temperature: float = 0.7
     max_tokens: int = 256
+    
     def __post_init__(self):
         if self.n_ctx < 512 or self.n_ctx > 8192:
             raise ConfigValidationError("n_ctx must be between 512 and 8192")
@@ -129,59 +130,11 @@ class MurmurNetConfig:
     rag: RAGConfig = field(default_factory=RAGConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
-    
-    def to_dict(self) -> Dict[str, Any]:
-        """設定を辞書形式で取得（後方互換性用）"""
-        return {
-            # Agent settings
-            'num_agents': self.agent.num_agents,
-            'iterations': self.agent.iterations,
-            'use_parallel': self.agent.use_parallel,
-            'use_summary': self.agent.use_summary,
-            'use_memory': self.agent.use_memory,
-            'role_type': self.agent.role_type,
-            
-            # Model settings
-            'model_type': self.model.model_type,
-            'model_path': self.model.model_path,
-            'chat_template': self.model.chat_template,
-            'n_ctx': self.model.n_ctx,
-            'n_threads': self.model.n_threads,
-            'temperature': self.model.temperature,
-            'max_tokens': self.model.max_tokens,
-            
-            # RAG settings
-            'rag_mode': self.rag.rag_mode,
-            'rag_score_threshold': self.rag.rag_score_threshold,
-            'rag_top_k': self.rag.rag_top_k,
-            'zim_path': self.rag.zim_path,
-            'embedding_model': self.rag.embedding_model,
-            
-            # Logging settings
-            'log_level': self.logging.log_level,
-            'log_file': self.logging.log_file,
-            'debug': self.logging.debug,
-            'performance_monitoring': self.logging.performance_monitoring,
-            'memory_tracking': self.logging.memory_tracking,
-            
-            # Memory settings
-            'conversation_memory_limit': self.memory.conversation_memory_limit,
-            'summary_max_length': self.memory.summary_max_length,
-            'blackboard_history_limit': self.memory.blackboard_history_limit,
-            'max_summary_tokens': self.memory.max_summary_tokens,
-            'max_history_entries': self.memory.max_history_entries,
-        }
 
 
 class ConfigManager:
     """
     設定管理クラス
-    
-    責務:
-    - 設定ファイルの読み込み
-    - 設定値のバリデーション
-    - 型安全な設定アクセス
-    - デフォルト値の管理
     """
     
     _instance = None
@@ -194,12 +147,7 @@ class ConfigManager:
         return cls._instance
     
     def __init__(self, config_path_or_dict: Optional[Union[str, Dict[str, Any]]] = None):
-        """
-        設定マネージャーの初期化
-        
-        引数:
-            config_path_or_dict: 設定ファイルのパス、または設定辞書（省略時はデフォルトを検索）
-        """
+        """設定マネージャーの初期化"""
         if self._config is None:
             if isinstance(config_path_or_dict, dict):
                 # 設定辞書が直接渡された場合
@@ -265,6 +213,7 @@ class ConfigManager:
         except Exception as e:
             logger.error(f"設定読み込みエラー: {e}")
             raise ConfigValidationError(f"設定の読み込みに失敗しました: {e}")
+    
     def _create_config_from_dict(self, raw_config: Dict[str, Any]) -> MurmurNetConfig:
         """設定辞書から設定オブジェクトを作成"""
         try:
@@ -345,7 +294,8 @@ class ConfigManager:
     def config(self) -> MurmurNetConfig:
         """設定オブジェクトを取得"""
         return self._config
-      # 便利なプロパティ（後方互換性のため）
+    
+    # 便利なプロパティ（後方互換性のため）
     @property
     def model_type(self) -> str:
         """モデルタイプを取得"""

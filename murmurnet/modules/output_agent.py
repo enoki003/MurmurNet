@@ -97,47 +97,47 @@ class OutputAgent:
             # 2) 言語検出
             lang = self._detect_language(user_input)
             logger.debug(f"検出された言語: {lang}")
-            
-            # 3) 要約とエージェント出力の整理
+              # 3) 要約とエージェント出力の整理
             summaries = []
-            agent_outputs = []
+            agent_contents = []  # エージェント内容を直接収集（ラベルなし）
             
             for entry in entries:
                 entry_type = entry.get('type', 'agent')  # デフォルトはagent
-                text = entry.get('text', '')[:200]  # テキスト制限
+                text = entry.get('text', '')[:300]  # テキスト制限を拡張
                 
                 if entry_type == 'summary':
                     iteration = entry.get('iteration', 0)
                     summaries.append(f"要約 {iteration+1}: {text}")
                 else:  # agent
-                    agent_id = entry.get('agent', 0)
-                    agent_outputs.append(f"エージェント {agent_id+1}: {text}")
-              # 4) システムプロンプト作成 - 話し言葉重視の改善
+                    # エージェント出力はラベルなしで内容のみ収集
+                    if text and not text.endswith("応答できませんでした"):
+                        agent_contents.append(text)              # 4) システムプロンプト作成 - 統合・合成重視の改善
             if lang == 'ja':
                 sys_prompt = (
-                    "あなたは親しみやすい日本語アシスタントです。話し言葉で自然に会話してください：\n"
-                    "1. 質問にまっすぐ答えてね。話題から外れないように。\n"
-                    "2. 具体的で分かりやすく説明するよ。\n"
-                    "3. 日本語で自然に話してね。\n"
-                    "4. みんなの意見をまとめて、筋の通った答えにするよ。\n"
-                    "5. 情報の出どころがあるときははっきりと示すね。\n"
-                    "6. 確実じゃない情報は「〜かもしれない」「〜の可能性があるよ」と伝えるね。\n"
-                    "7. 長いときは段落分けや箇条書きで見やすくするよ。\n"
-                    "8. 150〜300文字くらいで話し言葉で答えてね。短すぎず長すぎず、ちょうどいい感じで。"
-                )
-            else:                sys_prompt = (
-                    "You are a friendly English assistant. Please use conversational language:\n"
-                    "1. Answer the question directly and stay on topic.\n"
-                    "2. Explain things clearly and specifically.\n"
-                    "3. Always respond in conversational English.\n"
-                    "4. Combine everyone's input into a coherent, natural response.\n"
-                    "5. Clearly mention sources when citing information.\n"
-                    "6. Use phrases like 'it's possible that' or 'it may be' for uncertain information.\n"
-                    "7. Structure your response using paragraphs or bullet points when appropriate.\n"
-                    "8. Keep responses around 150-300 characters, conversational but not too short or long."
+                    "あなたは優秀な日本語アシスタントです。複数の情報源を統合して一つの完璧な回答を作成してください：\n"
+                    "1. 質問に対して直接的で包括的な回答を提供してください。\n"
+                    "2. 提供された情報を統合・合成し、一貫した説明にまとめてください。\n"
+                    "3. 自然な日本語で、話し言葉で回答してください。\n"
+                    "4. 複数の視点や情報を組み合わせて、バランスの取れた答えを作成してください。\n"
+                    "5. 情報源がある場合は適切に引用してください。\n"
+                    "6. 不確実な情報は「〜と考えられます」「〜の可能性があります」として表現してください。\n"
+                    "7. 必要に応じて段落分けや構造化で読みやすくしてください。\n"
+                    "8. 200〜400文字程度で、完結で分かりやすい回答を作成してください。"
+                )            
+            else:
+                sys_prompt = (
+                    "You are an excellent English assistant. Please synthesize multiple sources of information into one comprehensive answer:\n"
+                    "1. Provide a direct and comprehensive answer to the question.\n"
+                    "2. Integrate and synthesize the provided information into a coherent explanation.\n"
+                    "3. Respond in natural, conversational English.\n"
+                    "4. Combine multiple perspectives and information to create a balanced answer.\n"
+                    "5. Properly cite sources when information is provided.\n"
+                    "6. Express uncertain information using phrases like 'it is believed that' or 'it is possible that'.\n"
+                    "7. Structure your response with paragraphs when appropriate for readability.\n"
+                    "8. Create a concise and clear answer in approximately 200-400 characters."
                 )
             
-            # 5) ユーザープロンプト作成（黒板情報を統合）
+            # 5) ユーザープロンプト作成（統合された情報を使用）
             user_prompt = f"質問: {user_input}\n\n"
             
             # RAG情報があれば追加
@@ -148,11 +148,11 @@ class OutputAgent:
             if summaries:
                 user_prompt += "要約情報:\n" + "\n".join(summaries) + "\n\n"
                 
-            # エージェント出力があれば追加
-            if agent_outputs:
-                user_prompt += "エージェント出力:\n" + "\n".join(agent_outputs) + "\n\n"
+            # エージェント出力があれば統合して追加
+            if agent_contents:
+                user_prompt += "専門家の見解:\n" + "\n\n".join(agent_contents) + "\n\n"
                 
-            user_prompt += "以上の情報を統合して、質問に対する最終的な回答を生成してください。"
+            user_prompt += "以上の情報を統合・合成して、質問に対する包括的で一貫した最終回答を生成してください。複数の視点を組み合わせ、バランスの取れた統一された回答にしてください。"
             
             # 6) 出力生成
             resp = self.llm.create_chat_completion(

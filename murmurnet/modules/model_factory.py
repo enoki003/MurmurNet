@@ -80,11 +80,16 @@ class LlamaModel(BaseModel):
         self.temperature = config_manager.model.temperature
         self.max_tokens = config_manager.model.max_tokens
         self.chat_template = config_manager.model.chat_template
-        
-        # Llamaモデルの初期化
+          # Llamaモデルの初期化
         self._llm = None
         self._initialization_attempted = False
         self._initialization_error = None
+        
+        # 並列処理用のロック（重要：モデルレベルでの同期化）
+        import threading
+        self._model_lock = threading.RLock()
+        
+        self.logger = logging.getLogger('MurmurNet.Model')
         
         # 遅延初期化：最初の使用時に初期化する
         # これにより循環参照の問題を回避

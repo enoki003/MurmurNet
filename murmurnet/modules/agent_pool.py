@@ -15,6 +15,7 @@ import json
 import re
 import threading
 import time
+import asyncio
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Dict, Any, List, Optional, Tuple, Callable
 from MurmurNet.modules.model_factory import get_shared_model
@@ -78,12 +79,17 @@ class AgentPoolManager:
         
         if self.debug:
             logger.setLevel(logging.DEBUG)
-        
-        # ConfigManagerから並列モード設定を取得
+          # ConfigManagerから並列モード設定を取得
         self.parallel_mode = self.config_manager.agent.use_parallel
         
-        # 共有モデルインスタンスを取得（シングルトンパターン）
-        self.llm = get_shared_model(self.config)
+        # モデルプールを使用（真の並列処理）
+        if self.parallel_mode:
+            from MurmurNet.modules.model_pool import get_model_pool
+            self.model_pool = get_model_pool()
+            logger.info("モデルプールを使用した真の並列処理モードを初期化しました")
+        else:
+            # 従来のシングルトンモデル
+            self.llm = get_shared_model(self.config)
         
         # エージェント毎の個別ロック管理
         self.lock_manager = AgentLockManager(self.num_agents)
@@ -495,3 +501,135 @@ class AgentPoolManager:
         elif any(keyword in question_lower for keyword in conversational_keywords):            return 'conversational'
         else:
             return 'default'
+    
+    # 追加メソッド: 並列実行最適化
+    async def run_agent_parallel(self, agent_id: int) -> str:
+        """
+        エージェントを並列実行に最適化された方法で実行
+        
+        引数:
+            agent_id: エージェントID
+            
+        戻り値:
+            エージェントの応答テキスト
+        """
+        try:
+            # 非同期で並列実行（ロックなし）
+            loop = asyncio.get_event_loop()
+            
+            # 専用のモデルインスタンスまたは並列対応実行
+            result = await loop.run_in_executor(
+                None, 
+                self._agent_task_parallel_safe, 
+                agent_id
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"エージェント{agent_id}並列実行エラー: {e}")
+            role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
+            error_msg = f"{role_name}は並列実行エラーにより応答できませんでした"
+            self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            return error_msg
+
+    def _agent_task_parallel_safe(self, agent_id: int) -> str:
+        """
+        並列実行に安全なエージェントタスク（ロックなし版）
+        
+        引数:
+            agent_id: エージェントID
+            
+        戻り値:
+            エージェントの応答テキスト
+        """
+        try:
+            # エージェントIDの検証
+            if agent_id < 0 or agent_id >= len(self.roles):
+                logger.error(f"無効なエージェントID: {agent_id}")
+                return f"エージェント{agent_id}は設定されていません"
+            
+            # プロンプトの構築
+            prompt = self._format_prompt(agent_id)
+            if not prompt:
+                logger.error(f"エージェント{agent_id}のプロンプト生成に失敗")
+                return f"エージェント{agent_id}はプロンプトを生成できませんでした"
+            
+            # エージェントの役割と設定
+            role = self.roles[agent_id]
+            temperature = max(0.1, min(1.0, role.get('temperature', 0.7)))
+            role_name = role.get('role', f'エージェント{agent_id}')
+            
+            logger.debug(f"エージェント{agent_id} ({role_name}) 並列タスク開始")
+            
+            # 並列実行用のモデル呼び出し（ロックなし）
+            import time
+            start_time = time.time()
+            
+            # ロックを使わずに直接モデル実行
+            try:
+                # モデルの可用性チェック
+                if not hasattr(self.llm, 'create_chat_completion') and not hasattr(self.llm, 'generate'):
+                    logger.error(f"モデルインスタンスが正しく初期化されていません")
+                    return f"{role_name}はモデルの問題で応答できませんでした"
+                
+                # 並列安全なモデル呼び出し
+                if hasattr(self.llm, 'create_chat_completion'):
+                    resp = self.llm.create_chat_completion(
+                        messages=[{"role": "user", "content": prompt}],
+                        max_tokens=300,
+                        temperature=temperature,
+                        top_p=0.9,
+                        stop=["。", ".", "\n\n"]
+                    )
+                else:
+                    # フォールバック
+                    resp_text = self.llm.generate(
+                        prompt=prompt,
+                        max_tokens=300,
+                        temperature=temperature
+                    )
+                    resp = {"choices": [{"message": {"content": resp_text}}]}
+                
+            except Exception as model_error:
+                logger.error(f"エージェント{agent_id}モデル実行エラー: {model_error}")
+                return f"{role_name}はモデル実行エラーにより応答できませんでした"
+            
+            generation_time = time.time() - start_time
+            logger.debug(f"エージェント{agent_id} 生成時間: {generation_time:.2f}秒")
+            
+            # レスポンスの解析（堅牢化）
+            try:
+                if isinstance(resp, dict) and 'choices' in resp and resp['choices']:
+                    response_text = resp['choices'][0]['message']['content'].strip()
+                elif hasattr(resp, 'choices') and resp.choices:
+                    response_text = resp.choices[0].message.content.strip()
+                else:
+                    logger.error(f"予期しないレスポンス形式: {type(resp)}")
+                    response_text = str(resp).strip()
+            except (KeyError, IndexError, AttributeError) as e:
+                logger.error(f"レスポンス解析エラー: {e}")
+                return f"{role_name}は応答の解析に失敗しました"
+            
+            # 出力の検証とクリーニング
+            if not response_text:
+                logger.warning(f"エージェント{agent_id}が空の応答を生成")
+                return f"{role_name}は適切な応答を生成できませんでした"
+            
+            # 出力長の制限
+            if len(response_text) > 500:
+                response_text = response_text[:500]
+                logger.debug(f"エージェント{agent_id}の応答を切り詰めました")
+            
+            # 黒板への書き込み
+            self.blackboard.write(f'agent_{agent_id}_output', response_text)
+            logger.debug(f"エージェント{agent_id} ({role_name}) 並列タスク完了: {len(response_text)}文字")
+            return response_text
+            
+        except Exception as e:
+            # 全般的なエラーハンドリング
+            role_name = self.roles[agent_id].get('role', f'エージェント{agent_id}') if agent_id < len(self.roles) else f'エージェント{agent_id}'
+            error_msg = f"{role_name}は並列実行エラーにより応答できませんでした"
+            logger.error(f"エージェント{agent_id} 並列実行エラー: {e}")
+            self.blackboard.write(f'agent_{agent_id}_output', error_msg)
+            return error_msg

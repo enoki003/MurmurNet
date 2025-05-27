@@ -108,9 +108,7 @@ async def chat_loop():
         # "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
         # "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
         "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
-        "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
-
-        "num_agents": args.agents,
+        "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",        "num_agents": args.agents,
         "iterations": args.iter,
         "use_summary": not args.no_summary,
         "use_parallel": args.parallel,

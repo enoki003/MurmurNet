@@ -127,7 +127,9 @@ class RAGRetriever:
         elif self.mode == "embedding":
             return self._retrieve_knowledge_base(query)
         else:
-            return "サポートされていない検索モードです。"    def _retrieve_zim(self, query: str) -> str:
+            return "サポートされていない検索モードです。"
+    
+    def _retrieve_zim(self, query: str) -> str:
         """ZIMファイルから検索"""
         try:
             if not hasattr(self, 'zim_archive'):
@@ -155,7 +157,7 @@ class RAGRetriever:
                 
             if len(result_list) == 0:
                 return "検索結果が見つかりませんでした。"
-                  content_results = []
+            content_results = []
             for result in result_list:
                 try:
                     entry = self.zim_archive.get_entry_by_path(result.get_path())

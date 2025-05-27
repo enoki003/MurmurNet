@@ -22,50 +22,6 @@ from MurmurNet.modules.performance import time_async_function
 logger = logging.getLogger('MurmurNet.SystemCoordinator')
 
 
-def _execute_agent_in_process(task_data: Tuple[int, str, Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    別プロセスでエージェントを実行するワーカー関数（グローバル関数）
-    
-    引数:
-        task_data: (agent_id, prompt, blackboard_data) のタプル
-        
-    戻り値:
-        実行結果辞書
-    """
-    agent_id, prompt, blackboard_data = task_data
-    
-    try:
-        # プロセス内でモジュールを再インポート
-        from MurmurNet.modules.config_manager import get_config
-        from MurmurNet.modules.model_factory import ModelFactory
-        
-        # 設定を取得
-        config_manager = get_config()
-        
-        # モデルを初期化
-        model_factory = ModelFactory()
-        model = model_factory.create_model(config_manager.model_type)
-        
-        # プロンプト実行
-        response = model.generate(prompt)
-        
-        return {
-            'agent_id': agent_id,
-            'success': True,
-            'response': response,
-            'error': None
-        }
-        
-    except Exception as e:
-        logger.error(f"エージェント {agent_id} の実行でエラー: {e}")
-        return {
-            'agent_id': agent_id,
-            'success': False,
-            'response': None,
-            'error': str(e)
-        }
-
-
 class SystemCoordinator:
     """
     システム全体の調整・制御クラス
@@ -99,9 +55,53 @@ class SystemCoordinator:
         self.use_parallel = self.config_manager.agent.use_parallel
           # エラー回復設定（デフォルト値）
         self.max_retry_attempts = 2
-        self.failed_agents_threshold = 0.5  # 50%        logger.info(f"システム調整器を初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
+        self.failed_agents_threshold = 0.5  # 50%
+        logger.info(f"システム調整器を初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
         logger.info(f"並列処理モード: {'プロセスベース' if self.use_parallel else '逐次実行'}")
 
+    def _execute_agent_in_process(self, task_data: Tuple[int, str, Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        別プロセスでエージェントを実行するワーカー関数
+        
+        引数:
+            task_data: (agent_id, prompt, blackboard_data) のタプル
+            
+        戻り値:
+            実行結果辞書
+        """
+        agent_id, prompt, blackboard_data = task_data
+        
+        try:
+            # プロセス内でモジュールを再インポート
+            from MurmurNet.modules.config_manager import get_config
+            from MurmurNet.modules.model_factory import ModelFactory
+            
+            # 設定を取得
+            config_manager = get_config()
+            
+            # モデルを初期化
+            model_factory = ModelFactory()
+            model = model_factory.create_model(config_manager.model_type)
+            
+            # プロンプト実行
+            response = model.generate(prompt)
+            
+            return {
+                'agent_id': agent_id,
+                'success': True,
+                'response': response,
+                'error': None
+            }
+            
+        except Exception as e:
+            logger.error(f"エージェント {agent_id} の実行でエラー: {e}")
+            return {
+                'agent_id': agent_id,
+                'success': False,
+                'response': None,
+                'error': str(e)
+            }
+    
     @time_async_function
     async def run_iteration(self, iteration: int) -> bool:
         """
@@ -131,13 +131,13 @@ class SystemCoordinator:
             
             # 2. エージェント出力収集
             agent_entries = self._collect_agent_outputs()
-              # 3. 出力の要約（使用する場合）
+            
+            # 3. 出力の要約（使用する場合）
             if self.use_summary and agent_entries:
                 await self._create_iteration_summary(iteration, agent_entries)
             
             logger.info(f"反復 {iteration+1} が正常に完了しました")
             return True
-            
         except Exception as e:
             logger.error(f"反復 {iteration+1} でエラーが発生しました: {e}")
             raise MurmurNetError(f"反復処理エラー: {e}")
@@ -177,7 +177,7 @@ class SystemCoordinator:
             num_processes = min(self.num_agents, multiprocessing.cpu_count())
             
             with multiprocessing.Pool(processes=num_processes) as pool:
-                results = pool.map(_execute_agent_in_process, tasks)
+                results = pool.map(self._execute_agent_in_process, tasks)
             
             execution_time = time.time() - start_time
             

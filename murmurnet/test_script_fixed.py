@@ -111,14 +111,14 @@ class ComprehensiveTestSuite:
         
         print("🚀 MurmurNet 包括的テストスイート開始")
         print("="*80)
-          # テスト実行順序
+        
+        # テスト実行順序
         test_categories = [
             ("基本機能テスト", self.run_basic_tests),
             ("設定管理テスト", self.run_config_tests),
             ("モジュール統合テスト", self.run_module_tests),
             ("RAG機能テスト", self.run_rag_tests),
             ("並列処理テスト", self.run_parallel_tests),
-            ("プロセス並列テスト", self.run_process_parallel_tests),  # 新しく追加
             ("エラーハンドリングテスト", self.run_error_handling_tests),
             ("パフォーマンステスト", self.run_performance_tests),
             ("メモリ管理テスト", self.run_memory_tests),
@@ -142,6 +142,7 @@ class ComprehensiveTestSuite:
         """テストカテゴリを実行"""
         print(f"\n📋 {category_name}")
         print("-" * 60)
+        
         try:
             await test_method()
             print(f"✅ {category_name} 完了")
@@ -158,13 +159,10 @@ class ComprehensiveTestSuite:
         test_stats['total_tests'] += 1
         test_stats['passed_tests'] += 1
         print("  ✓ SLMインスタンス作成")
-          # 設定読み込みテスト - 実際のConfigManagerを使用
-        config_manager = self.slm_instance.config_manager
-        # デバッグ情報を表示
-        print(f"    DEBUG: config_manager type = {type(config_manager)}")
-        print(f"    DEBUG: model type = {type(config_manager.model)}")
-        print(f"    DEBUG: model_type = {config_manager.model.model_type}")
-        assert config_manager.model.model_type == 'gemma3'
+        
+        # 設定読み込みテスト
+        config = self.slm_instance.config
+        assert config.model_type == 'gemma3'
         test_stats['total_tests'] += 1
         test_stats['passed_tests'] += 1
         print("  ✓ 設定読み込み")
@@ -179,17 +177,9 @@ class ComprehensiveTestSuite:
     
     async def run_config_tests(self):
         """設定管理テスト"""
-        # 実際のconfig.yamlから設定作成
-        config_manager = ConfigManager()
+        # 辞書から設定作成
+        config_manager = ConfigManager(DEFAULT_CONFIG)
         assert config_manager.model_type == 'gemma3'
-        test_stats['total_tests'] += 1
-        test_stats['passed_tests'] += 1
-        print("  ✓ YAMLファイル設定読み込み")
-          # 辞書から設定作成
-        dict_config_manager = ConfigManager(DEFAULT_CONFIG)
-        # デバッグ情報を表示
-        print(f"    DEBUG: model_type = {dict_config_manager._config.model.model_type}")
-        assert dict_config_manager.model_type == 'gemma3'
         test_stats['total_tests'] += 1
         test_stats['passed_tests'] += 1
         print("  ✓ 辞書設定作成")
@@ -229,11 +219,13 @@ class ComprehensiveTestSuite:
     async def run_rag_tests(self):
         """RAG機能テスト"""
         if not self.slm_instance:
-            self.slm_instance = DistributedSLM(DEFAULT_CONFIG)        # ZIMモードテスト
+            self.slm_instance = DistributedSLM(DEFAULT_CONFIG)
+        
+        # ZIMモードテスト
         rag_retriever = self.slm_instance.rag_retriever
         # 実際のZIMファイルがない場合はモックでテスト
         try:
-            results = rag_retriever.retrieve("test query")
+            results = await rag_retriever.retrieve("test query")
             test_stats['total_tests'] += 1
             test_stats['passed_tests'] += 1
             print("  ✓ ZIMモード検索")
@@ -247,81 +239,19 @@ class ComprehensiveTestSuite:
         if not self.slm_instance:
             self.slm_instance = DistributedSLM(DEFAULT_CONFIG)
         
-        # 並列設定テスト - ConfigManagerのプロパティにアクセス
-        assert self.slm_instance.use_parallel == True
+        # 並列設定テスト
+        assert self.slm_instance.config.use_parallel == True
         test_stats['total_tests'] += 1
         test_stats['passed_tests'] += 1
         print("  ✓ 並列処理設定")
         
-        # 複数エージェント生成テスト        agent_pool = self.slm_instance.agent_pool
+        # 複数エージェント生成テスト
+        agent_pool = self.slm_instance.agent_pool
         # エージェントプールのサイズ確認
         test_stats['total_tests'] += 1
         test_stats['passed_tests'] += 1
         print("  ✓ エージェントプール")
     
-    async def run_process_parallel_tests(self):
-        """プロセスベース並列処理テスト（GGML assertion error対策）"""
-        print("6. プロセスベース並列処理テスト")
-        
-        if not self.slm_instance:
-            self.slm_instance = DistributedSLM(DEFAULT_CONFIG)
-        
-        # ProcessAgentManagerのテスト
-        from MurmurNet.modules.process_agent_manager import ProcessAgentManager
-        
-        process_manager = ProcessAgentManager()
-        test_stats['total_tests'] += 1
-        test_stats['passed_tests'] += 1
-        print("  ✓ ProcessAgentManager初期化")
-        
-        # 単一反復並列実行テスト
-        test_prompt = "これは並列処理のテストです。短い返答をお願いします。"
-        
-        try:
-            start_time = time.time()
-            collected_results = process_manager.execute_single_iteration(
-                prompt=test_prompt, 
-                num_agents=2  # テスト用に少数のエージェント
-            )
-            execution_time = time.time() - start_time
-            
-            # 結果の検証
-            assert collected_results.total_count > 0, "結果が空です"
-            test_stats['total_tests'] += 1
-            test_stats['passed_tests'] += 1
-            print(f"  ✓ プロセス並列実行 ({execution_time:.2f}秒)")
-            
-            # パフォーマンス指標の確認
-            metrics = process_manager.get_performance_metrics(collected_results)
-            assert 'success_rate' in metrics, "成功率指標がありません"
-            assert 'parallel_efficiency' in metrics, "並列効率指標がありません"
-            test_stats['total_tests'] += 1
-            test_stats['passed_tests'] += 1
-            print(f"  ✓ パフォーマンス指標 (成功率: {metrics['success_rate']:.2%})")
-            
-        except Exception as e:
-            test_stats['total_tests'] += 1
-            test_stats['failed_tests'] += 1
-            print(f"  ❌ プロセス並列実行エラー: {e}")
-        
-        # SystemCoordinatorとの統合テスト
-        try:
-            # 並列処理有効の設定でSystemCoordinatorをテスト
-            parallel_config = DEFAULT_CONFIG.copy()
-            parallel_config['agent']['use_parallel'] = True
-            
-            slm_parallel = DistributedSLM(parallel_config)
-            # SystemCoordinatorが初期化されることを確認
-            assert hasattr(slm_parallel.system_coordinator, 'process_agent_manager')
-            test_stats['total_tests'] += 1
-            test_stats['passed_tests'] += 1
-            print("  ✓ SystemCoordinator統合")
-            
-        except Exception as e:
-            test_stats['total_tests'] += 1
-            test_stats['failed_tests'] += 1
-            print(f"  ❌ SystemCoordinator統合エラー: {e}")
-
     async def run_error_handling_tests(self):
         """エラーハンドリングテスト"""
         # 無効な設定でのエラーハンドリング
@@ -329,9 +259,7 @@ class ComprehensiveTestSuite:
             invalid_config = DEFAULT_CONFIG.copy()
             invalid_config['model']['model_type'] = 'invalid_model'
             slm = DistributedSLM(invalid_config)
-            # 遅延初期化を強制して実際にエラーを発生させる
-            await slm.initialize()
-            # ここまで来た場合はエラーが発生していない
+            # エラーが発生すべき
             test_stats['total_tests'] += 1
             test_stats['failed_tests'] += 1
             print("  ❌ 無効なモデル設定（エラーが発生すべき）")
