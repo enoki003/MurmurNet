@@ -32,6 +32,9 @@ class AgentConfig:
     use_summary: bool = True
     use_memory: bool = True
     role_type: str = "default"
+    # New fields for SystemCoordinator logic, but related to agent execution
+    max_retry_attempts: int = 3 
+    failed_agents_threshold: float = 0.5 
     
     def __post_init__(self):
         if self.num_agents < 1 or self.num_agents > 10:
@@ -40,6 +43,10 @@ class AgentConfig:
             raise ConfigValidationError("iterations must be between 1 and 5")
         if self.role_type not in ["default", "discussion", "planning", "informational", "conversational"]:
             raise ConfigValidationError(f"Invalid role_type: {self.role_type}")
+        if not (0 <= self.max_retry_attempts <= 10):
+            raise ConfigValidationError("max_retry_attempts must be between 0 and 10.")
+        if not (0.0 <= self.failed_agents_threshold <= 1.0):
+            raise ConfigValidationError("failed_agents_threshold must be between 0.0 and 1.0.")
 
 
 @dataclass
@@ -107,6 +114,17 @@ class MemoryConfig:
     blackboard_history_limit: int = 100
     max_summary_tokens: int = 200
     max_history_entries: int = 10
+    # For DistributedSLM._is_memory_related_question
+    memory_question_patterns: List[str] = field(default_factory=lambda: [
+        r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(なに|何|なん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)(の|は|を)(なに|何|なん)と(言い|いい|呼び|よび|よん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(覚え|おぼえ)",
+        r"(私|僕|俺|わたし|ぼく|おれ)の(趣味|しゅみ)(は|を)(なに|何|なん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)(は|が)(なに|何|なん)(が好き|を好きと言いました)",
+        r"(覚え|おぼえ)てる",
+        r"(覚え|おぼえ)てます",
+        r"(私|僕|俺|わたし|ぼく|おれ)について",
+    ])
     
     def __post_init__(self):
         if self.conversation_memory_limit < 1 or self.conversation_memory_limit > 100:
@@ -119,6 +137,8 @@ class MemoryConfig:
             raise ConfigValidationError("max_summary_tokens must be between 50 and 1000")
         if self.max_history_entries < 1 or self.max_history_entries > 50:
             raise ConfigValidationError("max_history_entries must be between 1 and 50")
+        if not isinstance(self.memory_question_patterns, list) or not all(isinstance(p, str) for p in self.memory_question_patterns):
+            raise ConfigValidationError("memory_question_patterns must be a list of strings.")
 
 
 @dataclass
@@ -140,6 +160,8 @@ class MurmurNetConfig:
             'use_summary': self.agent.use_summary,
             'use_memory': self.agent.use_memory,
             'role_type': self.agent.role_type,
+            'max_retry_attempts': self.agent.max_retry_attempts, # Added
+            'failed_agents_threshold': self.agent.failed_agents_threshold, # Added
             
             # Model settings
             'model_type': self.model.model_type,
@@ -170,6 +192,7 @@ class MurmurNetConfig:
             'blackboard_history_limit': self.memory.blackboard_history_limit,
             'max_summary_tokens': self.memory.max_summary_tokens,
             'max_history_entries': self.memory.max_history_entries,
+            'memory_question_patterns': list(self.memory.memory_question_patterns), # Added, ensure list copy
         }
 
 
@@ -285,15 +308,22 @@ class ConfigManager:
         """設定をマージ"""
         
         # Agent設定
-        if 'agent' in raw_config or any(key in raw_config for key in ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type']):
-            agent_config = raw_config.get('agent', {})
+        agent_keys = ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type', 'max_retry_attempts', 'failed_agents_threshold']
+        if 'agent' in raw_config or any(key in raw_config for key in agent_keys):
+            agent_config_data = raw_config.get('agent', {})
             # トップレベルの値もagent設定としてマージ
-            for key in ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type']:
+            for key in agent_keys:
                 if key in raw_config:
-                    agent_config[key] = raw_config[key]
+                    agent_config_data[key] = raw_config[key]
             
-            if agent_config:
-                config.agent = AgentConfig(**{**config.agent.__dict__, **agent_config})
+            if agent_config_data: # Ensure there's something to merge
+                # Merge with existing defaults from config.agent
+                merged_agent_data = {**config.agent.__dict__, **agent_config_data}
+                try:
+                    config.agent = AgentConfig(**merged_agent_data)
+                except ConfigValidationError as e: # Catch validation errors during merge
+                    logger.error(f"AgentConfig validation error during merge: {e}. Data: {merged_agent_data}")
+                    raise # Re-raise to halt config loading if critical
         
         # Model設定
         if 'model' in raw_config or any(key in raw_config for key in ['model_type', 'model_path', 'chat_template', 'n_ctx', 'n_threads', 'temperature', 'max_tokens']):
@@ -329,15 +359,21 @@ class ConfigManager:
                 config.logging = LoggingConfig(**{**config.logging.__dict__, **logging_config})
         
         # Memory設定
-        if 'memory' in raw_config or any(key in raw_config for key in ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries']):
-            memory_config = raw_config.get('memory', {})
+        memory_keys = ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries', 'memory_question_patterns']
+        if 'memory' in raw_config or any(key in raw_config for key in memory_keys):
+            memory_config_data = raw_config.get('memory', {})
             # トップレベルの値もmemory設定としてマージ
-            for key in ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries']:
+            for key in memory_keys:
                 if key in raw_config:
-                    memory_config[key] = raw_config[key]
+                    memory_config_data[key] = raw_config[key]
             
-            if memory_config:
-                config.memory = MemoryConfig(**{**config.memory.__dict__, **memory_config})
+            if memory_config_data: # Ensure there's something to merge
+                merged_memory_data = {**config.memory.__dict__, **memory_config_data}
+                try:
+                    config.memory = MemoryConfig(**merged_memory_data)
+                except ConfigValidationError as e:
+                    logger.error(f"MemoryConfig validation error during merge: {e}. Data: {merged_memory_data}")
+                    raise
         
         return config
     

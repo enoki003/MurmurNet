@@ -20,7 +20,14 @@ from typing import Dict, Any, List, Optional, Union
 from MurmurNet.modules.common import setup_logger, PerformanceError, MurmurNetError, ConfigurationError
 from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
 from MurmurNet.modules.input_reception import InputReception
-from MurmurNet.modules.blackboard import Blackboard
+from MurmurNet.modules.blackboard import Blackboard 
+# Import new constants from blackboard (assuming they are defined there or in data_structures and exposed)
+from MurmurNet.modules.blackboard import (
+    CONTENT_TYPE_SUMMARY, CONTENT_TYPE_USER_INPUT, CONTENT_TYPE_RAG_RESULT,
+    CONTENT_TYPE_CONVERSATION_CONTEXT, CONTENT_TYPE_FINAL_RESPONSE,
+    SOURCE_SYSTEM, SOURCE_USER, SOURCE_RAG_RETRIEVER, SOURCE_CONVERSATION_MEMORY,
+    SOURCE_OUTPUT_AGENT
+)
 from MurmurNet.modules.agent_pool import AgentPoolManager
 from MurmurNet.modules.rag_retriever import RAGRetriever
 from MurmurNet.modules.output_agent import OutputAgent
@@ -141,9 +148,10 @@ class DistributedSLM:
         戻り値：
             生成された応答文字列        """
         self.logger.info("応答生成プロセスを開始")
-        
-        # 新しいターンのために黒板をクリア（会話履歴は保持）
-        self.blackboard.clear_current_turn()
+        self.current_iteration = 0 # Initialize current_iteration for this generate call.
+
+        # Blackboard clearing is now handled by SystemCoordinator.run_iteration()
+        # No self.blackboard.clear_current_turn() here.
         
         # 会話記憶に関連する質問かチェック
         if self.use_memory and self._is_memory_related_question(input_text):
@@ -159,41 +167,47 @@ class DistributedSLM:
                 return memory_answer
                 
         # 1. 入力受付・前処理
-        processed = self.input_reception.process(input_text)
-        self.blackboard.write('input', processed)
+        # processed_input_data is expected to be a dict like {'raw': ..., 'normalized': ...}
+        processed_input_data = self.input_reception.process(input_text)
+        self.blackboard.add_user_input(
+            text=processed_input_data.get('normalized', input_text), # Main text is normalized
+            raw_input_details=processed_input_data, # Pass the whole dict
+            iteration=self.current_iteration
+        )
         
         # 2. 会話履歴の追加（使用する場合）
         if self.use_memory:
-            conversation_context = self.conversation_memory.get_conversation_context()
-            if conversation_context and conversation_context != "過去の会話はありません。":
-                # 会話コンテキストを黒板に書き込む
-                self.blackboard.write('conversation_context', conversation_context)
-                self.logger.debug(f"会話コンテキストを追加: {len(conversation_context)}文字")
-                
-                # 会話コンテキストを入力処理に統合
-                if isinstance(processed, dict) and 'normalized' in processed:
-                    processed['context'] = conversation_context
-                    self.blackboard.write('input', processed)
+            conversation_context_text = self.conversation_memory.get_conversation_context()
+            if conversation_context_text and conversation_context_text != "過去の会話はありません。":
+                self.blackboard.add_conversation_context(
+                    context=conversation_context_text, 
+                    iteration=self.current_iteration,
+                    source=SOURCE_CONVERSATION_MEMORY
+                )
+                self.logger.debug(f"会話コンテキストを追加 (反復 {self.current_iteration}): {len(conversation_context_text)}文字")
         
         # 3. RAG検索
-        rag_result = self.rag_retriever.retrieve(input_text)
-        self.blackboard.write('rag', rag_result)
+        rag_content = self.rag_retriever.retrieve(input_text) 
+        self.blackboard.add_rag_result(
+            rag_data=rag_content, 
+            iteration=self.current_iteration,
+            source=SOURCE_RAG_RETRIEVER
+        )
         
-        # 4. 初期要約の実行（オプション）
-        if self.use_summary:
-            initial_summary = f"ユーザー入力: {processed['normalized'] if isinstance(processed, dict) else processed}\n\n検索情報: {rag_result}"
-            if self.use_memory and 'conversation_context' in self.blackboard.memory:
-                initial_summary += f"\n\n会話コンテキスト: {self.blackboard.read('conversation_context')}"
-            self.blackboard.write('initial_summary', initial_summary)
-              # 5. 反復サイクルの実行（SystemCoordinatorに委譲）
+        # 4. 初期要約の実行（オプション） - This is removed. 
+        # If a pre-iteration summary is needed, it should be explicitly generated and added.
+        # For now, SystemCoordinator._build_common_prompt will use raw entries.
+        
+        # 5. 反復サイクルの実行（SystemCoordinatorに委譲）
         try:
             for i in range(self.iterations):
-                self.performance.take_memory_snapshot(f"iteration_{i+1}_start")
+                self.current_iteration = i # Update current_iteration for this loop
+                self.performance.take_memory_snapshot(f"iteration_{self.current_iteration + 1}_start")
                 
                 # SystemCoordinatorに反復処理を委譲
-                success = await self.system_coordinator.run_iteration(i)
+                success = await self.system_coordinator.run_iteration(self.current_iteration)
                 if not success:
-                    self.logger.warning(f"反復 {i+1} でエラーが発生しましたが処理を継続します")
+                    self.logger.warning(f"反復 {self.current_iteration + 1} でエラーが発生しましたが処理を継続します")
                 
                 self.performance.take_memory_snapshot(f"iteration_{i+1}_end")
                 
@@ -201,22 +215,55 @@ class DistributedSLM:
             self.logger.error(f"反復処理中にエラーが発生しました: {e}")
             # エラーが発生しても最終応答生成を試行
             
-        # 6. 最終要約とエージェント出力の収集
-        entries = []
-        # 各イテレーションの要約を収集
-        if self.use_summary:
-            for i in range(self.iterations):
-                summary = self.blackboard.read(f'summary_{i}')
-                if summary:
-                    entries.append({"type": "summary", "iteration": i, "text": summary})
+        # 6. 最終要約とエージェント出力の収集 for OutputAgent
+        output_agent_input_entries = [] # This will be List[Dict[str, Any]] for OutputAgent
         
-        # 最終エージェント出力も収集
-        for i in range(self.num_agents):
-            agent_output = self.blackboard.read(f"agent_{i}_output")
-            if agent_output:
-                entries.append({"type": "agent", "agent": i, "text": agent_output})        # 7. 最終応答生成
-        final_response = self.output_agent.generate(self.blackboard, entries)
-        self.blackboard.write('final_response', final_response)        # 9. 会話履歴に追加（使用する場合）
+        if self.use_summary:
+            for i in range(self.iterations): # Iterate up to the final iteration number
+                summary_bb_entries = self.blackboard.get_entries_by_content_type(
+                    CONTENT_TYPE_SUMMARY, 
+                    iteration=i
+                )
+                for bb_entry in summary_bb_entries:
+                    # Extract summary text, assuming it's in bb_entry.data['text'] or bb_entry.data
+                    summary_text = ""
+                    if isinstance(bb_entry.data, dict) and 'text' in bb_entry.data:
+                        summary_text = bb_entry.data['text']
+                    elif isinstance(bb_entry.data, str):
+                         summary_text = bb_entry.data
+                    
+                    if summary_text:
+                        output_agent_input_entries.append({
+                            "type": "summary", 
+                            "iteration": i, 
+                            "text": summary_text
+                        })
+
+        # Collect agent outputs from the final iteration for OutputAgent
+        # self.current_iteration here refers to the last completed iteration index (e.g., self.iterations - 1)
+        final_iteration_agent_outputs = self.blackboard.get_agent_outputs(iteration=self.current_iteration)
+        for ao in final_iteration_agent_outputs: # ao is an AgentOutput object
+            if ao.text and not ao.text.endswith("応答できませんでした"): # Filter out errors/non-responses
+                output_agent_input_entries.append({
+                    "type": "agent", 
+                    "agent": ao.agent_id, 
+                    "text": ao.text,
+                    "iteration": ao.iteration 
+                })
+
+        # 7. 最終応答生成
+        # OutputAgent.generate might need to be updated to use new blackboard methods if it reads directly.
+        # For now, passing the collected entries in the old format.
+        final_response = self.output_agent.generate(self.blackboard, output_agent_input_entries)
+        
+        self.blackboard.add_generic_entry(
+            source=SOURCE_OUTPUT_AGENT,
+            content_type=CONTENT_TYPE_FINAL_RESPONSE,
+            data=final_response,
+            iteration=self.current_iteration 
+        )
+        
+        # 9. 会話履歴に追加（使用する場合）
         if self.use_memory:
             self.conversation_memory.add_conversation_entry(
                 user_input=input_text, 
@@ -236,8 +283,11 @@ class DistributedSLM:
         if hasattr(self, 'conversation_memory'):
             self.conversation_memory.clear_memory()
             self.logger.info("会話記憶をクリアしました")
-              # 黒板のターン関連データもクリア
-        self.blackboard.clear_current_turn()
+        
+        # For a full memory reset, clear all blackboard entries too.
+        if self.blackboard:
+            self.blackboard.clear_all()
+            self.logger.info("Blackboard cleared as part of memory reset.")
     
     def get_stats(self) -> Dict[str, Any]:
         """
