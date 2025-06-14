@@ -81,12 +81,31 @@ class AgentPoolManager:
             logger.setLevel(logging.DEBUG)
           # ConfigManagerから並列モード設定を取得
         self.parallel_mode = self.config_manager.agent.use_parallel
-        
-        # モデルプールを使用（真の並列処理）
+          # モデルプールを使用（真の並列処理）
         if self.parallel_mode:
             from MurmurNet.modules.model_pool import get_model_pool
             self.model_pool = get_model_pool()
-            logger.info("モデルプールを使用した真の並列処理モードを初期化しました")
+            
+            # モデルプールの事前初期化を実行（エラーを早期発見）
+            try:
+                logger.info("並列モード: モデルプールの事前初期化を開始します")
+                self.model_pool._initialize_pool()
+                
+                # 初期化結果を確認
+                stats = self.model_pool.get_stats()
+                if stats['available_models'] == 0:
+                    logger.error("モデルプールに利用可能なモデルがありません！")
+                    raise RuntimeError("モデルプールの初期化に失敗しました")
+                
+                logger.info(f"モデルプール初期化成功: {stats['available_models']}個のモデルが利用可能")
+                logger.info("モデルプールを使用した真の並列処理モードを初期化しました")
+                
+            except Exception as e:
+                logger.error(f"モデルプールの初期化に失敗: {e}")
+                # フォールバックとして通常モードに切り替え
+                logger.warning("フォールバック: 通常モードに切り替えます")
+                self.parallel_mode = False
+                self.llm = get_shared_model(self.config)
         else:
             # 従来のシングルトンモデル
             self.llm = get_shared_model(self.config)
@@ -291,12 +310,10 @@ class AgentPoolManager:
             if not prompt:
                 logger.error(f"エージェント{agent_id}のプロンプト生成に失敗")
                 return f"エージェント{agent_id}はプロンプトを生成できませんでした"
-            
-            # エージェントの役割と設定
+              # エージェントの役割と設定
             role = self.roles[agent_id]
             temperature = max(0.1, min(1.0, role.get('temperature', 0.7)))
             role_name = role.get('role', f'エージェント{agent_id}')
-            
             logger.debug(f"エージェント{agent_id} ({role_name}) タスク開始")
               # モデル出力の生成（個別エージェントロックで保護、タイムアウト対応）
             import time
@@ -305,61 +322,111 @@ class AgentPoolManager:
             # エージェント毎の個別ロックを使用
             agent_lock = self.lock_manager.get_agent_lock(agent_id)
             with agent_lock:
-                # モデルの可用性チェック
-                if not hasattr(self.llm, 'create_chat_completion') and not hasattr(self.llm, 'generate'):
-                    logger.error(f"モデルインスタンスが正しく初期化されていません")
-                    return f"{role_name}はモデルの問題で応答できませんでした"
-                
-                # チャット完了を試行
-                if hasattr(self.llm, 'create_chat_completion'):
-                    resp = self.llm.create_chat_completion(
-                        messages=[{"role": "user", "content": prompt}],
-                        max_tokens=300,  # 話し言葉に適したトークン数
-                        temperature=temperature,
-                        top_p=0.9,
-                        stop=["。", ".", "\n\n"]
-                    )
+                # 並列モードかどうかでモデルアクセス方法を変更
+                if self.parallel_mode and hasattr(self, 'model_pool'):
+                    # 並列モード：model_poolから専用モデルを取得（コンテキストマネージャー使用）
+                    try:
+                        # モデルプールの初期化を確実に実行
+                        if not self.model_pool._initialized:
+                            logger.info(f"エージェント{agent_id}: モデルプールの初期化を開始")
+                            self.model_pool._initialize_pool()
+                        
+                        # プール統計情報をログ出力
+                        stats = self.model_pool.get_stats()
+                        logger.debug(f"エージェント{agent_id}: プール統計 - 利用可能: {stats['available_models']}, アクティブ: {stats['active_models']}")
+                        
+                        with self.model_pool.get_model(timeout=30.0) as model:
+                            # モデルインスタンスの詳細チェック
+                            if model is None:
+                                logger.error(f"エージェント{agent_id}: モデルプールからNoneが返されました")
+                                return f"{role_name}はモデルの取得に失敗しました"
+                            
+                            # モデルの初期化状態を確認
+                            if not hasattr(model, '_llm') or model._llm is None:
+                                logger.error(f"エージェント{agent_id}: モデルの内部インスタンス(_llm)が初期化されていません")
+                                return f"{role_name}のモデルが正しく初期化されていません"
+                            
+                            # モデルの可用性チェック
+                            if not model.is_available():
+                                logger.error(f"エージェント{agent_id}: モデルが利用不可能な状態です")
+                                return f"{role_name}のモデルが利用できません"
+                            
+                            # メソッドの存在チェック
+                            if not hasattr(model, 'create_chat_completion') and not hasattr(model, 'generate'):
+                                logger.error(f"エージェント{agent_id}: モデルに必要なメソッドがありません")
+                                return f"{role_name}はモデルメソッドの問題で応答できませんでした"
+                            
+                            # チャット完了を試行
+                            if hasattr(model, 'create_chat_completion'):
+                                resp = model.create_chat_completion(
+                                    messages=[{"role": "user", "content": prompt}],
+                                    max_tokens=300,  # 話し言葉に適したトークン数
+                                    temperature=temperature,
+                                    top_p=0.9,
+                                    stop=["。", ".", "\n\n"]
+                                )
+                                if resp and 'choices' in resp and len(resp['choices']) > 0:
+                                    content = resp['choices'][0]['message']['content'].strip()
+                                    logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                                    return content
+                                else:
+                                    logger.warning(f"エージェント{agent_id}の応答が空でした")
+                                    return f"{role_name}は適切な応答を生成できませんでした"
+                            elif hasattr(model, 'generate'):
+                                resp = model.generate(prompt, max_tokens=300, temperature=temperature)
+                                if resp:
+                                    logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                                    return resp.strip()
+                                else:
+                                    logger.warning(f"エージェント{agent_id}の応答が空でした")
+                                    return f"{role_name}は適切な応答を生成できませんでした"
+                    except Exception as e:
+                        logger.error(f"エージェント{agent_id} モデルプールエラー: {type(e).__name__}: {e}")
+                        import traceback
+                        logger.debug(f"エージェント{agent_id} モデルプールエラー詳細:\n{traceback.format_exc()}")
+                        return f"{role_name}はモデルプールエラーで応答できませんでした"
                 else:
-                    # フォールバック：generate メソッドを使用
-                    resp_text = self.llm.generate(
-                        prompt=prompt,
-                        max_tokens=300,
-                        temperature=temperature
-                    )
-                    # 辞書形式に変換
-                    resp = {"choices": [{"message": {"content": resp_text}}]}
-            
-            generation_time = time.time() - start_time
-            if generation_time > 20:  # 20秒以上の場合
-                logger.warning(f"エージェント{agent_id}の応答生成に時間がかかりました: {generation_time:.2f}秒")
-            
-            # レスポンスの解析（堅牢化）
-            try:
-                if isinstance(resp, dict) and 'choices' in resp and resp['choices']:
-                    response_text = resp['choices'][0]['message']['content'].strip()
-                elif hasattr(resp, 'choices') and resp.choices:
-                    response_text = resp.choices[0].message.content.strip()
-                else:
-                    logger.error(f"予期しないレスポンス形式: {type(resp)}")
-                    response_text = str(resp).strip()
-            except (KeyError, IndexError, AttributeError) as e:
-                logger.error(f"レスポンス解析エラー: {e}")
-                return f"{role_name}は応答の解析に失敗しました"
-            
-            # 出力の検証とクリーニング
-            if not response_text:
-                logger.warning(f"エージェント{agent_id}が空の応答を生成")
-                return f"{role_name}は適切な応答を生成できませんでした"
-            
-            # 出力長の制限
-            if len(response_text) > 500:
-                response_text = response_text[:500]
-                logger.debug(f"エージェント{agent_id}の応答を切り詰めました")
-            
-            # 黒板への書き込み
-            self.blackboard.write(f'agent_{agent_id}_output', response_text)
-            logger.debug(f"エージェント{agent_id} ({role_name}) タスク完了: {len(response_text)}文字")
-            return response_text
+                    # 通常モード：共有llmを使用
+                    model = self.llm
+                    
+                    # モデルの可用性チェック
+                    if model is None:
+                        logger.error(f"エージェント{agent_id}: 共有モデルが初期化されていません")
+                        return f"{role_name}は共有モデルの問題で応答できませんでした"
+                    
+                    if not hasattr(model, 'create_chat_completion') and not hasattr(model, 'generate'):
+                        logger.error(f"エージェント{agent_id}: 共有モデルに必要なメソッドがありません")
+                        return f"{role_name}は共有モデルのメソッド問題で応答できませんでした"
+                    
+                    # チャット完了を試行
+                    if hasattr(model, 'create_chat_completion'):
+                        resp = model.create_chat_completion(
+                            messages=[{"role": "user", "content": prompt}],
+                            max_tokens=300,  # 話し言葉に適したトークン数
+                            temperature=temperature,
+                            top_p=0.9,
+                            stop=["。", ".", "\n\n"]
+                        )
+                        if resp and 'choices' in resp and len(resp['choices']) > 0:
+                            content = resp['choices'][0]['message']['content'].strip()
+                            logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                            return content
+                        else:
+                            logger.warning(f"エージェント{agent_id}の応答が空でした")
+                            return f"{role_name}は適切な応答を生成できませんでした"
+                    else:
+                        # フォールバック：generate メソッドを使用
+                        resp_text = model.generate(
+                            prompt=prompt,
+                            max_tokens=300,
+                            temperature=temperature
+                        )
+                        if resp_text:
+                            logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                            return resp_text.strip()
+                        else:
+                            logger.warning(f"エージェント{agent_id}の応答が空でした")
+                            return f"{role_name}は適切な応答を生成できませんでした"
             
         except TimeoutError as e:
             # タイムアウト専用処理
@@ -566,65 +633,102 @@ class AgentPoolManager:
             import time
             start_time = time.time()
             
-            # ロックを使わずに直接モデル実行
             try:
-                # モデルの可用性チェック
-                if not hasattr(self.llm, 'create_chat_completion') and not hasattr(self.llm, 'generate'):
-                    logger.error(f"モデルインスタンスが正しく初期化されていません")
-                    return f"{role_name}はモデルの問題で応答できませんでした"
-                
-                # 並列安全なモデル呼び出し
-                if hasattr(self.llm, 'create_chat_completion'):
-                    resp = self.llm.create_chat_completion(
-                        messages=[{"role": "user", "content": prompt}],
-                        max_tokens=300,
-                        temperature=temperature,
-                        top_p=0.9,
-                        stop=["。", ".", "\n\n"]
-                    )
+                # 並列モードかどうかでモデルアクセス方法を変更
+                if self.parallel_mode and hasattr(self, 'model_pool'):
+                    # 並列モード：model_poolから専用モデルを取得（コンテキストマネージャー使用）
+                    with self.model_pool.get_model(timeout=30.0) as model:
+                        if model is None:
+                            logger.error(f"エージェント{agent_id}: モデルプールからNoneが返されました")
+                            return f"{role_name}はモデルの取得に失敗しました"
+                        
+                        # モデルの初期化状態を確認
+                        if not hasattr(model, '_llm') or model._llm is None:
+                            logger.error(f"エージェント{agent_id}: モデルの内部インスタンス(_llm)が初期化されていません")
+                            return f"{role_name}のモデルが正しく初期化されていません"
+                        
+                        # モデルの可用性チェック
+                        if not model.is_available():
+                            logger.error(f"エージェント{agent_id}: モデルが利用不可能な状態です")
+                            return f"{role_name}のモデルが利用できません"
+                        
+                        # メソッドの存在チェック
+                        if not hasattr(model, 'create_chat_completion') and not hasattr(model, 'generate'):
+                            logger.error(f"エージェント{agent_id}: モデルに必要なメソッドがありません")
+                            return f"{role_name}はモデルメソッドの問題で応答できませんでした"
+                        
+                        # チャット完了を試行
+                        if hasattr(model, 'create_chat_completion'):
+                            resp = model.create_chat_completion(
+                                messages=[{"role": "user", "content": prompt}],
+                                max_tokens=300,
+                                temperature=temperature,
+                                top_p=0.9,
+                                stop=["。", ".", "\n\n"]
+                            )
+                            if resp and 'choices' in resp and len(resp['choices']) > 0:
+                                content = resp['choices'][0]['message']['content'].strip()
+                                logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                                return content
+                            else:
+                                logger.warning(f"エージェント{agent_id}の応答が空でした")
+                                return f"{role_name}は適切な応答を生成できませんでした"
+                        elif hasattr(model, 'generate'):
+                            resp = model.generate(prompt, max_tokens=300, temperature=temperature)
+                            if resp:
+                                logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                                return resp.strip()
+                            else:
+                                logger.warning(f"エージェント{agent_id}の応答が空でした")
+                                return f"{role_name}は適切な応答を生成できませんでした"
                 else:
-                    # フォールバック
-                    resp_text = self.llm.generate(
-                        prompt=prompt,
-                        max_tokens=300,
-                        temperature=temperature
-                    )
-                    resp = {"choices": [{"message": {"content": resp_text}}]}
+                    # 通常モード：共有llmを使用
+                    model = self.llm
+                    
+                    # モデルの可用性チェック
+                    if model is None:
+                        logger.error(f"エージェント{agent_id}: 共有モデルが初期化されていません")
+                        return f"{role_name}は共有モデルの問題で応答できませんでした"
+                    
+                    if not hasattr(model, 'create_chat_completion') and not hasattr(model, 'generate'):
+                        logger.error(f"エージェント{agent_id}: 共有モデルに必要なメソッドがありません")
+                        return f"{role_name}は共有モデルのメソッド問題で応答できませんでした"
+                    
+                    # チャット完了を試行
+                    if hasattr(model, 'create_chat_completion'):
+                        resp = model.create_chat_completion(
+                            messages=[{"role": "user", "content": prompt}],
+                            max_tokens=300,
+                            temperature=temperature,
+                            top_p=0.9,
+                            stop=["。", ".", "\n\n"]
+                        )
+                        if resp and 'choices' in resp and len(resp['choices']) > 0:
+                            content = resp['choices'][0]['message']['content'].strip()
+                            logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                            return content
+                        else:
+                            logger.warning(f"エージェント{agent_id}の応答が空でした")
+                            return f"{role_name}は適切な応答を生成できませんでした"
+                    else:
+                        # フォールバック：generate メソッドを使用
+                        resp_text = model.generate(
+                            prompt=prompt,
+                            max_tokens=300,
+                            temperature=temperature
+                        )
+                        if resp_text:
+                            logger.debug(f"エージェント{agent_id} ({role_name})の応答生成成功")
+                            return resp_text.strip()
+                        else:
+                            logger.warning(f"エージェント{agent_id}の応答が空でした")
+                            return f"{role_name}は適切な応答を生成できませんでした"
                 
             except Exception as model_error:
-                logger.error(f"エージェント{agent_id}モデル実行エラー: {model_error}")
+                logger.error(f"エージェント{agent_id} モデル実行エラー: {type(model_error).__name__}: {model_error}")
+                import traceback
+                logger.debug(f"エージェント{agent_id} モデル実行エラー詳細:\n{traceback.format_exc()}")
                 return f"{role_name}はモデル実行エラーにより応答できませんでした"
-            
-            generation_time = time.time() - start_time
-            logger.debug(f"エージェント{agent_id} 生成時間: {generation_time:.2f}秒")
-            
-            # レスポンスの解析（堅牢化）
-            try:
-                if isinstance(resp, dict) and 'choices' in resp and resp['choices']:
-                    response_text = resp['choices'][0]['message']['content'].strip()
-                elif hasattr(resp, 'choices') and resp.choices:
-                    response_text = resp.choices[0].message.content.strip()
-                else:
-                    logger.error(f"予期しないレスポンス形式: {type(resp)}")
-                    response_text = str(resp).strip()
-            except (KeyError, IndexError, AttributeError) as e:
-                logger.error(f"レスポンス解析エラー: {e}")
-                return f"{role_name}は応答の解析に失敗しました"
-            
-            # 出力の検証とクリーニング
-            if not response_text:
-                logger.warning(f"エージェント{agent_id}が空の応答を生成")
-                return f"{role_name}は適切な応答を生成できませんでした"
-            
-            # 出力長の制限
-            if len(response_text) > 500:
-                response_text = response_text[:500]
-                logger.debug(f"エージェント{agent_id}の応答を切り詰めました")
-            
-            # 黒板への書き込み
-            self.blackboard.write(f'agent_{agent_id}_output', response_text)
-            logger.debug(f"エージェント{agent_id} ({role_name}) 並列タスク完了: {len(response_text)}文字")
-            return response_text
             
         except Exception as e:
             # 全般的なエラーハンドリング

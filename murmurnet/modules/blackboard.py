@@ -300,14 +300,12 @@ class Blackboard:
         except Exception as e:
             if self.debug:
                 print(f"[Blackboard] Cleanup error: {e}")
-    
     def __del__(self):
         """デストラクタでリソースをクリーンアップ"""
         try:
             self.cleanup()
         except Exception:
             pass  # デストラクタでは例外を無視
-        return [entry for entry in self.history if entry['key'] == key]
         
     def get_debug_view(self) -> Dict[str, Any]:
         """

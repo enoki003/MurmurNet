@@ -16,10 +16,46 @@ Process Agent Manager モジュール
 import logging
 import time
 from typing import List, Dict, Any, Optional
-from MurmurNet.modules.process_coordinator import ProcessCoordinator
-from MurmurNet.modules.result_collector import ResultCollector, CollectedResults
-from MurmurNet.modules.process_agent_worker import AgentTask, AgentResult
+# from MurmurNet.modules.process_coordinator import ProcessCoordinator  # ファイルが削除されたためコメントアウト
+# from MurmurNet.modules.result_collector import ResultCollector, CollectedResults  # ファイルが削除されたためコメントアウト
+# from MurmurNet.modules.process_agent_worker import AgentTask, AgentResult  # ファイルが削除されたためコメントアウト
 from MurmurNet.modules.config_manager import get_config
+
+# Begin stubs for missing classes
+class ProcessCoordinator:
+    def __init__(self, num_processes):
+        self.num_processes = num_processes if num_processes is not None else 1
+    def start(self):
+        return True
+    def submit_task(self, task):
+        return True
+    def get_all_results(self, success_count, timeout):
+        return []
+    def stop(self):
+        pass
+
+class CollectedResults:
+    def __init__(self):
+        self.total_count = 0
+        self.successful_results = []
+        self.failed_results = []
+        self.success_rate = 0.0
+        self.average_execution_time = 0.0
+
+class ResultCollector:
+    def collect_and_analyze(self, results):
+        return CollectedResults()
+    def log_statistics(self, collected_results):
+        pass
+
+class AgentTask:
+    def __init__(self, agent_id, prompt, role, config, blackboard_data):
+        self.agent_id = agent_id
+        self.prompt = prompt
+        self.role = role
+        self.config = config
+        self.blackboard_data = blackboard_data
+# End stubs for missing classes
 
 
 class ProcessAgentManager:

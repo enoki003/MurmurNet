@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-MurmurNet 分散SLMシステム
-~~~~~~~~~~~~~~~~~~~
-複数の小型言語モデルを組み合わせた分散創発型アーキテクチャ
-黒板設計・要約・RAGを統合した協調パターン
-
+Enhanced Distributed SLM System
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 新しい通信インターフェースを使用する改良版DistributedSLM
 モジュラー設計と疎結合アーキテクチャを実現
 
@@ -36,15 +33,12 @@ from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.agent_pool import AgentPoolManager
 from MurmurNet.modules.config_manager import get_config
 
-logger = logging.getLogger('MurmurNet.DistributedSLM')
+logger = logging.getLogger('MurmurNet.EnhancedDistributedSLM')
 
 
-class DistributedSLM:
+class EnhancedDistributedSLM:
     """
-    分散創発型言語モデルメインクラス
-    
-    複数の小規模な言語モデルが協調的に動作する分散型アーキテクチャを通じて
-    高度な対話生成機能を提供する中枢システム。
+    改良版分散SLMシステム
     
     改善点:
     - 新しい通信インターフェースの採用
@@ -52,32 +46,19 @@ class DistributedSLM:
     - アダプターパターンによる既存システムとの互換性
     - 明確なAPI境界
     - 依存性注入による柔軟性
-    
-    特徴:
-    - 複数の小規模モデルが協調動作
-    - 黒板を通じた情報共有
-    - 反復的な知識交換で知性を創発
-    
-    属性:
-        config: 設定辞書
-        blackboard: 共有黒板
-        num_agents: エージェント数
-        iterations: 反復回数
     """
     
     def __init__(
         self, 
         config: Dict[str, Any] = None, 
-        blackboard=None,
         comm_manager: ModuleCommunicationManager = None,
         compatibility_mode: bool = True
     ):
         """
-        分散SLMシステムの初期化
+        改良版分散SLMシステムの初期化
         
         引数:
             config: 設定辞書（オプション）
-            blackboard: Blackboardインスタンス（互換性のため）
             comm_manager: 通信管理器（オプション、未指定時は自動作成）
             compatibility_mode: 既存システムとの互換モード
         """
@@ -95,19 +76,20 @@ class DistributedSLM:
         )
         
         # 初期メモリスナップショット
-        self.performance.take_memory_snapshot("distributed_slm_init_start")
+        self.performance.take_memory_snapshot("enhanced_slm_init_start")
         
         # 通信システムの初期化
         self.comm_manager = comm_manager or create_communication_system()
         
         # 互換性モードの設定
         self.compatibility_mode = compatibility_mode
-          # 基本動作パラメータ（渡された設定を優先）
-        self.num_agents = config.get('num_agents', self.config_manager.agent.num_agents) if config else self.config_manager.agent.num_agents
-        self.iterations = config.get('iterations', self.config_manager.agent.iterations) if config else self.config_manager.agent.iterations
-        self.use_summary = config.get('use_summary', self.config_manager.agent.use_summary) if config else self.config_manager.agent.use_summary
-        self.use_parallel = config.get('use_parallel', self.config_manager.agent.use_parallel) if config else self.config_manager.agent.use_parallel
-        self.use_memory = config.get('use_memory', self.config_manager.agent.use_memory) if config else self.config_manager.agent.use_memory
+        
+        # 基本動作パラメータ
+        self.num_agents = self.config_manager.agent.num_agents
+        self.iterations = self.config_manager.agent.iterations
+        self.use_summary = self.config_manager.agent.use_summary
+        self.use_parallel = self.config_manager.agent.use_parallel
+        self.use_memory = self.config_manager.agent.use_memory
         
         # 遅延初期化フラグ
         self._modules_initialized = False
@@ -117,17 +99,16 @@ class DistributedSLM:
         self.input_reception = InputReception(self.config)
         
         # レガシーシステム（互換性モード用）
-        self._legacy_blackboard = blackboard or None
+        self._legacy_blackboard = None
         self._bridge_adapter = None
         
         # 新システムのモジュール
         self._system_coordinator = None
         self._module_adapters = {}
-        
-        # パフォーマンスステータスを通信システムに記録
+          # パフォーマンスステータスを通信システムに記録
         message = create_message(
             MessageType.SYSTEM_STATUS,
-            "distributed_slm",
+            "enhanced_slm",
             {
                 'performance_enabled': self.performance.enabled,
                 'compatibility_mode': self.compatibility_mode
@@ -136,9 +117,9 @@ class DistributedSLM:
         self.comm_manager.publish(message)
         
         # 初期化完了時のメモリスナップショット
-        self.performance.take_memory_snapshot("distributed_slm_init_complete")
+        self.performance.take_memory_snapshot("enhanced_slm_init_complete")
         
-        self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復 (遅延初期化)")
+        self.logger.info(f"改良版分散SLMシステムを初期化しました (互換モード: {self.compatibility_mode})")
 
     def _ensure_modules_initialized(self) -> None:
         """
@@ -160,6 +141,7 @@ class DistributedSLM:
                 
                 # 新システムの初期化
                 self._initialize_new_system()
+                
                 self._modules_initialized = True
                 self.performance.take_memory_snapshot("module_initialization_complete")
                 
@@ -179,19 +161,12 @@ class DistributedSLM:
             from MurmurNet.modules.agent_pool import AgentPoolManager
             from MurmurNet.modules.summary_engine import SummaryEngine
             from MurmurNet.modules.conversation_memory import ConversationMemory
-            from MurmurNet.modules.rag_retriever import RAGRetriever
-            from MurmurNet.modules.output_agent import OutputAgent
-              # レガシーモジュールの初期化
-            if not self._legacy_blackboard:
-                self._legacy_blackboard = Blackboard(self.config)
             
+            # レガシーモジュールの初期化
+            self._legacy_blackboard = Blackboard(self.config)
             legacy_agent_pool = AgentPoolManager(self.config, self._legacy_blackboard)
-            legacy_summary_engine = SummaryEngine(self.config)  # SummaryEngineはconfigのみ受け取る
+            legacy_summary_engine = SummaryEngine(self.config, self._legacy_blackboard)
             legacy_conversation_memory = ConversationMemory(self.config, self._legacy_blackboard)
-              # RAGRetrieverとOutputAgentの初期化（configパラメータのみ）
-            self._rag_retriever = RAGRetriever(self.config)
-              # OutputAgentの初期化
-            self._output_agent = OutputAgent(self.config)
             
             # アダプターを作成
             self._module_adapters = create_module_adapters(
@@ -218,7 +193,7 @@ class DistributedSLM:
         try:
             # 新しいシステム調整器を初期化
             self._system_coordinator = ModuleSystemCoordinator(
-                blackboard=self._legacy_blackboard if self.compatibility_mode else None,
+                comm_manager=self.comm_manager,
                 agent_pool=self._module_adapters.get('agent_pool') if self.compatibility_mode else None,
                 summary_engine=self._module_adapters.get('summary_engine') if self.compatibility_mode else None,
                 config=self.config
@@ -229,34 +204,6 @@ class DistributedSLM:
         except Exception as e:
             self.logger.error(f"新システム初期化エラー: {e}")
             raise
-
-    def _is_memory_related_question(self, text: str) -> bool:
-        """
-        入力テキストが会話記憶に関連する質問かどうかを判定
-        
-        引数:
-            text: 入力テキスト
-        
-        戻り値:
-            会話記憶に関連する質問ならTrue
-        """
-        # 記憶関連の質問パターン
-        memory_patterns = [
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(の|は|を)(なに|何|なん)と(言い|いい|呼び|よび|よん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(覚え|おぼえ)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の(趣味|しゅみ)(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(は|が)(なに|何|なん)(が好き|を好きと言いました)",
-            r"(覚え|おぼえ)てる",
-            r"(覚え|おぼえ)てます",
-            r"(私|僕|俺|わたし|ぼく|おれ)について",
-        ]
-        
-        # いずれかのパターンにマッチしたら記憶関連の質問と判定
-        for pattern in memory_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-        return False
 
     @time_async_function
     async def generate(self, input_text: str) -> str:
@@ -276,24 +223,12 @@ class DistributedSLM:
             # パフォーマンス監視開始
             self.performance.take_memory_snapshot("generate_start")
             
-            self.logger.info("応答生成プロセスを開始")
-            
-            # 互換性モード：黒板をクリア
-            if self.compatibility_mode and self._legacy_blackboard:
-                self._legacy_blackboard.clear_current_turn()
-            
-            # 会話記憶に関連する質問かチェック
-            if self.use_memory and self._is_memory_related_question(input_text):
-                memory_answer = await self._handle_memory_question(input_text)
-                if memory_answer:
-                    return memory_answer
-              # 1. 入力処理
-            input_data = self.input_reception.process(input_text)
+            # 1. 入力処理
+            input_data = self.input_reception.process_input(input_text)
             
             # 入力データを通信システムに送信
             message = create_message(
                 MessageType.USER_INPUT,
-                "input_reception",
                 {
                     'original': input_text,
                     'processed': input_data
@@ -324,32 +259,12 @@ class DistributedSLM:
             # パフォーマンス監視終了
             self.performance.take_memory_snapshot("generate_end")
             
-            self.logger.info(f"応答生成完了: {len(final_response)}文字")
             return final_response
             
         except Exception as e:
             self.logger.error(f"生成処理エラー: {e}")
             raise MurmurNetError(f"テキスト生成に失敗しました: {e}")
 
-    async def _handle_memory_question(self, input_text: str) -> Optional[str]:
-        """
-        会話記憶に関連する質問を処理
-        """
-        try:
-            if self.compatibility_mode and 'conversation_memory' in self._module_adapters:
-                adapter = self._module_adapters['conversation_memory']
-                # ConversationMemoryAdapterにget_answer_for_questionメソッドがあれば使用
-                if hasattr(adapter, 'get_answer_for_question'):
-                    memory_answer = adapter.get_answer_for_question(input_text)
-                    if memory_answer:
-                        self.logger.info("会話記憶から回答を取得しました")                        # 会話記憶を更新
-                        adapter.update_context(input_text, [memory_answer])
-                        return memory_answer
-                        
-        except Exception as e:
-            self.logger.error(f"会話記憶処理エラー: {e}")
-            return None
-    
     async def _execute_rag_search(self, input_text: str) -> None:
         """
         RAG検索を実行
@@ -359,26 +274,24 @@ class DistributedSLM:
             from MurmurNet.modules.rag_retriever import RAGRetriever
             
             if not hasattr(self, '_rag_retriever'):
-                # RAGRetrieverはconfigパラメータのみを受け取る
-                self._rag_retriever = RAGRetriever(self.config)
+                if self.compatibility_mode and self._legacy_blackboard:
+                    self._rag_retriever = RAGRetriever(self.config, self._legacy_blackboard)
+                else:
+                    # 新システム用のRAGRetrieverが実装されるまでは既存版を使用
+                    self._rag_retriever = RAGRetriever(self.config)
             
             # RAG検索実行
-            rag_results = self._rag_retriever.retrieve(input_text)
+            rag_results = self._rag_retriever.search(input_text)
             
             # 結果を通信システムに送信
             message = create_message(
                 MessageType.RAG_RESULTS,
-                "rag_retriever",
                 {
                     'query': input_text,
                     'results': rag_results
                 }
             )
             self.comm_manager.publish(message)
-            
-            # 互換性モード：黒板にも書き込み
-            if self.compatibility_mode and self._legacy_blackboard:
-                self._legacy_blackboard.write('rag', rag_results)
             
             self.logger.debug("RAG検索が完了しました")
             
@@ -387,7 +300,6 @@ class DistributedSLM:
             # エラーメッセージを通信システムに送信
             message = create_message(
                 MessageType.ERROR,
-                "rag_retriever",
                 {
                     'error': f"RAG検索中にエラーが発生しました: {e}"
                 }
@@ -406,17 +318,12 @@ class DistributedSLM:
                 # コンテキストを通信システムに送信
                 message = create_message(
                     MessageType.DATA_STORE,
-                    "conversation_memory",
                     {
                         'key': 'conversation_context',
                         'value': context
                     }
                 )
                 self.comm_manager.publish(message)
-                
-                # 互換性モード：黒板にも書き込み
-                if self.compatibility_mode and self._legacy_blackboard and context:
-                    self._legacy_blackboard.write('conversation_context', context)
                 
             self.logger.debug("会話メモリ処理が完了しました")
             
@@ -445,16 +352,11 @@ class DistributedSLM:
             # 初期要約を通信システムに送信
             message = create_message(
                 MessageType.INITIAL_SUMMARY,
-                "summary_engine",
                 {
                     'summary': initial_summary
                 }
             )
             self.comm_manager.publish(message)
-            
-            # 互換性モード：黒板にも書き込み
-            if self.compatibility_mode and self._legacy_blackboard and self.use_summary:
-                self._legacy_blackboard.write('initial_summary', initial_summary)
             
             self.logger.debug("初期要約を作成しました")
             
@@ -506,39 +408,16 @@ class DistributedSLM:
                     self._output_agent = OutputAgent(self.config)
             
             # 最終レスポンス生成
-            if self.compatibility_mode and self._legacy_blackboard:
-                # 互換性モード：黒板からエントリを収集
-                entries = []
-                # 各イテレーションの要約を収集
-                if self.use_summary:
-                    for i in range(self.iterations):
-                        summary = self._legacy_blackboard.read(f'summary_{i}')
-                        if summary:
-                            entries.append({"type": "summary", "iteration": i, "text": summary})
-                
-                # 最終エージェント出力も収集
-                for i in range(self.num_agents):
-                    agent_output = self._legacy_blackboard.read(f"agent_{i}_output")
-                    if agent_output:
-                        entries.append({"type": "agent", "agent": i, "text": agent_output})
-                
-                final_response = self._output_agent.generate(self._legacy_blackboard, entries)
-            else:
-                final_response = self._output_agent.generate_response()
+            final_response = self._output_agent.generate_response()
             
             # レスポンスを通信システムに送信
             message = create_message(
                 MessageType.FINAL_RESPONSE,
-                "output_agent",
                 {
                     'response': final_response
                 }
             )
             self.comm_manager.publish(message)
-            
-            # 互換性モード：黒板にも書き込み
-            if self.compatibility_mode and self._legacy_blackboard:
-                self._legacy_blackboard.write('final_response', final_response)
             
             return final_response
             
@@ -559,56 +438,6 @@ class DistributedSLM:
             
         except Exception as e:
             self.logger.error(f"会話メモリ更新エラー: {e}")
-
-    def reset_memory(self) -> None:
-        """
-        会話履歴をリセット
-        
-        システムの会話記憶を完全にクリアする
-        """
-        try:
-            if self.compatibility_mode and 'conversation_memory' in self._module_adapters:
-                adapter = self._module_adapters['conversation_memory']
-                if hasattr(adapter, 'clear_memory'):
-                    adapter.clear_memory()
-                    
-            # 黒板のターン関連データもクリア
-            if self.compatibility_mode and self._legacy_blackboard:
-                self._legacy_blackboard.clear_current_turn()
-                
-            self.logger.info("会話記憶をクリアしました")
-            
-        except Exception as e:
-            self.logger.error(f"メモリリセットエラー: {e}")
-
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        システムの統計情報を取得
-        
-        戻り値:
-            システム統計情報を含む辞書
-        """
-        stats = {
-            "agents": self.num_agents,
-            "iterations": self.iterations,
-            "memory_enabled": self.use_memory,
-            "summary_enabled": self.use_summary,
-            "parallel_enabled": self.use_parallel,
-            "compatibility_mode": self.compatibility_mode,
-            "modules_initialized": self._modules_initialized
-        }
-        
-        # 会話履歴の長さを追加
-        if self.compatibility_mode and 'conversation_memory' in self._module_adapters:
-            adapter = self._module_adapters['conversation_memory']
-            if hasattr(adapter, 'conversation_memory') and hasattr(adapter.conversation_memory, 'conversation_history'):
-                stats["conversation_history"] = len(adapter.conversation_memory.conversation_history)
-            else:
-                stats["conversation_history"] = 0
-        else:
-            stats["conversation_history"] = 0
-        
-        return stats
 
     def get_system_status(self) -> Dict[str, Any]:
         """
@@ -644,49 +473,6 @@ class DistributedSLM:
             通信統計辞書
         """
         return self.comm_manager.get_stats()
-
-    # プロパティアクセッサー（互換性のため）
-    @property
-    def blackboard(self):
-        """Blackboardへのアクセッサー（互換性のため）"""
-        self._ensure_modules_initialized()
-        return self._legacy_blackboard
-
-    @property
-    def agent_pool(self):
-        """エージェントプールマネージャー（互換性のため）"""
-        self._ensure_modules_initialized()
-        return self._module_adapters.get('agent_pool')
-
-    @property
-    def rag_retriever(self):
-        """RAG検索エンジン（互換性のため）"""
-        self._ensure_modules_initialized()
-        return getattr(self, '_rag_retriever', None)
-
-    @property
-    def summary_engine(self):
-        """要約エンジン（互換性のため）"""
-        self._ensure_modules_initialized()
-        return self._module_adapters.get('summary_engine')
-
-    @property
-    def output_agent(self):
-        """出力エージェント（互換性のため）"""
-        self._ensure_modules_initialized()
-        return getattr(self, '_output_agent', None)
-
-    @property
-    def conversation_memory(self):
-        """会話記憶（互換性のため）"""
-        self._ensure_modules_initialized()
-        return self._module_adapters.get('conversation_memory')
-
-    @property
-    def system_coordinator(self):
-        """システム調整器（互換性のため）"""
-        self._ensure_modules_initialized()
-        return self._system_coordinator
 
     def cleanup(self) -> None:
         """

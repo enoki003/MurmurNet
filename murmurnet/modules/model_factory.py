@@ -93,13 +93,24 @@ class LlamaModel(BaseModel):
         
         # 遅延初期化：最初の使用時に初期化する
         # これにより循環参照の問題を回避
-    
     def _ensure_initialized(self):
         """モデルの初期化を確実に行う（遅延初期化）"""
         if not self._initialization_attempted:
             self._initialization_attempted = True
+            self.logger.debug("モデルの初期化を開始します...")
+            
             if self._check_prerequisites():
                 self._init_model()
+                
+                # 初期化後の状態確認
+                if self._llm is not None:
+                    self.logger.info("モデルの初期化が成功しました")
+                else:
+                    self.logger.error("モデルの初期化に失敗しました（_llmがNone）")
+                    if self._initialization_error:
+                        self.logger.error(f"初期化エラー詳細: {self._initialization_error}")
+            else:
+                self.logger.error("モデル初期化の前提条件チェックに失敗しました")
     
     def _check_prerequisites(self) -> bool:
         """初期化の前提条件をチェック（内部メソッド）"""

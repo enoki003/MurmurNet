@@ -19,10 +19,10 @@ from MurmurNet.modules.common import MurmurNetError, AgentExecutionError
 from MurmurNet.modules.config_manager import get_config
 from MurmurNet.modules.performance import time_async_function
 
-logger = logging.getLogger('MurmurNet.SystemCoordinator')
+logger = logging.getLogger('MurmurNet.ModuleSystemCoordinator')
 
 
-class SystemCoordinator:
+class ModuleSystemCoordinator:
     """
     システム全体の調整・制御クラス
     
@@ -47,15 +47,17 @@ class SystemCoordinator:
         self.blackboard = blackboard
         self.agent_pool = agent_pool
         self.summary_engine = summary_engine
-        
-        # ConfigManagerから設定パラメータを取得
+          # ConfigManagerから設定パラメータを取得
         self.num_agents = self.config_manager.agent.num_agents
         self.iterations = self.config_manager.agent.iterations
         self.use_summary = self.config_manager.agent.use_summary
-        self.use_parallel = self.config_manager.agent.use_parallel
-          # エラー回復設定（デフォルト値）
+        self.use_parallel = self.config_manager.agent.use_parallel        # エラー回復設定（デフォルト値）
         self.max_retry_attempts = 2
         self.failed_agents_threshold = 0.5  # 50%
+          # 実行統計カウンター
+        self.executed_iterations = 0
+        self.successful_iterations = 0
+        
         logger.info(f"システム調整器を初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
         logger.info(f"並列処理モード: {'プロセスベース' if self.use_parallel else '逐次実行'}")
 
@@ -70,18 +72,17 @@ class SystemCoordinator:
             実行結果辞書
         """
         agent_id, prompt, blackboard_data = task_data
-        
         try:
             # プロセス内でモジュールを再インポート
-            from MurmurNet.modules.config_manager import get_config
+            from MurmurNet.modules.config_manager import get_config_manager
             from MurmurNet.modules.model_factory import ModelFactory
             
             # 設定を取得
-            config_manager = get_config()
+            config_manager = get_config_manager()
             
             # モデルを初期化
             model_factory = ModelFactory()
-            model = model_factory.create_model(config_manager.model_type)
+            model = model_factory.create_model(config_manager.config.model.model_type)
             
             # プロンプト実行
             response = model.generate(prompt)
@@ -118,6 +119,9 @@ class SystemCoordinator:
         """
         logger.info(f"反復 {iteration+1}/{self.iterations} を開始")
         
+        # 実行カウンターを増加（開始時）
+        self.executed_iterations += 1
+        
         try:
             # 1. エージェント実行（並列または逐次）
             if self.use_parallel:
@@ -128,20 +132,21 @@ class SystemCoordinator:
             if not success:
                 logger.warning(f"反復 {iteration+1} でエージェント実行に問題が発生しました")
                 return False
-            
-            # 2. エージェント出力収集
+              # 2. エージェント出力収集
             agent_entries = self._collect_agent_outputs()
             
             # 3. 出力の要約（使用する場合）
             if self.use_summary and agent_entries:
                 await self._create_iteration_summary(iteration, agent_entries)
             
+            # 成功カウンターを更新
+            self.successful_iterations += 1
+            
             logger.info(f"反復 {iteration+1} が正常に完了しました")
             return True
         except Exception as e:
             logger.error(f"反復 {iteration+1} でエラーが発生しました: {e}")
-            raise MurmurNetError(f"反復処理エラー: {e}")
-
+            raise MurmurNetError(f"反復処理エラー: {e}")    
     async def _run_agents_parallel(self) -> bool:
         """
         エージェントをプロセスベース並列実行（GGML assertion error回避）
@@ -155,6 +160,35 @@ class SystemCoordinator:
             # 現在のプロンプトを構築
             prompt = self._build_common_prompt()
             
+            # エージェントプールが設定されている場合はそれを使用
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                logger.info("設定されたエージェントプールを使用")
+                # 並列でエージェントを実行
+                tasks = []
+                for i in range(self.num_agents):
+                    task = self.agent_pool.run_agent_async(i, prompt)
+                    tasks.append(task)
+                
+                # すべてのタスクを並列実行
+                responses = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # 結果を処理
+                successful_agents = 0
+                for i, response in enumerate(responses):
+                    if isinstance(response, Exception):
+                        # エラーメッセージを黒板に書き込み
+                        error_msg = f"エージェント{i}はエラーにより応答できませんでした: {response}"
+                        self.blackboard.write(f'agent_{i}_output', error_msg)
+                    else:
+                        successful_agents += 1
+                        # 成功した場合は結果を黒板に書き込み
+                        self.blackboard.write(f'agent_{i}_output', response)
+                
+                success_rate = successful_agents / self.num_agents
+                logger.info(f"エージェントプール実行完了: 成功率 {success_rate:.2%} ({successful_agents}/{self.num_agents})")
+                return success_rate >= self.failed_agents_threshold
+            
+            # デフォルトのプロセスベース実行
             # 黒板データを準備
             blackboard_data = {}
             if self.blackboard:
@@ -209,7 +243,6 @@ class SystemCoordinator:
             for i in range(self.num_agents):
                 self.blackboard.write(f'agent_{i}_output', f"エージェント{i}はプロセス実行エラーにより応答できませんでした")
             return False
-    
     def _run_agents_sequential(self) -> bool:
         """
         エージェントを逐次実行
@@ -219,6 +252,30 @@ class SystemCoordinator:
         """
         logger.info("エージェントを逐次実行中...")
         
+        # エージェントプールが設定されている場合はそれを使用
+        if hasattr(self, 'agent_pool') and self.agent_pool:
+            logger.info("設定されたエージェントプールを使用（逐次実行）")
+            prompt = self._build_common_prompt()
+            success_count = 0
+            
+            for i in range(self.num_agents):
+                try:
+                    # 非同期メソッドを同期的に実行
+                    import asyncio
+                    response = asyncio.run(self.agent_pool.run_agent_async(i, prompt))
+                    success_count += 1
+                    self.blackboard.write(f'agent_{i}_output', response)
+                    logger.debug(f"エージェント{i}の逐次実行が完了しました")
+                except Exception as e:
+                    logger.error(f"エージェント{i}実行エラー: {e}")
+                    error_msg = f"エージェント{i}はエラーにより応答できませんでした: {e}"
+                    self.blackboard.write(f'agent_{i}_output', error_msg)
+            
+            success_rate = success_count / self.num_agents
+            logger.info(f"逐次実行完了: 成功率 {success_rate:.2%} ({success_count}/{self.num_agents})")
+            return success_rate >= self.failed_agents_threshold
+        
+        # デフォルトの逐次実行
         success_count = 0
         for i in range(self.num_agents):
             try:
@@ -391,7 +448,9 @@ class SystemCoordinator:
         """
         return {
             "num_agents": self.num_agents,
-            "iterations": self.iterations,
+            "iterations": self.executed_iterations,  # 実際に実行された回数
+            "max_iterations": self.iterations,  # 設定上の最大回数
+            "successful_iterations": getattr(self, 'successful_iterations', 0),  # 成功した反復回数
             "parallel_mode": self.use_parallel,
             "summary_enabled": self.use_summary,
             "failed_agents_threshold": self.failed_agents_threshold,

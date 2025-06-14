@@ -74,31 +74,59 @@ except ImportError:
 
 def print_debug(slm):
     """デバッグモード時の詳細情報表示"""
-    print("\n[DEBUG] 黒板の内容:")
-    # 簡略化されたビューを使用
-    debug_view = slm.blackboard.get_debug_view()
-    for k, v in debug_view.items():
-        print(f"  {k}: {v}")
-    
-    print("\n[DEBUG] RAG結果:")
-    print(f"  {slm.blackboard.read('rag')}")
-    
-    # 要約結果を表示
-    if slm.use_summary:
-        print("\n[DEBUG] 要約結果:")
-        for i in range(slm.iterations):
-            summary = slm.blackboard.read(f'summary_{i}')
-            if summary:
-                print(f"  反復{i+1}の要約: {summary[:100]}...")
-    
-    print("\n[DEBUG] エージェント出力:")
-    for i in range(slm.num_agents):
-        output = slm.blackboard.read(f'agent_{i}_output')
-        if output:
-            # 長い出力は省略表示
-            if len(output) > 100:
-                output = output[:100] + "..."
-            print(f"  エージェント{i+1}: {output}")
+    try:
+        # システム統計情報を表示
+        stats = slm.get_stats()
+        print(f"\n[DEBUG] システム統計: {stats}")
+        
+        # 通信統計情報を表示
+        comm_stats = slm.get_communication_stats()
+        print(f"[DEBUG] 通信統計: {comm_stats}")
+        
+        # 黒板が利用可能な場合の情報表示
+        if slm.blackboard:
+            print("\n[DEBUG] 黒板の内容:")
+            # 簡略化されたビューを使用
+            try:
+                debug_view = slm.blackboard.get_debug_view()
+                for k, v in debug_view.items():
+                    print(f"  {k}: {v}")
+            except Exception as e:
+                print(f"  黒板ビュー取得エラー: {e}")
+            
+            print("\n[DEBUG] RAG結果:")
+            try:
+                rag_result = slm.blackboard.read('rag')
+                print(f"  {rag_result}")
+            except Exception:
+                print("  RAG結果の取得に失敗")
+            
+            # 要約結果を表示
+            if slm.use_summary:
+                print("\n[DEBUG] 要約結果:")
+                for i in range(slm.iterations):
+                    try:
+                        summary = slm.blackboard.read(f'summary_{i}')
+                        if summary:
+                            print(f"  反復{i+1}の要約: {summary[:100]}...")
+                    except Exception:
+                        print(f"  反復{i+1}の要約取得に失敗")
+            
+            print("\n[DEBUG] エージェント出力:")
+            for i in range(slm.num_agents):
+                try:
+                    output = slm.blackboard.read(f'agent_{i}_output')
+                    if output:
+                        # 長い出力は省略表示
+                        if len(output) > 100:
+                            output = output[:100] + "..."
+                        print(f"  エージェント{i+1}: {output}")
+                except Exception:
+                    print(f"  エージェント{i+1}の出力取得に失敗")
+        else:
+            print("\n[DEBUG] 黒板は利用できません（新システムモード）")
+    except Exception as e:
+        print(f"\n[DEBUG] デバッグ情報の表示中にエラー: {e}")
     print()
 
 async def chat_loop():
@@ -133,18 +161,36 @@ async def chat_loop():
             print("ファイルパスが正しいか確認してください")
         else:
             print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
-    
-    # SLMインスタンス作成
-    slm = DistributedSLM(config)
-      # RAGモードのチェック
-    from MurmurNet.modules.rag_retriever import RAGRetriever
-    rag = RAGRetriever(config)
-    if args.rag_mode == "zim" and rag.mode != "zim":
-        print("警告: ZIMモードを指定しましたが、ZIMモードになっていません")
-        print("以下の理由が考えられます:")
-        print("- libzimライブラリがインストールされていない")
-        print("- ZIMファイルのパスが間違っている")
-        print("- ZIMファイルが壊れている")
+      # SLMインスタンス作成
+    try:
+        slm = DistributedSLM(config)
+        print("分散SLMシステムの初期化が完了しました")
+        
+        # システム状態の確認
+        system_status = slm.get_system_status()
+        print(f"[システム情報] 互換性モード: {system_status['compatibility_mode']}")
+        print(f"[システム情報] パフォーマンス監視: {system_status['performance_monitoring']}")
+        
+    except Exception as e:
+        print(f"分散SLMシステムの初期化中にエラーが発生しました: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return      # RAGモードのチェック
+    try:
+        from MurmurNet.modules.rag_retriever import RAGRetriever
+        rag = RAGRetriever(config)
+        if args.rag_mode == "zim" and rag.mode != "zim":
+            print("警告: ZIMモードを指定しましたが、ZIMモードになっていません")
+            print("以下の理由が考えられます:")
+            print("- libzimライブラリがインストールされていない")
+            print("- ZIMファイルのパスが間違っている")
+            print("- ZIMファイルが壊れている")
+    except Exception as e:
+        print(f"RAGシステムの確認中にエラー: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
     
     print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
     print("終了するには 'quit' または 'exit' を入力してください")
@@ -162,12 +208,31 @@ async def chat_loop():
         print(f"[設定] ZIMファイル: {args.zim_path}")
     
     history = []
+      # 対話的環境かどうかをチェック
+    is_interactive = sys.stdin.isatty()
+    if not is_interactive:
+        print("警告: 非対話的環境で実行されています。標準入力から質問を読み取ります。")
     
     while True:
         try:
-            # ユーザー入力
-            user_input = input("\nあなた> ")
-            if user_input.lower() in ["quit", "exit", "終了"]:
+            # ユーザー入力（EOFError対応）
+            try:
+                if is_interactive:
+                    user_input = input("\nあなた> ")
+                else:
+                    # 非対話的環境では改行なしプロンプト
+                    user_input = input()
+            except EOFError:
+                # EOF (Ctrl+D/Ctrl+Z) が押された場合の処理
+                print("\n\n入力が終了しました。プログラムを終了します。")
+                break
+            except KeyboardInterrupt:
+                # Ctrl+C が押された場合
+                print("\n中断されました。終了するには 'exit' を入力するか、再度 Ctrl+C を押してください。")
+                continue
+            
+            # 終了コマンドチェック
+            if user_input.lower() in ["quit", "exit", "終了", "q"]:
                 break
             
             # 空入力はスキップ
@@ -196,12 +261,24 @@ async def chat_loop():
             history.append({"role": "assistant", "content": response})
             
         except KeyboardInterrupt:
-            print("\n中断されました。終了するには 'exit' を入力してください。")
+            print("\n\nプログラムを強制終了します。")
+            break
         except Exception as e:
             print(f"\nエラーが発生しました: {e}")
             if args.debug:
                 import traceback
                 traceback.print_exc()
+    
+    print("MurmurNet Console を終了しました。")
+    
+    # システムリソースのクリーンアップ
+    try:
+        if hasattr(slm, 'cleanup'):
+            slm.cleanup()
+        print("リソースのクリーンアップが完了しました。")
+    except Exception as e:
+        if args.debug:
+            print(f"クリーンアップ中にエラー: {e}")
 
 if __name__ == "__main__":
     asyncio.run(chat_loop())
