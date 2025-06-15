@@ -1,9 +1,31 @@
-﻿import logging
-from enum import Enum
-from dataclasses import dataclass
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Communication Interface モジュール
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+モジュール間通信の抽象化レイヤー
+BLACKBOARDへの直接依存を削減し、疎結合アーキテクチャを実現
+
+設計原則:
+- Interface Segregation Principle (ISP)
+- Dependency Inversion Principle (DIP)
+- 明確なAPI境界
+- 責務の分離
+
+作者: Yuhi Sonoki
+"""
+
+import logging
+from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List, Protocol, runtime_checkable
+from dataclasses import dataclass
+from enum import Enum
+
+logger = logging.getLogger('MurmurNet.CommunicationInterface')
+
 
 class MessageType(Enum):
+    """メッセージタイプの定義"""
     INPUT = "input"
     AGENT_OUTPUT = "agent_output"
     SUMMARY = "summary"
@@ -11,7 +33,7 @@ class MessageType(Enum):
     CONTEXT = "context"
     ERROR = "error"
     STATUS = "status"
-    # テストで使用される追加のメッセージタイプ
+    # Added from communication_interface.py
     USER_INPUT = "user_input"
     DATA_STORE = "data_store"
     AGENT_RESPONSE = "agent_response"
@@ -21,8 +43,10 @@ class MessageType(Enum):
     FINAL_RESPONSE = "final_response"
     INITIAL_SUMMARY = "initial_summary"
 
+
 @dataclass
 class Message:
+    """モジュール間通信用メッセージ"""
     message_type: MessageType
     sender: str
     recipient: Optional[str] = None
@@ -34,6 +58,7 @@ class Message:
         if self.timestamp is None:
             import time
             self.timestamp = time.time()
+
 
 @runtime_checkable
 class DataStorage(Protocol):
@@ -55,6 +80,7 @@ class DataStorage(Protocol):
         """データを削除"""
         ...
 
+
 @runtime_checkable
 class MessageBroker(Protocol):
     """メッセージブローカーの抽象インターフェース"""
@@ -71,41 +97,51 @@ class MessageBroker(Protocol):
         """購読を解除"""
         ...
 
+
 class CommunicationAdapter:
-    """BLACKBOARD適応アダプター"""
+    """
+    既存のBLACKBOARDシステムを新しい通信インターフェースに適応
+
+    責務:
+    - 既存システムとの互換性維持
+    - 段階的なマイグレーション支援
+    - パフォーマンスの最適化
+    """
     
     def __init__(self, blackboard=None):
+        """
+        通信アダプターの初期化
+
+        引数:
+            blackboard: 既存の黒板インスタンス
+        """
         self.blackboard = blackboard
         self.subscribers: Dict[MessageType, List] = {}
         self.logger = logging.getLogger('CommunicationAdapter')
-        # blackboardがない場合の代替ストレージ
-        self._fallback_storage: Dict[str, Any] = {}
         
     def store(self, key: str, value: Any) -> bool:
+        """データストレージインターフェースの実装"""
         try:
             if self.blackboard:
                 self.blackboard.write(key, value)
                 return True
-            else:
-                # 代替ストレージを使用
-                self._fallback_storage[key] = value
-                return True
+            return False
         except Exception as e:
             self.logger.error(f"ストレージエラー: {e}")
             return False
     
     def retrieve(self, key: str) -> Any:
+        """データ取得インターフェースの実装"""
         try:
             if self.blackboard:
                 return self.blackboard.read(key)
-            else:
-                # 代替ストレージから取得
-                return self._fallback_storage.get(key)
+            return None
         except Exception as e:
             self.logger.error(f"取得エラー: {e}")
             return None
     
     def exists(self, key: str) -> bool:
+        """存在確認インターフェースの実装"""
         try:
             if self.blackboard:
                 return self.blackboard.read(key) is not None
@@ -115,8 +151,10 @@ class CommunicationAdapter:
             return False
     
     def remove(self, key: str) -> bool:
+        """削除インターフェースの実装"""
         try:
             if self.blackboard:
+                # 黒板の実装に依存するため、空の値を設定
                 self.blackboard.write(key, None)
                 return True
             return False
@@ -125,20 +163,13 @@ class CommunicationAdapter:
             return False
     
     def publish(self, message: Message) -> bool:
+        """メッセージ発行インターフェースの実装"""
         try:
-            # DATA_STOREメッセージタイプの場合は特別な処理
-            if message.message_type == MessageType.DATA_STORE and isinstance(message.content, dict):
-                if 'key' in message.content and 'value' in message.content:
-                    self.store(message.content['key'], message.content['value'])
-                else:
-                    # 通常のキー生成でコンテンツを保存
-                    key = self._generate_key(message)
-                    self.store(key, message.content)
-            else:
-                # 通常のメッセージ処理
-                key = self._generate_key(message)
-                self.store(key, message.content)
+            # メッセージを適切なキーで黒板に書き込み
+            key = self._generate_key(message)
+            self.store(key, message.content)
             
+            # 購読者に通知
             if message.message_type in self.subscribers:
                 for callback in self.subscribers[message.message_type]:
                     try:
@@ -152,6 +183,7 @@ class CommunicationAdapter:
             return False
     
     def subscribe(self, message_type: MessageType, callback) -> bool:
+        """メッセージ購読インターフェースの実装"""
         try:
             if message_type not in self.subscribers:
                 self.subscribers[message_type] = []
@@ -162,6 +194,7 @@ class CommunicationAdapter:
             return False
     
     def unsubscribe(self, message_type: MessageType, callback) -> bool:
+        """購読解除インターフェースの実装"""
         try:
             if message_type in self.subscribers:
                 if callback in self.subscribers[message_type]:
@@ -173,25 +206,47 @@ class CommunicationAdapter:
             return False
     
     def _generate_key(self, message: Message) -> str:
+        """メッセージからキーを生成"""
         return f"{message.sender}_{message.message_type.value}"
-    
-    # BlackBoardインターフェース互換性のためのメソッド
-    def read(self, key: str) -> Any:
-        """BlackBoard互換のreadメソッド"""
-        return self.retrieve(key)
-    
-    def write(self, key: str, value: Any) -> bool:
-        """BlackBoard互換のwriteメソッド"""
-        return self.store(key, value)
+
 
 class ModuleCommunicationManager:
-    def __init__(self, storage=None, broker=None):
+    """
+    モジュール間通信の統合管理
+
+    責務:
+    - 通信チャネルの管理
+    - メッセージルーティング
+    - エラーハンドリング
+    - ログ記録
+    """
+
+    def __init__(self, storage: DataStorage = None, broker: MessageBroker = None):
+        """
+        通信マネージャーの初期化
+
+        引数:
+            storage: データストレージ実装
+            broker: メッセージブローカー実装
+        """
         self.storage = storage
         self.broker = broker
         self.logger = logging.getLogger('ModuleCommunicationManager')
-        self.registered_modules = {}
+
+        # モジュール登録
+        self.registered_modules: Dict[str, Any] = {}
         
     def register_module(self, module_name: str, module_instance: Any) -> bool:
+        """
+        モジュールを通信システムに登録
+
+        引数:
+            module_name: モジュール名
+            module_instance: モジュールインスタンス
+
+        戻り値:
+            登録成功の可否
+        """
         try:
             self.registered_modules[module_name] = module_instance
             self.logger.info(f"モジュール '{module_name}' を登録しました")
@@ -201,6 +256,15 @@ class ModuleCommunicationManager:
             return False
     
     def unregister_module(self, module_name: str) -> bool:
+        """
+        モジュールの登録を解除
+
+        引数:
+            module_name: モジュール名
+
+        戻り値:
+            解除成功の可否
+        """
         try:
             if module_name in self.registered_modules:
                 del self.registered_modules[module_name]
@@ -212,10 +276,20 @@ class ModuleCommunicationManager:
             return False
     
     def send_message(self, message: Message) -> bool:
+        """
+        メッセージを送信
+
+        引数:
+            message: 送信するメッセージ
+
+        戻り値:
+            送信成功の可否
+        """
         try:
             if self.broker:
                 return self.broker.publish(message)
             
+            # フォールバック: 直接配信
             if message.recipient and message.recipient in self.registered_modules:
                 recipient_module = self.registered_modules[message.recipient]
                 if hasattr(recipient_module, 'receive_message'):
@@ -228,6 +302,15 @@ class ModuleCommunicationManager:
             return False
     
     def get_data(self, key: str) -> Any:
+        """
+        データを取得
+
+        引数:
+            key: データキー
+
+        戻り値:
+            取得されたデータ
+        """
         try:
             if self.storage:
                 return self.storage.retrieve(key)
@@ -236,25 +319,17 @@ class ModuleCommunicationManager:
             self.logger.error(f"データ取得エラー: {e}")
             return None
     
-    def get_all_storage_data(self) -> Dict[str, Any]:
-        """ストレージの全データを取得"""
-        try:
-            if self.storage and hasattr(self.storage, '_fallback_storage'):
-                # CommunicationAdapterの代替ストレージから取得
-                return self.storage._fallback_storage.copy()
-            elif self.storage and hasattr(self.storage, 'blackboard') and self.storage.blackboard:
-                # BLACKBOARDから取得する場合
-                if hasattr(self.storage.blackboard, 'read_all'):
-                    return self.storage.blackboard.read_all()
-                else:
-                    # フォールバック: 空の辞書を返す
-                    return {}
-            return {}
-        except Exception as e:
-            self.logger.error(f"全データ取得エラー: {e}")
-            return {}
-    
     def set_data(self, key: str, value: Any) -> bool:
+        """
+        データを設定
+
+        引数:
+            key: データキー
+            value: 設定する値
+
+        戻り値:
+            設定成功の可否
+        """
         try:
             if self.storage:
                 return self.storage.store(key, value)
@@ -262,33 +337,43 @@ class ModuleCommunicationManager:
         except Exception as e:
             self.logger.error(f"データ設定エラー: {e}")
             return False
-    
-    def publish(self, message: Message) -> bool:
-        """テスト互換性のためのpublishメソッド"""
-        return self.send_message(message)
-    
-    def get_stats(self) -> Dict[str, Any]:
-        """通信統計情報を取得"""
-        try:
-            stats = {
-                'registered_modules': len(self.registered_modules),
-                'module_names': list(self.registered_modules.keys()),
-                'storage_available': self.storage is not None,
-                'broker_available': self.broker is not None
-            }
-            
-            # ストレージがある場合は追加の統計情報を取得
-            if self.storage and hasattr(self.storage, 'get_stats'):
-                stats.update(self.storage.get_stats())
-            
-            return stats
-        except Exception as e:
-            self.logger.error(f"統計情報取得エラー: {e}")
-            return {}
 
-def create_communication_system(blackboard=None):
+
+# ファクトリー関数
+def create_communication_system(blackboard=None) -> ModuleCommunicationManager:
+    """
+    通信システムのファクトリー関数
+
+    引数:
+        blackboard: 既存の黒板インスタンス（オプション）
+
+    戻り値:
+        設定された通信マネージャー
+    """
     adapter = CommunicationAdapter(blackboard)
     return ModuleCommunicationManager(storage=adapter, broker=adapter)
 
-def create_message(message_type, sender, content, recipient=None, metadata=None):
-    return Message(message_type, sender, recipient, content, metadata)
+
+# 便利な関数
+def create_message(message_type: MessageType, sender: str, content: Any,
+                  recipient: str = None, metadata: Dict[str, Any] = None) -> Message:
+    """
+    メッセージを作成する便利な関数
+
+    引数:
+        message_type: メッセージタイプ
+        sender: 送信者
+        content: メッセージ内容
+        recipient: 受信者（オプション）
+        metadata: メタデータ（オプション）
+
+    戻り値:
+        作成されたメッセージ
+    """
+    return Message(
+        message_type=message_type,
+        sender=sender,
+        recipient=recipient,
+        content=content,
+        metadata=metadata
+    )

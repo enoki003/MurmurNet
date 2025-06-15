@@ -21,6 +21,8 @@ from typing import Dict, Any, List, Optional, Tuple, Callable
 from MurmurNet.modules.model_factory import get_shared_model
 from MurmurNet.modules.common import AgentExecutionError, ThreadSafetyError
 from MurmurNet.modules.config_manager import get_config
+from MurmurNet.modules.path_utils import resolve_path
+import yaml
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
@@ -112,7 +114,28 @@ class AgentPoolManager:
         
         # エージェント毎の個別ロック管理
         self.lock_manager = AgentLockManager(self.num_agents)
-        self._load_role_templates()
+
+        # Load role templates from YAML
+        roles_cfg_path_str = self.config_manager.agent.roles_config_path
+        abs_roles_path = resolve_path(roles_cfg_path_str)
+        try:
+            with open(abs_roles_path, 'r', encoding='utf-8') as f:
+                self.role_templates = yaml.safe_load(f)
+            if not isinstance(self.role_templates, dict): # Basic validation
+                raise ValueError("Roles config is not a dictionary.")
+            logger.info(f"Loaded agent roles from: {abs_roles_path}")
+        except FileNotFoundError:
+            logger.error(f"Agent roles config file not found: {abs_roles_path}. Using minimal fallback.")
+            # Define a very basic fallback if file not found
+            self.role_templates = {
+                "default": [{"role": "汎用AI", "system": "あなたの質問に答えます。", "temperature": 0.7}]
+            }
+        except Exception as e:
+            logger.error(f"Error loading agent roles from {abs_roles_path}: {e}. Using minimal fallback.")
+            self.role_templates = { # Fallback
+                "default": [{"role": "汎用AI", "system": "あなたの質問に答えます。", "temperature": 0.7}]
+            }
+
         self._load_roles()
         
         # 並列モードの場合の設定
@@ -120,50 +143,6 @@ class AgentPoolManager:
             logger.info("並列処理モードを初期化しました（個別ロック使用）")
         
         logger.info(f"エージェントプールを初期化しました (エージェント数: {self.num_agents})")
-
-    def _load_role_templates(self) -> None:
-        """
-        役割テンプレートの初期化（内部メソッド）
-        
-        質問タイプ別の役割テンプレートを定義
-        """
-        # 質問タイプ別の役割テンプレート定義
-        self.role_templates = {
-            # 議論型質問用の役割
-            "discussion": [
-                {"role": "多角的視点AI", "system": "あなたは多角的思考のスペシャリストです。論点を多面的に分析して議論の全体像を示してください。", "temperature": 0.7},
-                {"role": "批判的思考AI", "system": "あなたは批判的思考の専門家です。前提や論理に疑問を投げかけ、新たな視点を提供してください。", "temperature": 0.8},
-                {"role": "実証主義AI", "system": "あなたはデータと証拠を重視する科学者です。事実に基づいた分析と検証可能な情報を提供してください。", "temperature": 0.6},
-                {"role": "倫理的視点AI", "system": "あなたは倫理学者です。道徳的・倫理的観点から議論を分析し、価値判断の視点を提供してください。", "temperature": 0.7}
-            ],
-            
-            # 計画・構想型質問用の役割
-            "planning": [
-                {"role": "実用主義AI", "system": "あなたは実用主義の専門家です。実行可能で具体的なアプローチを提案してください。", "temperature": 0.7},
-                {"role": "創造的思考AI", "system": "あなたは創造的思考のスペシャリストです。革新的なアイデアと可能性を探索してください。", "temperature": 0.9},
-                {"role": "戦略的視点AI", "system": "あなたは戦略家です。長期的な視点と全体像を考慮した計画を立案してください。", "temperature": 0.7},
-                {"role": "リスク分析AI", "system": "あなたはリスク管理専門家です。潜在的な問題点と対策を特定してください。", "temperature": 0.6}
-            ],
-            
-            # 情報提供型質問用の役割
-            "informational": [
-                {"role": "事実提供AI", "system": "あなたは情報の専門家です。正確で検証可能な事実情報を簡潔に提供してください。", "temperature": 0.5},
-                {"role": "教育的視点AI", "system": "あなたは教育者です。わかりやすく体系的に情報を整理して説明してください。", "temperature": 0.6},
-                {"role": "比較分析AI", "system": "あなたは比較分析の専門家です。異なる視点や選択肢を公平に比較してください。", "temperature": 0.7}
-            ],
-            
-            # 一般会話型質問用の役割
-            "conversational": [
-                {"role": "共感的リスナーAI", "system": "あなたは共感的なリスナーです。相手の感情や意図を理解し、温かみのある応答をしてください。", "temperature": 0.8},
-                {"role": "実用アドバイザーAI", "system": "あなたは日常の実用知識に詳しいアドバイザーです。役立つ情報や提案を提供してください。", "temperature": 0.7}
-            ],
-            
-            # デフォルト役割（どのタイプにも当てはまらない場合）
-            "default": [
-                {"role": "バランス型AI", "system": "あなたは総合的な分析ができるバランス型AIです。公平で多面的な視点から回答してください。", "temperature": 0.7},
-                {"role": "専門知識AI", "system": "あなたは幅広い知識を持つ専門家です。正確でわかりやすい情報を提供してください。", "temperature": 0.6}
-            ]
-        }
 
     def _load_roles(self) -> None:
         """役割の割り当て（内部メソッド）"""

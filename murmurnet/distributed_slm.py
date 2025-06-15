@@ -30,7 +30,7 @@ from MurmurNet.modules.communication_interface import (
     create_message
 )
 from MurmurNet.modules.blackboard import Blackboard
-from MurmurNet.modules.module_system_coordinator import ModuleSystemCoordinator
+from MurmurNet.modules.system_coordinator_new import SystemCoordinator as NewSystemCoordinator # Alias to avoid immediate name clash if old one is still referenced
 from MurmurNet.modules.module_adapters import create_module_adapters, BlackboardBridgeAdapter
 from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.agent_pool import AgentPoolManager
@@ -82,16 +82,15 @@ class DistributedSLM:
             compatibility_mode: 既存システムとの互換モード
         """
         # ConfigManagerから設定を取得
-        self.config_manager = get_config()
-        self.config = config or self.config_manager.to_dict()
+        self.settings_obj = get_config(config_path_or_dict=config)
         
         # ロガー設定
-        self.logger = setup_logger(self.config)
+        self.logger = setup_logger(self.settings_obj.to_dict())
         
         # パフォーマンスモニタリング
         self.performance = PerformanceMonitor(
-            enabled=self.config_manager.logging.performance_monitoring,
-            memory_tracking=self.config_manager.logging.memory_tracking
+            enabled=self.settings_obj.logging.performance_monitoring,
+            memory_tracking=self.settings_obj.logging.memory_tracking
         )
         
         # 初期メモリスナップショット
@@ -103,18 +102,19 @@ class DistributedSLM:
         # 互換性モードの設定
         self.compatibility_mode = compatibility_mode
           # 基本動作パラメータ（渡された設定を優先）
-        self.num_agents = config.get('num_agents', self.config_manager.agent.num_agents) if config else self.config_manager.agent.num_agents
-        self.iterations = config.get('iterations', self.config_manager.agent.iterations) if config else self.config_manager.agent.iterations
-        self.use_summary = config.get('use_summary', self.config_manager.agent.use_summary) if config else self.config_manager.agent.use_summary
-        self.use_parallel = config.get('use_parallel', self.config_manager.agent.use_parallel) if config else self.config_manager.agent.use_parallel
-        self.use_memory = config.get('use_memory', self.config_manager.agent.use_memory) if config else self.config_manager.agent.use_memory
+        self.num_agents = self.settings_obj.agent.num_agents
+        self.iterations = self.settings_obj.agent.iterations
+        self.use_summary = self.settings_obj.agent.use_summary
+        self.use_parallel = self.settings_obj.agent.use_parallel
+        self.use_memory = self.settings_obj.agent.use_memory
+        self.memory_question_patterns = self.settings_obj.agent.memory_question_patterns
         
         # 遅延初期化フラグ
         self._modules_initialized = False
         self._initialization_lock = threading.Lock()
         
         # 基本モジュールの初期化
-        self.input_reception = InputReception(self.config)
+        self.input_reception = InputReception(self.settings_obj.to_dict())
         
         # レガシーシステム（互換性モード用）
         self._legacy_blackboard = blackboard or None
@@ -183,15 +183,15 @@ class DistributedSLM:
             from MurmurNet.modules.output_agent import OutputAgent
               # レガシーモジュールの初期化
             if not self._legacy_blackboard:
-                self._legacy_blackboard = Blackboard(self.config)
+                self._legacy_blackboard = Blackboard(self.settings_obj.to_dict())
             
-            legacy_agent_pool = AgentPoolManager(self.config, self._legacy_blackboard)
-            legacy_summary_engine = SummaryEngine(self.config)  # SummaryEngineはconfigのみ受け取る
-            legacy_conversation_memory = ConversationMemory(self.config, self._legacy_blackboard)
+            legacy_agent_pool = AgentPoolManager(self.settings_obj.to_dict(), self._legacy_blackboard)
+            legacy_summary_engine = SummaryEngine(self.settings_obj.to_dict())  # SummaryEngineはconfigのみ受け取る
+            legacy_conversation_memory = ConversationMemory(self.settings_obj.to_dict(), self._legacy_blackboard)
               # RAGRetrieverとOutputAgentの初期化（configパラメータのみ）
-            self._rag_retriever = RAGRetriever(self.config)
+            self._rag_retriever = RAGRetriever(self.settings_obj.to_dict())
               # OutputAgentの初期化
-            self._output_agent = OutputAgent(self.config)
+            self._output_agent = OutputAgent(self.settings_obj.to_dict())
             
             # アダプターを作成
             self._module_adapters = create_module_adapters(
@@ -217,11 +217,11 @@ class DistributedSLM:
         """
         try:
             # 新しいシステム調整器を初期化
-            self._system_coordinator = ModuleSystemCoordinator(
+            self._system_coordinator = NewSystemCoordinator(
+                config=self.settings_obj.to_dict(), # Pass the main config dict
                 blackboard=self._legacy_blackboard if self.compatibility_mode else None,
                 agent_pool=self._module_adapters.get('agent_pool') if self.compatibility_mode else None,
-                summary_engine=self._module_adapters.get('summary_engine') if self.compatibility_mode else None,
-                config=self.config
+                summary_engine=self._module_adapters.get('summary_engine') if self.compatibility_mode else None
             )
             
             self.logger.info("新システムの初期化が完了しました")
@@ -240,20 +240,8 @@ class DistributedSLM:
         戻り値:
             会話記憶に関連する質問ならTrue
         """
-        # 記憶関連の質問パターン
-        memory_patterns = [
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(の|は|を)(なに|何|なん)と(言い|いい|呼び|よび|よん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(覚え|おぼえ)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の(趣味|しゅみ)(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(は|が)(なに|何|なん)(が好き|を好きと言いました)",
-            r"(覚え|おぼえ)てる",
-            r"(覚え|おぼえ)てます",
-            r"(私|僕|俺|わたし|ぼく|おれ)について",
-        ]
-        
         # いずれかのパターンにマッチしたら記憶関連の質問と判定
-        for pattern in memory_patterns:
+        for pattern in self.memory_question_patterns:
             if re.search(pattern, text, re.IGNORECASE):
                 return True
         return False
@@ -360,7 +348,7 @@ class DistributedSLM:
             
             if not hasattr(self, '_rag_retriever'):
                 # RAGRetrieverはconfigパラメータのみを受け取る
-                self._rag_retriever = RAGRetriever(self.config)
+                self._rag_retriever = RAGRetriever(self.settings_obj.to_dict())
             
             # RAG検索実行
             rag_results = self._rag_retriever.retrieve(input_text)
@@ -500,10 +488,10 @@ class DistributedSLM:
             
             if not hasattr(self, '_output_agent'):
                 if self.compatibility_mode and self._legacy_blackboard:
-                    self._output_agent = OutputAgent(self.config, self._legacy_blackboard)
+                    self._output_agent = OutputAgent(self.settings_obj.to_dict(), self._legacy_blackboard)
                 else:
                     # 新システム用のOutputAgentが実装されるまでは既存版を使用
-                    self._output_agent = OutputAgent(self.config)
+                    self._output_agent = OutputAgent(self.settings_obj.to_dict())
             
             # 最終レスポンス生成
             if self.compatibility_mode and self._legacy_blackboard:

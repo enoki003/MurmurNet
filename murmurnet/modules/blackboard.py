@@ -66,7 +66,7 @@ class Blackboard:
         self.debug = self.config_manager.logging.debug
         
         # 保持するキー（ターンをまたいで保持）
-        self.persistent_keys = {'conversation_context', 'key_facts', 'history_summary'}
+        self.persistent_keys = set(self.config_manager.memory.persistent_keys)
         
         # 観察者パターン（弱参照で循環参照を回避）
         self._observers: weakref.WeakSet = weakref.WeakSet()
@@ -237,27 +237,6 @@ class Blackboard:
                 
         except Exception as e:
             raise BlackboardError(f"履歴取得エラー: {e}")
-    
-    def get_debug_view(self) -> Dict[str, str]:
-        """
-        デバッグ用の簡略化されたビューを取得
-        
-        戻り値:
-            デバッグ用の辞書
-        """
-        try:
-            with self._lock:
-                debug_view = {}
-                for key, value in self._memory.items():
-                    if isinstance(value, str):
-                        display_value = value[:100] + "..." if len(value) > 100 else value
-                    else:
-                        display_value = str(value)[:100]
-                    debug_view[key] = display_value
-                return debug_view
-                
-        except Exception as e:
-            raise BlackboardError(f"デバッグビュー取得エラー: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
         """統計情報を取得"""

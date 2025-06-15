@@ -32,6 +32,19 @@ class AgentConfig:
     use_summary: bool = True
     use_memory: bool = True
     role_type: str = "default"
+    roles_config_path: str = "murmurnet/roles_config/default_roles.yaml"
+    memory_question_patterns: List[str] = field(default_factory=lambda: [
+        r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(なに|何|なん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)(の|は|を)(なに|何|なん)と(言い|いい|呼び|よび|よん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(覚え|おぼえ)",
+        r"(私|僕|俺|わたし|ぼく|おれ)の(趣味|しゅみ)(は|を)(なに|何|なん)",
+        r"(私|僕|俺|わたし|ぼく|おれ)(は|が)(なに|何|なん)(が好き|を好きと言いました)",
+        r"(覚え|おぼえ)てる",
+        r"(覚え|おぼえ)てます",
+        r"(私|僕|俺|わたし|ぼく|おれ)について"
+    ])
+    coordinator_max_retry_attempts: int = 2
+    coordinator_failed_agents_threshold: float = 0.5
     
     def __post_init__(self):
         if self.num_agents < 1 or self.num_agents > 10:
@@ -107,6 +120,7 @@ class MemoryConfig:
     blackboard_history_limit: int = 100
     max_summary_tokens: int = 200
     max_history_entries: int = 10
+    persistent_keys: List[str] = field(default_factory=lambda: ["conversation_context", "key_facts", "history_summary"])
     
     def __post_init__(self):
         if self.conversation_memory_limit < 1 or self.conversation_memory_limit > 100:
@@ -140,6 +154,10 @@ class MurmurNetConfig:
             'use_summary': self.agent.use_summary,
             'use_memory': self.agent.use_memory,
             'role_type': self.agent.role_type,
+            'roles_config_path': self.agent.roles_config_path,
+            'memory_question_patterns': self.agent.memory_question_patterns,
+            'coordinator_max_retry_attempts': self.agent.coordinator_max_retry_attempts,
+            'coordinator_failed_agents_threshold': self.agent.coordinator_failed_agents_threshold,
             
             # Model settings
             'model_type': self.model.model_type,
@@ -170,6 +188,7 @@ class MurmurNetConfig:
             'blackboard_history_limit': self.memory.blackboard_history_limit,
             'max_summary_tokens': self.memory.max_summary_tokens,
             'max_history_entries': self.memory.max_history_entries,
+            'persistent_keys': self.memory.persistent_keys,
         }
 
 
@@ -285,15 +304,30 @@ class ConfigManager:
         """設定をマージ"""
         
         # Agent設定
-        if 'agent' in raw_config or any(key in raw_config for key in ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type']):
-            agent_config = raw_config.get('agent', {})
+        agent_keys_to_check = ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type', 'roles_config_path', 'memory_question_patterns', 'coordinator_max_retry_attempts', 'coordinator_failed_agents_threshold']
+        if 'agent' in raw_config or any(key in raw_config for key in agent_keys_to_check):
+            agent_config_data = raw_config.get('agent', {})
             # トップレベルの値もagent設定としてマージ
-            for key in ['num_agents', 'iterations', 'use_parallel', 'use_summary', 'use_memory', 'role_type']:
-                if key in raw_config:
-                    agent_config[key] = raw_config[key]
+            for key in agent_keys_to_check:
+                if key in raw_config: # Prioritize top-level if it exists
+                    agent_config_data[key] = raw_config[key]
+                elif key in agent_config_data: # Use value from 'agent' section if top-level doesn't exist
+                    pass # Value already in agent_config_data
+                # If key is not in raw_config (top-level) and not in agent_config_data, it will take default from AgentConfig
+
+            # Ensure all fields from AgentConfig are considered for the new_agent_fields dictionary
+            current_agent_fields_dict = config.agent.__dict__
+            new_agent_fields = {**current_agent_fields_dict} # start with defaults
+
+            for key, value in agent_config_data.items():
+                if hasattr(config.agent, key): # Check if the key is a valid field in AgentConfig
+                    new_agent_fields[key] = value
             
-            if agent_config:
-                config.agent = AgentConfig(**{**config.agent.__dict__, **agent_config})
+            # Filter out keys not in AgentConfig dataclass before creating the instance
+            from dataclasses import fields
+            agent_dataclass_fields = {f.name for f in fields(AgentConfig)}
+            filtered_agent_fields = {k: v for k, v in new_agent_fields.items() if k in agent_dataclass_fields}
+            config.agent = AgentConfig(**filtered_agent_fields)
         
         # Model設定
         if 'model' in raw_config or any(key in raw_config for key in ['model_type', 'model_path', 'chat_template', 'n_ctx', 'n_threads', 'temperature', 'max_tokens']):
@@ -329,15 +363,27 @@ class ConfigManager:
                 config.logging = LoggingConfig(**{**config.logging.__dict__, **logging_config})
         
         # Memory設定
-        if 'memory' in raw_config or any(key in raw_config for key in ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries']):
-            memory_config = raw_config.get('memory', {})
-            # トップレベルの値もmemory設定としてマージ
-            for key in ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries']:
-                if key in raw_config:
-                    memory_config[key] = raw_config[key]
-            
-            if memory_config:
-                config.memory = MemoryConfig(**{**config.memory.__dict__, **memory_config})
+        memory_data_from_yaml = raw_config.get('memory', {})
+        # Include direct top-level keys for backward compatibility for other memory settings
+        for key in ['conversation_memory_limit', 'summary_max_length', 'blackboard_history_limit', 'max_summary_tokens', 'max_history_entries', 'persistent_keys']:
+            if key in raw_config and key not in memory_data_from_yaml: # only if not already set by 'memory' section
+                memory_data_from_yaml[key] = raw_config[key]
+
+        # Now apply these to the dataclass fields
+        # Ensure all fields from MemoryConfig are considered for the new_memory_fields dictionary
+        current_memory_fields_dict = config.memory.__dict__
+        new_memory_fields = {**current_memory_fields_dict} # start with defaults
+
+        for key, value in memory_data_from_yaml.items():
+            if hasattr(config.memory, key): # Check if the key is a valid field in MemoryConfig
+                new_memory_fields[key] = value
+
+        # Filter out keys not in MemoryConfig dataclass before creating the instance
+        # to prevent "TypeError: __init__() got an unexpected keyword argument"
+        from dataclasses import fields
+        memory_dataclass_fields = {f.name for f in fields(MemoryConfig)}
+        filtered_memory_fields = {k: v for k, v in new_memory_fields.items() if k in memory_dataclass_fields}
+        config.memory = MemoryConfig(**filtered_memory_fields)
         
         return config
     

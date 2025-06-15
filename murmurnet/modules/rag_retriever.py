@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from MurmurNet.modules.config_manager import get_config
+from MurmurNet.modules.path_utils import resolve_path
 
 logger = logging.getLogger('MurmurNet.RAGRetriever')
 
@@ -89,7 +90,8 @@ class RAGRetriever:
             logger.error("libzim is required for ZIM mode")
             return
             
-        path = self.config_manager.rag.zim_path
+        raw_zim_path = self.config_manager.rag.zim_path
+        path = resolve_path(raw_zim_path) if raw_zim_path else ""
         if not path or not os.path.exists(path):
             logger.error(f"ZIM file not found: {path}")
             return
@@ -128,7 +130,7 @@ class RAGRetriever:
             return self._retrieve_knowledge_base(query)
         else:
             return "サポートされていない検索モードです。"
-    
+
     def _retrieve_zim(self, query: str) -> str:
         """ZIMファイルから検索"""
         try:
@@ -139,43 +141,31 @@ class RAGRetriever:
             search_query = Query().set_query(query)
             results = searcher.search(search_query)
             
-            # 結果をリストに変換して数を確認
-            result_list = []
-            try:
-                for i in range(self.top_k):
-                    result = results.get_next()
-                    if result:
-                        result_list.append(result)
-                    else:
-                        break
-            except:
-                # 結果がない場合
-                pass
-            
             if self.debug:
-                logger.debug(f"ZIM検索: クエリ='{query}', ヒット={len(result_list)}")
+                logger.debug(f"ZIM検索: クエリ='{query}', ヒット={results.get_matches_estimated()}")
                 
-            if len(result_list) == 0:
+            if results.get_matches_estimated() == 0:
                 return "検索結果が見つかりませんでした。"
+
             content_results = []
-            for result in result_list:
-                try:
-                    entry = self.zim_archive.get_entry_by_path(result.get_path())
-                    if not entry:
-                        continue
-                        
-                    content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
-                    if entry.get_mime_type() == "text/html":
-                        content = _html_to_text(content)
-                        
-                    if len(content) > 500:
-                        content = content[:500] + "..."
-                        
-                    title = entry.title
-                    content_results.append(f"【{title}】 {content}")
-                except Exception as e:
-                    logger.warning(f"エントリ処理エラー: {e}")
+            for i in range(min(self.top_k, results.get_matches_estimated())):
+                result = results.get_next()
+                if not result:
                     continue
+
+                entry = self.zim_archive.get_entry_by_path(result.get_path())
+                if not entry:
+                    continue
+
+                content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
+                if entry.get_mime_type() == "text/html":
+                    content = _html_to_text(content)
+
+                if len(content) > 500:
+                    content = content[:500] + "..."
+
+                title = entry.title
+                content_results.append(f"【{title}】 {content}")
                 
             return "\n\n".join(content_results) if content_results else "検索結果が見つかりませんでした。"
             

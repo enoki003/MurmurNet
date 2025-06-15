@@ -59,8 +59,8 @@ class SystemCoordinator:
         self.process_agent_manager = ProcessAgentManager()
         
         # エラー回復設定（デフォルト値）
-        self.max_retry_attempts = 2
-        self.failed_agents_threshold = 0.5  # 50%
+        self.max_retry_attempts = self.config_manager.agent.coordinator_max_retry_attempts
+        self.failed_agents_threshold = self.config_manager.agent.coordinator_failed_agents_threshold
         
         logger.info(f"システム調整器を初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
         logger.info(f"並列処理モード: {'プロセスベース' if self.use_parallel else '逐次実行'}")

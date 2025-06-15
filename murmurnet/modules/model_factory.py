@@ -13,6 +13,7 @@ import os
 from typing import Dict, Any, Optional, Union, List
 from abc import ABC, abstractmethod
 from MurmurNet.modules.config_manager import get_config
+from MurmurNet.modules.path_utils import resolve_path
 
 # 条件付きインポート
 try:
@@ -74,12 +75,14 @@ class LlamaModel(BaseModel):
         super().__init__(self.config)
         
         # ConfigManagerから直接設定値を取得
-        self.model_path = config_manager.model.model_path
+        raw_model_path = config_manager.model.model_path
+        self.model_path = resolve_path(raw_model_path) if raw_model_path else ""
         self.n_ctx = config_manager.model.n_ctx
         self.n_threads = config_manager.model.n_threads
         self.temperature = config_manager.model.temperature
         self.max_tokens = config_manager.model.max_tokens
-        self.chat_template = config_manager.model.chat_template
+        raw_chat_template = config_manager.model.chat_template
+        self.chat_template = resolve_path(raw_chat_template) if raw_chat_template else ""
           # Llamaモデルの初期化
         self._llm = None
         self._initialization_attempted = False
