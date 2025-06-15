@@ -16,14 +16,20 @@ import asyncio
 from pathlib import Path
 import logging
 
-# murmurnetパスを追加
-current_dir = Path(__file__).resolve().parent
-project_root = current_dir.parent
-murmurnet_dir = project_root / "MurmurNet"
-sys.path.append(str(project_root))  # プロジェクトルートをパスに追加
+# MurmurNetのルートディレクトリをPythonパスに追加
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
 
 # ここでモジュールをインポート
-from MurmurNet.distributed_slm import DistributedSLM
+try:
+    from MurmurNet.distributed_slm import DistributedSLM
+    from Database.zim_reader import ZIMReader
+    print("必要なモジュールが正常にインポートされました")
+except ImportError as e:
+    print(f"モジュールのインポートエラー: {e}")
+    print("必要なファイルが不足している可能性があります")
+    sys.exit(1)
 
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
@@ -61,7 +67,7 @@ if args.log:
 
 # libzimがインストールされているか確認
 try:
-    from libzim.reader import Archive
+    import libzim
     HAS_LIBZIM = True
     print("libzimライブラリが利用可能です")
 except ImportError:
@@ -72,85 +78,61 @@ except ImportError:
     if args.rag_mode == "zim":
         print("ZIMモードが指定されましたが、libzimがないため検索機能が制限されます")
 
-def print_debug(slm):
+def print_debug(distributed_slm):
     """デバッグモード時の詳細情報表示"""
     try:
         # システム統計情報を表示
-        stats = slm.get_stats()
-        print(f"\n[DEBUG] システム統計: {stats}")
+        if hasattr(distributed_slm, 'get_stats'):
+            stats = distributed_slm.get_stats()
+            print(f"\n[DEBUG] システム統計: {stats}")
         
         # 通信統計情報を表示
-        comm_stats = slm.get_communication_stats()
-        print(f"[DEBUG] 通信統計: {comm_stats}")
+        if hasattr(distributed_slm, 'get_communication_stats'):
+            comm_stats = distributed_slm.get_communication_stats()
+            print(f"[DEBUG] 通信統計: {comm_stats}")
         
-        # 黒板が利用可能な場合の情報表示
-        if slm.blackboard:
-            print("\n[DEBUG] 黒板の内容:")
-            # 簡略化されたビューを使用
-            try:
-                debug_view = slm.blackboard.get_debug_view()
-                for k, v in debug_view.items():
-                    print(f"  {k}: {v}")
-            except Exception as e:
-                print(f"  黒板ビュー取得エラー: {e}")
-            
-            print("\n[DEBUG] RAG結果:")
-            try:
-                rag_result = slm.blackboard.read('rag')
-                print(f"  {rag_result}")
-            except Exception:
-                print("  RAG結果の取得に失敗")
-            
-            # 要約結果を表示
-            if slm.use_summary:
-                print("\n[DEBUG] 要約結果:")
-                for i in range(slm.iterations):
-                    try:
-                        summary = slm.blackboard.read(f'summary_{i}')
-                        if summary:
-                            print(f"  反復{i+1}の要約: {summary[:100]}...")
-                    except Exception:
-                        print(f"  反復{i+1}の要約取得に失敗")
-            
-            print("\n[DEBUG] エージェント出力:")
-            for i in range(slm.num_agents):
-                try:
-                    output = slm.blackboard.read(f'agent_{i}_output')
-                    if output:
-                        # 長い出力は省略表示
-                        if len(output) > 100:
-                            output = output[:100] + "..."
-                        print(f"  エージェント{i+1}: {output}")
-                except Exception:
-                    print(f"  エージェント{i+1}の出力取得に失敗")
-        else:
-            print("\n[DEBUG] 黒板は利用できません（新システムモード）")
+        # システム状態を表示
+        system_status = distributed_slm.get_system_status()
+        print(f"\n[DEBUG] システム状態: {system_status}")
+        
     except Exception as e:
         print(f"\n[DEBUG] デバッグ情報の表示中にエラー: {e}")
     print()
 
 async def chat_loop():
     """会話ループのメイン関数"""
-    # 設定
-    config = {
-        # "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
-        # "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
-        "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
-        "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",        "num_agents": args.agents,
-        "iterations": args.iter,
-        "use_summary": not args.no_summary,
-        "use_parallel": args.parallel,
-        "debug": args.debug,
-        # RAG設定
-        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
-        "rag_score_threshold": 0.5,
-        "rag_top_k": 3,
-        "embedding_model": "all-MiniLM-L6-v2",
-        # 並列処理の安全性向上オプション
-        "safe_parallel": args.safe_parallel,
-        "max_workers": args.max_workers if args.max_workers > 0 else None,
-        "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
-    }
+    # 設定ファイルを読み込み
+    config_path = os.path.join(os.path.dirname(__file__), '..', 'config.yaml')
+    
+    # 設定を読み込み
+    config = None
+    if os.path.exists(config_path):
+        try:
+            import yaml
+            with open(config_path, 'r', encoding='utf-8') as file:
+                config = yaml.safe_load(file)
+                print("設定ファイルを読み込みました")
+        except Exception as e:
+            print(f"設定ファイルの読み込みエラー: {e}")
+    
+    if config is None:
+        print("デフォルト設定を使用します")
+        config = {
+            "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
+            "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
+            "num_agents": args.agents,
+            "iterations": args.iter,
+            "use_summary": not args.no_summary,
+            "use_parallel": args.parallel,
+            "debug": args.debug,
+            "rag_mode": args.rag_mode,
+            "rag_score_threshold": 0.5,
+            "rag_top_k": 3,
+            "embedding_model": "all-MiniLM-L6-v2",
+            "safe_parallel": args.safe_parallel,
+            "max_workers": args.max_workers if args.max_workers > 0 else None,
+            "use_global_lock": True,
+        }
 
     # ZIMモードの場合、パスを追加
     if args.rag_mode == "zim":
@@ -160,32 +142,43 @@ async def chat_loop():
             print(f"警告: 指定されたZIMファイルが見つかりません: {args.zim_path}")
             print("ファイルパスが正しいか確認してください")
         else:
-            print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
-      # SLMインスタンス作成
+            print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")      # SLMインスタンス作成
+    print("分散SLMシステムを初期化中...")
     try:
-        slm = DistributedSLM(config)
+        # 設定を一時ファイルに保存
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False, encoding='utf-8') as f:
+            import yaml
+            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+            temp_config_path = f.name
+        
+        try:
+            distributed_slm = DistributedSLM(temp_config_path)
+            print("分散SLMシステムが正常に初期化されました")
+        finally:
+            # 一時ファイルを削除
+            os.unlink(temp_config_path)
+            
         print("分散SLMシステムの初期化が完了しました")
         
         # システム状態の確認
-        system_status = slm.get_system_status()
-        print(f"[システム情報] 互換性モード: {system_status['compatibility_mode']}")
-        print(f"[システム情報] パフォーマンス監視: {system_status['performance_monitoring']}")
+        system_status = distributed_slm.get_system_status()
+        print(f"[システム情報] 互換性モード: {system_status.get('compatibility_mode', 'N/A')}")
+        print(f"[システム情報] パフォーマンス監視: {system_status.get('performance_monitoring', 'N/A')}")
         
     except Exception as e:
         print(f"分散SLMシステムの初期化中にエラーが発生しました: {e}")
         if args.debug:
             import traceback
             traceback.print_exc()
-        return      # RAGモードのチェック
+        return
+
+    # RAGモードのチェック
     try:
-        from MurmurNet.modules.rag_retriever import RAGRetriever
-        rag = RAGRetriever(config)
-        if args.rag_mode == "zim" and rag.mode != "zim":
-            print("警告: ZIMモードを指定しましたが、ZIMモードになっていません")
-            print("以下の理由が考えられます:")
-            print("- libzimライブラリがインストールされていない")
-            print("- ZIMファイルのパスが間違っている")
-            print("- ZIMファイルが壊れている")
+        # 簡単なRAGテスト
+        if args.rag_mode == "zim" and not HAS_LIBZIM:
+            print("警告: ZIMモードを指定しましたが、libzimライブラリがありません")
+        print(f"[設定] RAGモード: {args.rag_mode}")
     except Exception as e:
         print(f"RAGシステムの確認中にエラー: {e}")
         if args.debug:
@@ -203,12 +196,12 @@ async def chat_loop():
             print(f"[設定] 最大並列ワーカー数: {args.max_workers}")
     if not args.no_summary:
         print("[設定] 要約機能: 有効")
-    print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
     if args.rag_mode == "zim":
         print(f"[設定] ZIMファイル: {args.zim_path}")
     
     history = []
-      # 対話的環境かどうかをチェック
+    
+    # 対話的環境かどうかをチェック
     is_interactive = sys.stdin.isatty()
     if not is_interactive:
         print("警告: 非対話的環境で実行されています。標準入力から質問を読み取ります。")
@@ -220,14 +213,11 @@ async def chat_loop():
                 if is_interactive:
                     user_input = input("\nあなた> ")
                 else:
-                    # 非対話的環境では改行なしプロンプト
                     user_input = input()
             except EOFError:
-                # EOF (Ctrl+D/Ctrl+Z) が押された場合の処理
                 print("\n\n入力が終了しました。プログラムを終了します。")
                 break
             except KeyboardInterrupt:
-                # Ctrl+C が押された場合
                 print("\n中断されました。終了するには 'exit' を入力するか、再度 Ctrl+C を押してください。")
                 continue
             
@@ -241,12 +231,11 @@ async def chat_loop():
             
             # 履歴に追加
             history.append({"role": "user", "content": user_input})
-            
-            # 生成開始
+              # 生成開始
             print("AI> ", end="", flush=True)
             
             start_time = asyncio.get_event_loop().time()
-            response = await slm.generate(user_input)
+            response = await distributed_slm.generate(user_input)
             elapsed = asyncio.get_event_loop().time() - start_time
             
             # 応答表示
@@ -254,7 +243,7 @@ async def chat_loop():
             
             # デバッグ情報表示
             if args.debug:
-                print_debug(slm)
+                print_debug(distributed_slm)
                 print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
             
             # 履歴に追加
@@ -273,12 +262,19 @@ async def chat_loop():
     
     # システムリソースのクリーンアップ
     try:
-        if hasattr(slm, 'cleanup'):
-            slm.cleanup()
+        if hasattr(distributed_slm, 'cleanup'):
+            distributed_slm.cleanup()
         print("リソースのクリーンアップが完了しました。")
     except Exception as e:
         if args.debug:
             print(f"クリーンアップ中にエラー: {e}")
 
+def main():
+    """メイン関数"""
+    try:
+        asyncio.run(chat_loop())
+    except Exception as e:
+        print(f"アプリケーション実行中にエラーが発生しました: {e}")
+
 if __name__ == "__main__":
-    asyncio.run(chat_loop())
+    main()

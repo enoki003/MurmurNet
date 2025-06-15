@@ -275,6 +275,18 @@ class ModuleCommunicationManager:
             self.logger.error(f"モジュール登録解除エラー: {e}")
             return False
     
+    def publish(self, message: Message) -> bool:
+        """
+        メッセージを発行（send_messageのエイリアス）
+
+        引数:
+            message: 発行するメッセージ
+
+        戻り値:
+            発行成功の可否
+        """
+        return self.send_message(message)
+    
     def send_message(self, message: Message) -> bool:
         """
         メッセージを送信

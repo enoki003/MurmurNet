@@ -80,9 +80,20 @@ class DistributedSLM:
             blackboard: Blackboardインスタンス（互換性のため）
             comm_manager: 通信管理器（オプション、未指定時は自動作成）
             compatibility_mode: 既存システムとの互換モード
-        """
-        # ConfigManagerから設定を取得
-        self.settings_obj = get_config(config_path_or_dict=config)
+        """        # ConfigManagerから設定を取得
+        if isinstance(config, dict):
+            # 辞書の場合、一時的に設定ファイルに保存して読み込み
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+                yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+                temp_config_path = f.name
+            try:
+                self.settings_obj = get_config(temp_config_path)
+            finally:
+                os.unlink(temp_config_path)
+        else:
+            # パスまたはNoneの場合
+            self.settings_obj = get_config(config)
         
         # ロガー設定
         self.logger = setup_logger(self.settings_obj.to_dict())
@@ -95,9 +106,13 @@ class DistributedSLM:
         
         # 初期メモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_start")
-        
-        # 通信システムの初期化
+          # 通信システムの初期化
         self.comm_manager = comm_manager or create_communication_system()
+        
+        # デバッグ: 通信マネージャーの確認
+        self.logger.debug(f"通信マネージャーの型: {type(self.comm_manager)}")
+        self.logger.debug(f"利用可能なメソッド: {dir(self.comm_manager)}")
+        self.logger.debug(f"publishメソッドの存在: {hasattr(self.comm_manager, 'publish')}")
         
         # 互換性モードの設定
         self.compatibility_mode = compatibility_mode
@@ -123,8 +138,7 @@ class DistributedSLM:
         # 新システムのモジュール
         self._system_coordinator = None
         self._module_adapters = {}
-        
-        # パフォーマンスステータスを通信システムに記録
+          # パフォーマンスステータスを通信システムに記録
         message = create_message(
             MessageType.SYSTEM_STATUS,
             "distributed_slm",
@@ -133,7 +147,18 @@ class DistributedSLM:
                 'compatibility_mode': self.compatibility_mode
             }
         )
-        self.comm_manager.publish(message)
+        
+        # デバッグ: publishメソッドの存在確認
+        if hasattr(self.comm_manager, 'publish'):
+            self.comm_manager.publish(message)
+        else:
+            self.logger.error(f"通信マネージャーにpublishメソッドがありません。型: {type(self.comm_manager)}")
+            self.logger.error(f"利用可能なメソッド: {[m for m in dir(self.comm_manager) if not m.startswith('_')]}")
+            # 代替手段としてsend_messageを使用
+            if hasattr(self.comm_manager, 'send_message'):
+                self.comm_manager.send_message(message)
+            else:
+                self.logger.warning("send_messageメソッドも利用できません")
         
         # 初期化完了時のメモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
