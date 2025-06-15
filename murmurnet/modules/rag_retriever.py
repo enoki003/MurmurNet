@@ -140,32 +140,86 @@ class RAGRetriever:
             searcher = Searcher(self.zim_archive)
             search_query = Query().set_query(query)
             results = searcher.search(search_query)
-            
-            if self.debug:
-                logger.debug(f"ZIM検索: クエリ='{query}', ヒット={results.get_matches_estimated()}")
+              # get_matches_estimatedメソッドが利用できない場合の代替処理
+            try:
+                estimated_count = results.get_matches_estimated()
+                if self.debug:
+                    logger.debug(f"ZIM検索: クエリ='{query}', ヒット={estimated_count}")
                 
-            if results.get_matches_estimated() == 0:
-                return "検索結果が見つかりませんでした。"
+                if estimated_count == 0:
+                    return "検索結果が見つかりませんでした。"
+                    
+                max_results = min(self.top_k, estimated_count)
+            except AttributeError:
+                # get_matches_estimatedが利用できない場合
+                logger.debug("get_matches_estimated not available, using fallback approach")
+                max_results = self.top_k
+                estimated_count = max_results
 
             content_results = []
-            for i in range(min(self.top_k, results.get_matches_estimated())):
-                result = results.get_next()
-                if not result:
-                    continue
+            
+            # libzimバージョンに応じた結果取得方法の選択
+            try:
+                # 新しいlibzimのイテレーター方式を試行
+                if hasattr(results, '__iter__'):
+                    for i, result in enumerate(results):
+                        if i >= max_results:
+                            break
+                        if not result:
+                            continue
+                        
+                        try:
+                            entry = self.zim_archive.get_entry_by_path(result.get_path())
+                            if not entry:
+                                continue
 
-                entry = self.zim_archive.get_entry_by_path(result.get_path())
-                if not entry:
-                    continue
+                            content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
+                            if entry.get_mime_type() == "text/html":
+                                content = _html_to_text(content)
 
-                content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
-                if entry.get_mime_type() == "text/html":
-                    content = _html_to_text(content)
+                            if len(content) > 500:
+                                content = content[:500] + "..."
 
-                if len(content) > 500:
-                    content = content[:500] + "..."
+                            title = entry.title
+                            content_results.append(f"【{title}】 {content}")
+                        except Exception as e:
+                            logger.debug(f"エントリ処理エラー: {e}")
+                            continue
+                else:
+                    # 古いlibzimのget_next方式を試行
+                    for i in range(max_results):
+                        try:
+                            result = results.get_next()
+                            if not result:
+                                break
+                        except AttributeError:
+                            # get_nextが利用できない場合
+                            logger.debug("get_next method not available")
+                            break
+                        except Exception as e:
+                            logger.debug(f"get_next呼び出しエラー: {e}")
+                            break
 
-                title = entry.title
-                content_results.append(f"【{title}】 {content}")
+                        try:
+                            entry = self.zim_archive.get_entry_by_path(result.get_path())
+                            if not entry:
+                                continue
+
+                            content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
+                            if entry.get_mime_type() == "text/html":
+                                content = _html_to_text(content)
+
+                            if len(content) > 500:
+                                content = content[:500] + "..."
+
+                            title = entry.title
+                            content_results.append(f"【{title}】 {content}")
+                        except Exception as e:
+                            logger.debug(f"エントリ処理エラー: {e}")
+                            continue
+                            
+            except Exception as e:
+                logger.debug(f"検索結果処理エラー: {e}")
                 
             return "\n\n".join(content_results) if content_results else "検索結果が見つかりませんでした。"
             

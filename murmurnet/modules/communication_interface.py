@@ -349,6 +349,22 @@ class ModuleCommunicationManager:
         except Exception as e:
             self.logger.error(f"データ設定エラー: {e}")
             return False
+        
+    def get_all_storage_data(self) -> dict:
+        """
+        ストレージ内の全データを取得
+
+        戻り値:
+            全データの辞書（取得できない場合は空辞書）
+        """
+        try:
+            if self.storage and hasattr(self.storage, 'get_all'):
+                return self.storage.get_all()
+            self.logger.warning("ストレージに get_all() メソッドがありません")
+            return {}
+        except Exception as e:
+            self.logger.error(f"全ストレージデータ取得エラー: {e}")
+            return {}
 
 
 # ファクトリー関数
