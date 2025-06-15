@@ -209,28 +209,26 @@ class SystemCoordinator:
         
         base_prompt += " 簡潔で有用な回答をお願いします。"
         return base_prompt
-    
     def _write_results_to_blackboard(self, collected_results) -> None:
         """
-        収集した結果を黒板に書き込み
+        収集した結果を黒板に書き込み（成功した結果のみ）
         
         引数:
             collected_results: 収集済み結果
         """
-        # 成功した結果を書き込み
+        # 成功した結果のみを書き込み
         for i, result in enumerate(collected_results.successful_results):
             self.blackboard.write(f'agent_{result.agent_id}_output', result.output)
         
-        # 失敗した結果にエラーメッセージを書き込み
+        # 失敗した結果やエラーメッセージは黒板に書き込まない（ログのみ）
         for result in collected_results.failed_results:
-            error_msg = f"エージェント{result.agent_id}は実行エラーにより応答できませんでした: {result.error_message}"
-            self.blackboard.write(f'agent_{result.agent_id}_output', error_msg)
+            logger.debug(f"エージェント{result.agent_id}は実行エラーにより応答できませんでした: {result.error_message}")
         
-        # 処理されなかったエージェントにもメッセージを設定
+        # 処理されなかったエージェントの情報もログのみ
         processed_ids = {r.agent_id for r in collected_results.successful_results + collected_results.failed_results}
         for i in range(self.num_agents):
             if i not in processed_ids:
-                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は処理されませんでした")
+                logger.debug(f"エージェント{i}は処理されませんでした")
     
     def _collect_agent_outputs(self) -> List[Dict[str, Any]]:
         """

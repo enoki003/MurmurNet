@@ -16,46 +16,10 @@ Process Agent Manager モジュール
 import logging
 import time
 from typing import List, Dict, Any, Optional
-# from MurmurNet.modules.process_coordinator import ProcessCoordinator  # ファイルが削除されたためコメントアウト
-# from MurmurNet.modules.result_collector import ResultCollector, CollectedResults  # ファイルが削除されたためコメントアウト
-# from MurmurNet.modules.process_agent_worker import AgentTask, AgentResult  # ファイルが削除されたためコメントアウト
+from MurmurNet.modules.process_coordinator import ProcessCoordinator
+from MurmurNet.modules.result_collector import ResultCollector, CollectedResults
+from MurmurNet.modules.process_agent_worker import AgentTask, AgentResult
 from MurmurNet.modules.config_manager import get_config
-
-# Begin stubs for missing classes
-class ProcessCoordinator:
-    def __init__(self, num_processes):
-        self.num_processes = num_processes if num_processes is not None else 1
-    def start(self):
-        return True
-    def submit_task(self, task):
-        return True
-    def get_all_results(self, success_count, timeout):
-        return []
-    def stop(self):
-        pass
-
-class CollectedResults:
-    def __init__(self):
-        self.total_count = 0
-        self.successful_results = []
-        self.failed_results = []
-        self.success_rate = 0.0
-        self.average_execution_time = 0.0
-
-class ResultCollector:
-    def collect_and_analyze(self, results):
-        return CollectedResults()
-    def log_statistics(self, collected_results):
-        pass
-
-class AgentTask:
-    def __init__(self, agent_id, prompt, role, config, blackboard_data):
-        self.agent_id = agent_id
-        self.prompt = prompt
-        self.role = role
-        self.config = config
-        self.blackboard_data = blackboard_data
-# End stubs for missing classes
 
 
 class ProcessAgentManager:
@@ -113,30 +77,45 @@ class ProcessAgentManager:
         # 入力検証（シンプルな検証）
         if len(roles) != len(prompts):
             roles = roles + ["default"] * (len(prompts) - len(roles))
-        
         self.logger.info(f"Starting parallel execution of {len(prompts)} agents")
-        
+        print(f"[DEBUG] execute_agents_parallel called with {len(prompts)} prompts")
         try:
+            print(f"[DEBUG] About to start coordinator processes")
+            print(f"[DEBUG] Coordinator object: {type(self.coordinator)}")
+            print(f"[DEBUG] Coordinator is_running: {self.coordinator.is_running}")
+            
             # プロセス開始
-            if not self.coordinator.start():
+            start_result = self.coordinator.start()
+            print(f"[DEBUG] Coordinator start() returned: {start_result}")
+            if not start_result:
+                print(f"[DEBUG] Failed to start coordinator processes")
                 raise RuntimeError("Failed to start worker processes")
+            print(f"[DEBUG] Coordinator processes started successfully")
             
             # タスク作成と送信（シンプルなループ）
             tasks = self._create_tasks(prompts, roles, blackboard_data)
+            print(f"[DEBUG] Created {len(tasks)} tasks")
             success_count = 0
             
             for task in tasks:
+                print(f"[DEBUG] Submitting task for agent {task.agent_id}")
                 if self.coordinator.submit_task(task):
                     success_count += 1
+                    print(f"[DEBUG] Successfully submitted task for agent {task.agent_id}")
                 else:
                     self.logger.error(f"Failed to submit task for agent {task.agent_id}")
-            
+                    print(f"[DEBUG] Failed to submit task for agent {task.agent_id}")
             if success_count == 0:
+                print(f"[DEBUG] No tasks submitted successfully")
                 raise RuntimeError("Failed to submit any tasks")
+            
+            print(f"[DEBUG] {success_count} tasks submitted successfully")
             
             # 結果収集
             self.logger.info(f"Submitted {success_count} tasks, waiting for results...")
+            print(f"[DEBUG] About to collect {success_count} results with 60s timeout")
             results = self.coordinator.get_all_results(success_count, timeout=60.0)
+            print(f"[DEBUG] Collected {len(results)} results")
             
             # 結果分析
             collected_results = self.collector.collect_and_analyze(results)
@@ -176,8 +155,8 @@ class ProcessAgentManager:
                 blackboard_data=blackboard_data.copy()  # 各プロセスで独立したコピー
             )
             tasks.append(task)
-        
         return tasks
+    
     def execute_single_iteration(self, prompt: str, num_agents: int = None, 
                                 blackboard_data: Dict[str, Any] = None) -> CollectedResults:
         """
@@ -191,11 +170,15 @@ class ProcessAgentManager:
         戻り値:
             収集済み結果
         """
+        print(f"[DEBUG] execute_single_iteration called with num_agents={num_agents}")
+        
         if num_agents is None:
             num_agents = self.config_manager.agent.num_agents
         
         if blackboard_data is None:
             blackboard_data = {}
+        
+        print(f"[DEBUG] Using {num_agents} agents")
         
         # 全エージェントに同じプロンプトを配布
         prompts = [prompt] * num_agents
@@ -203,6 +186,8 @@ class ProcessAgentManager:
         # ロール分散（シンプルなローテーション）
         available_roles = ["researcher", "critic", "synthesizer", "default"]
         roles = [available_roles[i % len(available_roles)] for i in range(num_agents)]
+        
+        print(f"[DEBUG] Created {len(prompts)} prompts with roles: {roles}")
         
         return self.execute_agents_parallel(prompts, roles, blackboard_data)
     

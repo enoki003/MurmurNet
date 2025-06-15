@@ -58,27 +58,44 @@ class ProcessCoordinator:
         戻り値:
             開始成功フラグ
         """
+        print(f"[DEBUG] ProcessCoordinator.start() called")
+        print(f"[DEBUG] Current is_running status: {self.is_running}")
+        
         if self.is_running:
             self.logger.warning("Processes already running")
+            print(f"[DEBUG] Processes already running, returning True")
             return True
         
         try:
+            print(f"[DEBUG] ProcessCoordinator starting {self.num_processes} worker processes")
+            print(f"[DEBUG] About to start multiprocessing workers")
+            
             # ワーカープロセスを起動
             for i in range(self.num_processes):
-                process = mp.Process(
-                    target=worker_process_entry,
-                    args=(self.task_queue, self.result_queue, i)
-                )
-                process.start()
-                self.processes.append(process)
-                self.logger.debug(f"Started worker process {i}: PID {process.pid}")
+                print(f"[DEBUG] Starting worker process {i}")
+                try:
+                    process = mp.Process(
+                        target=worker_process_entry,
+                        args=(self.task_queue, self.result_queue, i)
+                    )
+                    print(f"[DEBUG] Created process object for worker {i}")
+                    process.start()
+                    print(f"[DEBUG] Called start() on process {i}")
+                    self.processes.append(process)
+                    self.logger.debug(f"Started worker process {i}: PID {process.pid}")
+                    print(f"[DEBUG] Started worker process {i}: PID {process.pid}")
+                except Exception as e:
+                    print(f"[DEBUG] Exception starting worker {i}: {e}")
+                    raise
             
             self.is_running = True
             self.logger.info(f"Started {self.num_processes} worker processes")
+            print(f"[DEBUG] All {self.num_processes} worker processes started successfully")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to start processes: {e}")
+            print(f"[DEBUG] Failed to start processes: {e}")
             self.stop()
             return False
     
@@ -115,7 +132,6 @@ class ProcessCoordinator:
         except Exception as e:
             self.logger.error(f"Error stopping processes: {e}")
             return False
-    
     def submit_task(self, task: AgentTask) -> bool:
         """
         タスクを送信
@@ -128,10 +144,17 @@ class ProcessCoordinator:
         """
         if not self.is_running:
             self.logger.error("Processes not running")
+            print(f"[DEBUG] Cannot submit task - processes not running")
             return False
         
+        # プロセスの生存状況を確認
+        alive_processes = [p for p in self.processes if p.is_alive()]
+        print(f"[DEBUG] Alive processes: {len(alive_processes)}/{len(self.processes)}")
+        
         try:
+            print(f"[DEBUG] Submitting task for agent {task.agent_id}")
             self.task_queue.put(task, timeout=1.0)
+            print(f"[DEBUG] Task submitted successfully for agent {task.agent_id}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to submit task: {e}")

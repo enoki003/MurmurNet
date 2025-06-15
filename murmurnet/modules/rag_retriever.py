@@ -21,6 +21,9 @@ from MurmurNet.modules.path_utils import resolve_path
 
 logger = logging.getLogger('MurmurNet.RAGRetriever')
 
+# グローバルキャッシュ（SentenceTransformerの重複ロードを防ぐ）
+_sentence_transformer_cache = {}
+
 # 条件付きインポート
 try:
     from sentence_transformers import SentenceTransformer
@@ -110,8 +113,15 @@ class RAGRetriever:
             
         try:
             model_name = self.config_manager.rag.embedding_model
-            self.transformer = SentenceTransformer(model_name)
-            logger.info(f"Loaded embedding model: {model_name}")
+            
+            # グローバルキャッシュから取得、なければ新規作成
+            if model_name in _sentence_transformer_cache:
+                self.transformer = _sentence_transformer_cache[model_name]
+                logger.info(f"Loaded embedding model from cache: {model_name}")
+            else:
+                self.transformer = SentenceTransformer(model_name)
+                _sentence_transformer_cache[model_name] = self.transformer
+                logger.info(f"Loaded embedding model: {model_name}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
 
@@ -208,7 +218,7 @@ class RAGRetriever:
                             content = entry.get_item().content.tobytes().decode('utf-8', errors='ignore')
                             if entry.get_mime_type() == "text/html":
                                 content = _html_to_text(content)
-
+                                
                             if len(content) > 500:
                                 content = content[:500] + "..."
 
@@ -221,11 +231,11 @@ class RAGRetriever:
             except Exception as e:
                 logger.debug(f"検索結果処理エラー: {e}")
                 
-            return "\n\n".join(content_results) if content_results else "検索結果が見つかりませんでした。"
+            return "\n\n".join(content_results) if content_results else ""
             
         except Exception as e:
             logger.error(f"ZIM検索エラー: {e}")
-            return "検索中にエラーが発生しました。"
+            return ""
 
     def _retrieve_knowledge_base(self, query: str) -> str:
         """ローカル知識ベースから検索"""

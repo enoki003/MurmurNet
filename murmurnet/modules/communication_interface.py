@@ -360,10 +360,49 @@ class ModuleCommunicationManager:
         try:
             if self.storage and hasattr(self.storage, 'get_all'):
                 return self.storage.get_all()
-            self.logger.warning("ストレージに get_all() メソッドがありません")
+            self.logger.debug("ストレージに get_all() メソッドがありません")
             return {}
         except Exception as e:
             self.logger.error(f"全ストレージデータ取得エラー: {e}")
+            return {}
+    
+    def get_all(self) -> dict:
+        """
+        黒板から全データを取得
+
+        戻り値:
+            全データの辞書（取得できない場合は空辞書）
+        """
+        try:
+            if self.blackboard and hasattr(self.blackboard, 'get_all_data'):
+                return self.blackboard.get_all_data()
+            elif self.blackboard and hasattr(self.blackboard, 'data'):
+                # 黒板のdataプロパティから直接取得
+                return dict(self.blackboard.data) if hasattr(self.blackboard.data, 'items') else {}
+            else:
+                self.logger.warning("黒板に全データ取得メソッドがありません")
+                return {}
+        except Exception as e:
+            self.logger.error(f"全データ取得エラー: {e}")
+            return {}
+    
+    def get_stats(self) -> dict:
+        """
+        通信マネージャーの統計情報を取得
+
+        戻り値:
+            統計情報の辞書
+        """
+        try:
+            stats = {
+                "registered_modules": len(self.registered_modules),
+                "module_list": list(self.registered_modules.keys()),
+                "storage_available": self.storage is not None,
+                "broker_available": self.broker is not None
+            }
+            return stats
+        except Exception as e:
+            self.logger.error(f"統計情報取得エラー: {e}")
             return {}
 
 
