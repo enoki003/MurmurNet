@@ -119,19 +119,17 @@ class OutputAgent:
                     agent_outputs.append(f"エージェント {agent_id+1}: {text}")
             
             if self.debug:
-                logger.debug(f"OutputAgent: 要約数={len(summaries)}, エージェント出力数={len(agent_outputs)}")
-              # 4) システムプロンプト作成 - 話し言葉重視の改善
+                logger.debug(f"OutputAgent: 要約数={len(summaries)}, エージェント出力数={len(agent_outputs)}")            # 4) システムプロンプト作成 - 話し言葉重視の改善
             if lang == 'ja':
                 sys_prompt = (
-                    "あなたは親しみやすい日本語アシスタントです。話し言葉で自然に会話してください：\n"
+                    "あなたは親しみやすい日本語アシスタントです。複数のエージェントの意見を統合して、話し言葉で自然に会話してください：\n"
                     "1. 質問にまっすぐ答えてね。話題から外れないように。\n"
-                    "2. 具体的で分かりやすく説明するよ。\n"
-                    "3. 日本語で自然に話してね。\n"
-                    "4. みんなの意見をまとめて、筋の通った答えにするよ。\n"
-                    "5. 情報の出どころがあるときははっきりと示すね。\n"
+                    "2. 各エージェントの異なる視点や表現を活かして、豊かな回答を作ってね。\n"
+                    "3. 要約は参考程度に留めて、エージェントたちの生の意見を重視してね。\n"
+                    "4. みんなの意見を自然に組み合わせて、統一感のある話し言葉の回答にするよ。\n"
+                    "5. 具体例や詳細は各エージェントの出力から拾って活用してね。\n"
                     "6. 確実じゃない情報は「〜かもしれない」「〜の可能性があるよ」と伝えるね。\n"
-                    "7. 長いときは段落分けや箇条書きで見やすくするよ。\n"
-                    "8. 150〜300文字くらいで話し言葉で答えてね。短すぎず長すぎず、ちょうどいい感じで。"
+                    "7. 150〜300文字くらいで話し言葉で答えてね。エージェントの個性を活かしながら。"
                 )
             else:                sys_prompt = (
                     "You are a friendly English assistant. Please use conversational language:\n"
@@ -144,22 +142,22 @@ class OutputAgent:
                     "7. Structure your response using paragraphs or bullet points when appropriate.\n"
                     "8. Keep responses around 150-300 characters, conversational but not too short or long."
                 )
-            
-            # 5) ユーザープロンプト作成（黒板情報を統合）
+              # 5) ユーザープロンプト作成（エージェント出力を最優先）
             user_prompt = f"質問: {user_input}\n\n"
             
             # RAG情報があれば追加
             if rag:
                 user_prompt += f"参考情報: {rag}\n\n"
-                
-            # 要約情報があれば追加
-            if summaries:
-                user_prompt += "要約情報:\n" + "\n".join(summaries) + "\n\n"
-                  # エージェント出力があれば追加
+            
+            # エージェント出力を最初に配置（最も重要）
             if agent_outputs:
-                user_prompt += "エージェント出力:\n" + "\n".join(agent_outputs) + "\n\n"
+                user_prompt += "【各エージェントの意見】\n" + "\n".join(agent_outputs) + "\n\n"
                 
-            user_prompt += "以上の情報を統合して、質問に対する最終的な回答を生成してください。"
+            # 要約情報は参考として最後に配置
+            if summaries:
+                user_prompt += "【参考：要約情報】\n" + "\n".join(summaries) + "\n\n"
+                
+            user_prompt += "上記の各エージェントの意見を中心に、質問に対する自然で統合された回答を生成してください。要約は参考程度に使い、各エージェントの個性的な表現や視点を活かしてください。"
             
             if self.debug:
                 logger.debug(f"OutputAgent: システムプロンプト: {sys_prompt[:100]}...")
