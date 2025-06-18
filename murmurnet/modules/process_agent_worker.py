@@ -47,9 +47,15 @@ class AgentResult:
     error_message: Optional[str] = None
     execution_time: float = 0.0
     
+    @property
+    def output(self) -> str:
+        """後方互換性のためのoutputプロパティ"""
+        return self.response
+    
     def __post_init__(self):
         """データ検証（KISS原則）"""
-        if not isinstance(self.agent_id, int) or self.agent_id < 0:
+        # agent_id が -1 の場合はワーカープロセスエラーなので検証をスキップ
+        if self.agent_id != -1 and (not isinstance(self.agent_id, int) or self.agent_id < 0):
             raise ValueError("agent_id must be a non-negative integer")
 
 
@@ -60,8 +66,9 @@ class ProcessAgentWorker:
     設計原則:
     - 各プロセスが独自のモデルインスタンスを持つ
     - シンプルなピクル可能なデータのみを使用
-    - エラーハンドリングを明確に分離
-    """    @staticmethod
+    - エラーハンドリングを明確に分離    """
+    
+    @staticmethod
     def run_agent(task: AgentTask) -> AgentResult:
         """
         エージェントを実行（静的メソッド：シンプルなインターフェース）

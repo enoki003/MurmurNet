@@ -29,6 +29,11 @@ class CollectedResults:
     average_execution_time: float
     combined_response: str
     
+    @property
+    def all_results(self) -> List[AgentResult]:
+        """すべての結果（成功・失敗含む）を返す"""
+        return self.successful_results + self.failed_results
+    
     def __post_init__(self):
         """データ検証"""
         if self.total_count < 0:
