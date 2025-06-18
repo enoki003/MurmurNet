@@ -21,8 +21,7 @@ class OutputAgent:
     最終応答を生成するエージェント
     
     責務:
-    - 黒板情報の統合
-    - 要約と個別エージェント出力の統合
+    - 黒板情報の統合    - 要約と個別エージェント出力の統合
     - 一貫性のある最終応答の生成
     - 言語検出と応答言語の適応
       属性:
@@ -41,13 +40,14 @@ class OutputAgent:
         self.debug = self.config.get('debug', False)
         self.max_output_tokens = self.config.get('max_output_tokens', 400)  # 話し言葉に適した最大トークン数
         
-        if self.debug:
-            logger.setLevel(logging.DEBUG)
-            
+        # デバッグモードを強制的に有効にする
+        logger.setLevel(logging.DEBUG)
+        
         # ModelFactoryからモデルを取得
         self.llm = ModelFactory.create_model(self.config)
         
         logger.info("出力エージェントを初期化しました")
+        logger.debug(f"OutputAgent初期化: debug={self.debug}, max_tokens={self.max_output_tokens}")
 
     def _detect_language(self, text: str) -> str:
         """
@@ -61,13 +61,12 @@ class OutputAgent:
         """
         # 日本語の文字が含まれているかチェック
         if re.search(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', text):
-            return 'ja'
-        # 英語の文字が主に含まれているかチェック
+            return 'ja'        # 英語の文字が主に含まれているかチェック
         elif re.search(r'[a-zA-Z]', text) and not re.search(r'[^\x00-\x7F]', text):
             return 'en'
         # その他の言語（デフォルトは英語）
         return 'en'
-
+    
     def generate(self, blackboard, entries: List[Dict[str, Any]]) -> str:
         """
         黒板の情報と提供されたエントリからユーザー質問への最終回答を生成
@@ -76,31 +75,41 @@ class OutputAgent:
             blackboard: 共有黒板
             entries: 様々なタイプの入力エントリのリスト
                      各エントリは {"type": "summary"|"agent", ...} の形式
-        
-        戻り値:
+          戻り値:
             生成された最終応答テキスト
         """
+        logger.debug("=== OutputAgent.generate() 呼び出し開始 ===")
+        logger.info(f"OutputAgent: エントリ数={len(entries)}で最終応答生成を開始")
+        
         try:
             # 1) 入力と RAG を取得
+            logger.info("Step 1: 入力とRAG情報を取得中...")
             inp = blackboard.read('input')
             user_input = inp.get('normalized') if isinstance(inp, dict) else str(inp)
             user_input = user_input[:200]  # 入力を制限
+            logger.info(f"ユーザー入力: {user_input}")
             
             rag = blackboard.read('rag')
             if rag and isinstance(rag, str):
                 rag = rag[:300]  # RAG情報も制限
+            logger.info(f"RAG情報: {rag}")
 
             # 2) 言語検出
             lang = self._detect_language(user_input)
             logger.debug(f"検出された言語: {lang}")
-            
-            # 3) 要約とエージェント出力の整理
+              # 3) 要約とエージェント出力の整理
             summaries = []
             agent_outputs = []
+            
+            if self.debug:
+                logger.debug(f"OutputAgent: 受信したエントリ数: {len(entries)}")
             
             for entry in entries:
                 entry_type = entry.get('type', 'agent')  # デフォルトはagent
                 text = entry.get('text', '')[:200]  # テキスト制限
+                
+                if self.debug:
+                    logger.debug(f"OutputAgent: エントリタイプ={entry_type}, テキスト長={len(text)}")
                 
                 if entry_type == 'summary':
                     iteration = entry.get('iteration', 0)
@@ -108,6 +117,9 @@ class OutputAgent:
                 else:  # agent
                     agent_id = entry.get('agent', 0)
                     agent_outputs.append(f"エージェント {agent_id+1}: {text}")
+            
+            if self.debug:
+                logger.debug(f"OutputAgent: 要約数={len(summaries)}, エージェント出力数={len(agent_outputs)}")
               # 4) システムプロンプト作成 - 話し言葉重視の改善
             if lang == 'ja':
                 sys_prompt = (
@@ -143,14 +155,19 @@ class OutputAgent:
             # 要約情報があれば追加
             if summaries:
                 user_prompt += "要約情報:\n" + "\n".join(summaries) + "\n\n"
-                
-            # エージェント出力があれば追加
+                  # エージェント出力があれば追加
             if agent_outputs:
                 user_prompt += "エージェント出力:\n" + "\n".join(agent_outputs) + "\n\n"
                 
             user_prompt += "以上の情報を統合して、質問に対する最終的な回答を生成してください。"
             
-            # 6) 出力生成
+            if self.debug:
+                logger.debug(f"OutputAgent: システムプロンプト: {sys_prompt[:100]}...")
+                logger.debug(f"OutputAgent: ユーザープロンプト: {user_prompt[:300]}...")            # 6) 出力生成
+            logger.info("Step 6: LLMによる出力生成を開始...")
+            logger.info(f"システムプロンプト: {sys_prompt[:100]}...")
+            logger.info(f"ユーザープロンプト: {user_prompt[:300]}...")
+            
             resp = self.llm.create_chat_completion(
                 messages=[
                     {"role": "system", "content": sys_prompt},
@@ -159,7 +176,8 @@ class OutputAgent:
                 max_tokens=self.max_output_tokens,
                 temperature=0.7,
                 top_p=0.9
-            )
+            )            
+            logger.info("LLM応答を受信しました")
             
             # レスポンスの形式によって適切にアクセス
             if isinstance(resp, dict):
@@ -167,9 +185,10 @@ class OutputAgent:
             else:
                 final_output = resp.choices[0].message.content.strip()
                 
-            if self.debug:
-                logger.debug(f"最終出力生成: {len(final_output)}文字")
-                
+            logger.info(f"最終出力: {final_output}")
+            logger.info(f"OutputAgent: 最終応答生成完了 ({len(final_output)}文字)")
+            logger.info("=== OutputAgent.generate() 呼び出し終了 ===")
+            
             return final_output
             
         except Exception as e:
