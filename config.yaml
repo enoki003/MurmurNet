@@ -31,6 +31,7 @@ zim_path: "C:\\Users\\admin\\Desktop\\課題研究\\KNOWAGE_DATABASE\\wikipedia_
 rag_score_threshold: 0.5
 rag_top_k: 3
 embedding_model: "all-MiniLM-L6-v2"
+model_cache_dir: "cache/sentence_transformers"  # SentenceTransformerキャッシュディレクトリ
 
 # 要約設定
 summary_max_length: 200

@@ -293,8 +293,7 @@ class ModelFactory:
     言語モデルのファクトリクラス
     設定に基づいて適切なモデルインスタンスを作成
     """
-    
-    # 利用可能なモデルタイプ
+      # 利用可能なモデルタイプ
     MODEL_TYPES = {
         'llama': LlamaModel,
         'local': LlamaModel,  # localは LlamaModel にマッピング
@@ -325,7 +324,13 @@ class ModelFactory:
         
         with _CACHE_LOCK:
             if cache_key not in _MODEL_CACHE:
+                logging.info(f"新しいモデルインスタンスを作成中: {cache_key}")
+                start_time = __import__('time').time()
                 _MODEL_CACHE[cache_key] = model_class(config)
+                load_time = __import__('time').time() - start_time
+                logging.info(f"モデル初期化完了: {load_time:.2f}秒")
+            else:
+                logging.info(f"キャッシュされたモデルを再利用: {cache_key}")
         
         return _MODEL_CACHE[cache_key]
     
