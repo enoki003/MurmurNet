@@ -28,6 +28,10 @@ from MurmurNet.distributed_slm import DistributedSLM
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
 parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
+parser.add_argument('--rag', choices=['dummy', 'zim', 'none'], default='dummy', 
+                   help='RAGモード選択: dummy(基本知識), zim(Wikipedia), none(RAG無効)')
+parser.add_argument('--threads', type=int, help='推論スレッド数の上書き')
+parser.add_argument('--ctx', type=int, help='コンテキスト長の上書き')
 parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
 parser.add_argument('--iter', type=int, default=1, help='反復回数（デフォルト: 1）')
 parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
@@ -115,11 +119,18 @@ async def chat_loop():
         "use_summary": not args.no_summary,
         "use_parallel": args.parallel,
         "debug": args.debug,
-        # RAG設定
-        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
+        
+        # RAG設定（コマンドライン引数から上書き）
+        "rag_mode": args.rag,  # dummy, zim, none
+        "rag_enabled": args.rag != 'none',  # RAG無効化対応
         "rag_score_threshold": 0.5,
         "rag_top_k": 3,
         "embedding_model": "all-MiniLM-L6-v2",
+        
+        # パフォーマンス設定（コマンドライン引数から上書き）
+        "n_threads": args.threads if args.threads else 6,  # デフォルト6
+        "n_ctx": args.ctx if args.ctx else 2048,  # デフォルト2048
+        
         # 並列処理の安全性向上オプション
         "safe_parallel": args.safe_parallel,
         "max_workers": args.max_workers if args.max_workers > 0 else None,

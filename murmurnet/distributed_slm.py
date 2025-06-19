@@ -16,6 +16,12 @@ import asyncio
 import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, List, Optional, Union
+
+# Windows環境でのasyncio最適化（ProactorEventLoop回避）
+if os.name == "nt":
+    # ProactorEventLoopの問題を回避するためSelectorEventLoopを使用
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from MurmurNet.modules.common import setup_logger, PerformanceError
 from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
 from MurmurNet.modules.input_reception import InputReception

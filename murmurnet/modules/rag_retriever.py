@@ -141,20 +141,37 @@ class RAGRetriever:
             logger.info(f"埋め込みモデル準備: {model_name}, キャッシュ: {cache_dir}")
             os.makedirs(cache_dir, exist_ok=True)
 
-            # オフライン優先環境変数
-            os.environ.setdefault("TRANSFORMERS_OFFLINE", "0")
-            os.environ.setdefault("HF_HUB_OFFLINE", "0")
+            # HuggingFaceキャッシュの最適化設定
+            os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # 高速転送有効
+            os.environ.setdefault("TRANSFORMERS_CACHE", cache_dir)   # Transformersキャッシュディレクトリ
+            
+            # 既存キャッシュの確認
+            cached_model_path = os.path.join(cache_dir, model_name.replace("/", "--"))
+            if os.path.exists(cached_model_path):
+                logger.info(f"ローカルキャッシュ発見: {cached_model_path}")
+                # オフラインモード有効化でネットワークアクセス回避
+                os.environ["HF_HUB_OFFLINE"] = "1"
+                os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
             logger.info("SentenceTransformer読み込み開始...")
             import time
             start_time = time.time()
             
             self.transformer = SentenceTransformer(
-                model_name, cache_folder=cache_dir, device="cpu"
+                model_name, 
+                cache_folder=cache_dir, 
+                device="cpu",
+                trust_remote_code=False  # セキュリティ向上
             )
             
             load_time = time.time() - start_time
             logger.info("埋め込みモデル読み込み完了: %s (時間: %.2f秒, キャッシュ: %s)", model_name, load_time, cache_dir)
+            
+            # オフラインモードを元に戻す
+            if "HF_HUB_OFFLINE" in os.environ:
+                del os.environ["HF_HUB_OFFLINE"]
+            if "TRANSFORMERS_OFFLINE" in os.environ:
+                del os.environ["TRANSFORMERS_OFFLINE"]
             
         except Exception as e:
             logger.error("埋め込みモデル初期化失敗: %s", e)
