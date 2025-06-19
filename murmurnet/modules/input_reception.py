@@ -10,6 +10,7 @@ Input Reception モジュール
 """
 
 import logging
+import os
 import numpy as np
 from typing import Dict, Any, List, Optional, Union
 
@@ -48,17 +49,29 @@ class InputReception:
         埋め込みモデルを必要なときだけロード（内部メソッド）
         
         モデルロードはリソース消費が大きいため、実際に必要になるまで
-        遅延ロードする
-        """
+        遅延ロードする        """
         if self._transformer is None:
             try:
-                from sentence_transformers import SentenceTransformer
+                # 共有インスタンスを使用して重複ロードを防止
+                from MurmurNet.modules.rag_retriever import get_shared_sentence_transformer
+                
                 model_name = self.config.get('embedding_model', 'all-MiniLM-L6-v2')
+                cache_dir = (
+                    self.config.get("model_cache_dir")
+                    or os.path.join(
+                        os.path.dirname(__file__), "..", "..", "models", "st_cache"
+                    )
+                )
                 
                 if self.debug:
-                    logger.debug(f"埋め込みモデルをロード: {model_name}")
+                    logger.debug(f"埋め込みモデル共有インスタンス取得: {model_name}")
                     
-                self._transformer = SentenceTransformer(model_name)
+                self._transformer = get_shared_sentence_transformer(model_name, cache_dir)
+                
+                if self._transformer:
+                    logger.info(f"InputReception: 共有SentenceTransformerインスタンス取得成功")
+                else:
+                    logger.warning("共有SentenceTransformerインスタンス取得失敗")
                 
             except ImportError:
                 logger.warning("SentenceTransformersがインストールされていません。ダミー埋め込みを使用します。")

@@ -288,9 +288,9 @@ class DistributedSLM:
         rag_result = self.rag_retriever.retrieve(input_text)
         self.blackboard.write('rag', rag_result)
         step_time = time.time() - step_start
-        self.logger.info(f"[ステップ3] RAG検索完了: {step_time:.2f}秒")
-          # 4. 初期要約の実行（オプション）
-        if self.use_summary:
+        self.logger.info(f"[ステップ3] RAG検索完了: {step_time:.2f}秒")        # 4. 初期要約の実行（smart判定対応）
+        should_use_summary = self._should_use_summary(input_text, rag_result)
+        if self.use_summary and should_use_summary:
             step_start = time.time()
             initial_summary = f"ユーザー入力: {processed['normalized'] if isinstance(processed, dict) else processed}\n\n検索情報: {rag_result}"
             if self.use_memory and 'conversation_context' in self.blackboard.memory:
@@ -298,6 +298,10 @@ class DistributedSLM:
             self.blackboard.write('initial_summary', initial_summary)
             step_time = time.time() - step_start
             self.logger.info(f"[ステップ4] 初期要約完了: {step_time:.2f}秒")
+        elif self.use_summary:
+            self.logger.info(f"[ステップ4] 要約スキップ（簡潔な入力のため）: {len(input_text)}文字")
+        else:
+            self.logger.info(f"[ステップ4] 要約機能無効")
             
         # 5. 反復サイクルの実行
         step_start = time.time()

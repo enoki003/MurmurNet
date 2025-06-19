@@ -67,21 +67,26 @@ def get_shared_sentence_transformer(model_name: str = "all-MiniLM-L6-v2", cache_
                 logger.info(f"SentenceTransformer初回ロード開始: {model_name}")
                 import time
                 start_time = time.time()
-                  # 完全オフライン化設定
+                
+                # 完全オフライン化設定（ダウンロード照会を完全回避）
                 if cache_dir:
                     os.makedirs(cache_dir, exist_ok=True)
-                      # HuggingFace環境変数設定（強制オフライン）
+                    
+                    # HuggingFace環境変数設定（強制オフライン）
                     os.environ["HF_HUB_OFFLINE"] = "1"
                     os.environ["TRANSFORMERS_OFFLINE"] = "1"
                     os.environ["HF_DATASETS_OFFLINE"] = "1"
-                    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+                    os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+                    os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+                    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+                    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"  # 転送機能無効
                     os.environ["TRANSFORMERS_CACHE"] = cache_dir
                     os.environ["HF_HOME"] = cache_dir
                     os.environ["SENTENCE_TRANSFORMERS_HOME"] = cache_dir
                     
-                    logger.info(f"強制オフラインモード有効: {cache_dir}")
+                    logger.info(f"完全オフラインモード強制有効: {cache_dir}")
                     
-                    # ローカルキャッシュ確認（より確実な判定）
+                    # ローカルキャッシュ確認
                     cached_model_variants = [
                         os.path.join(cache_dir, model_name),
                         os.path.join(cache_dir, model_name.replace("/", "--")),
@@ -91,9 +96,9 @@ def get_shared_sentence_transformer(model_name: str = "all-MiniLM-L6-v2", cache_
                     cache_found = any(os.path.exists(path) and os.listdir(path) for path in cached_model_variants if os.path.isdir(path))
                     
                     if cache_found:
-                        logger.info(f"ローカルキャッシュ発見済み - 完全オフラインモード継続")
+                        logger.info(f"ローカルキャッシュ発見済み - ネットワークアクセス完全回避")
                     else:
-                        logger.warning(f"キャッシュ未発見: {model_name} - 初回ダウンロードが発生する可能性があります")
+                        logger.warning(f"キャッシュ未発見: {model_name} - 初回ダウンロードスクリプト実行が必要")
                 
                 _SHARED_SENTENCE_TRANSFORMER = SentenceTransformer(
                     model_name,
