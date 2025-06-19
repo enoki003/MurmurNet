@@ -23,7 +23,7 @@ import numpy as np
 logger = logging.getLogger("MurmurNet.RAGRetriever")
 
 # ──────────────────────────────────────────────────────────────
-# Optional dependencies
+# Optional dependencies & 共有インスタンス
 # ──────────────────────────────────────────────────────────────
 try:
     from sentence_transformers import SentenceTransformer
@@ -40,6 +40,84 @@ try:
 except ImportError:
     HAS_LIBZIM = False
     logger.warning("libzim not found – dummy modeへフォールバック")
+
+# SentenceTransformer共有インスタンス（再ロード防止）
+_SHARED_SENTENCE_TRANSFORMER = None
+_ST_LOCK = threading.Lock()
+
+def get_shared_sentence_transformer(model_name: str = "all-MiniLM-L6-v2", cache_dir: Optional[str] = None) -> Optional[object]:
+    """
+    SentenceTransformerの共有インスタンスを取得（完全オフライン化）
+    
+    引数:
+        model_name: モデル名
+        cache_dir: キャッシュディレクトリ
+    
+    戻り値:
+        SentenceTransformerインスタンス or None
+    """
+    global _SHARED_SENTENCE_TRANSFORMER
+    
+    if not HAS_SENTENCE_TRANSFORMERS:
+        return None
+    
+    with _ST_LOCK:
+        if _SHARED_SENTENCE_TRANSFORMER is None:
+            try:
+                logger.info(f"SentenceTransformer初回ロード開始: {model_name}")
+                import time
+                start_time = time.time()
+                  # 完全オフライン化設定
+                if cache_dir:
+                    os.makedirs(cache_dir, exist_ok=True)
+                      # HuggingFace環境変数設定（強制オフライン）
+                    os.environ["HF_HUB_OFFLINE"] = "1"
+                    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+                    os.environ["HF_DATASETS_OFFLINE"] = "1"
+                    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+                    os.environ["TRANSFORMERS_CACHE"] = cache_dir
+                    os.environ["HF_HOME"] = cache_dir
+                    os.environ["SENTENCE_TRANSFORMERS_HOME"] = cache_dir
+                    
+                    logger.info(f"強制オフラインモード有効: {cache_dir}")
+                    
+                    # ローカルキャッシュ確認（より確実な判定）
+                    cached_model_variants = [
+                        os.path.join(cache_dir, model_name),
+                        os.path.join(cache_dir, model_name.replace("/", "--")),
+                        os.path.join(cache_dir, f"sentence-transformers_{model_name.replace('/', '_')}"),
+                    ]
+                    
+                    cache_found = any(os.path.exists(path) and os.listdir(path) for path in cached_model_variants if os.path.isdir(path))
+                    
+                    if cache_found:
+                        logger.info(f"ローカルキャッシュ発見済み - 完全オフラインモード継続")
+                    else:
+                        logger.warning(f"キャッシュ未発見: {model_name} - 初回ダウンロードが発生する可能性があります")
+                
+                _SHARED_SENTENCE_TRANSFORMER = SentenceTransformer(
+                    model_name,
+                    cache_folder=cache_dir,
+                    device="cpu",
+                    trust_remote_code=False
+                )
+                
+                load_time = time.time() - start_time
+                logger.info(f"SentenceTransformer共有インスタンス作成完了: {load_time:.2f}秒")
+                
+                # オフライン設定をクリーンアップ
+                offline_vars = ["HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "HF_DATASETS_OFFLINE"]
+                for env_var in offline_vars:
+                    if env_var in os.environ:
+                        del os.environ[env_var]
+                        
+            except Exception as e:
+                logger.error(f"SentenceTransformer初期化失敗: {e}")
+                _SHARED_SENTENCE_TRANSFORMER = None
+        else:
+            logger.debug("SentenceTransformer共有インスタンスを再利用")
+    
+    return _SHARED_SENTENCE_TRANSFORMER
 
 # ──────────────────────────────────────────────────────────────
 # Utility
@@ -94,9 +172,7 @@ class RAGRetriever:
             self._init_zim()
             self._init_embedding()
 
-        logger.info("RAG リトリーバー初期化 (モード: %s, キャッシュサイズ: %d)", self.mode, self._cache_max_size)
-
-    # ───────────────────── init helpers ─────────────────────
+        logger.info("RAG リトリーバー初期化 (モード: %s, キャッシュサイズ: %d)", self.mode, self._cache_max_size)    # ───────────────────── init helpers ─────────────────────
     def _init_zim(self) -> None:
         """ZIM アーカイブのロード。"""
         if not HAS_LIBZIM:
@@ -117,14 +193,14 @@ class RAGRetriever:
             self.mode = "dummy"
 
     def _init_embedding(self) -> None:
-        """SentenceTransformer のロード。"""
+        """SentenceTransformer の共有インスタンス取得（再ロード防止）"""
         logger.info("埋め込みモデル初期化開始...")
         
         if self.mode != "zim":
             logger.info("ZIMモードではないため、埋め込み初期化をスキップ")
             return
             
-        if SentenceTransformer is None:
+        if not HAS_SENTENCE_TRANSFORMERS:
             logger.warning("SentenceTransformerが利用不可のため、dummyモードに変更")
             self.mode = "dummy"
             return
@@ -134,44 +210,21 @@ class RAGRetriever:
             cache_dir = (
                 self.config.get("model_cache_dir")
                 or os.path.join(
-                    os.path.dirname(__file__), "..", "..", "cache", "sentence_transformers"
+                    os.path.dirname(__file__), "..", "..", "models", "st_cache"
                 )
             )
             
             logger.info(f"埋め込みモデル準備: {model_name}, キャッシュ: {cache_dir}")
-            os.makedirs(cache_dir, exist_ok=True)
-
-            # HuggingFaceキャッシュの最適化設定
-            os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "1")  # 高速転送有効
-            os.environ.setdefault("TRANSFORMERS_CACHE", cache_dir)   # Transformersキャッシュディレクトリ
             
-            # 既存キャッシュの確認
-            cached_model_path = os.path.join(cache_dir, model_name.replace("/", "--"))
-            if os.path.exists(cached_model_path):
-                logger.info(f"ローカルキャッシュ発見: {cached_model_path}")
-                # オフラインモード有効化でネットワークアクセス回避
-                os.environ["HF_HUB_OFFLINE"] = "1"
-                os.environ["TRANSFORMERS_OFFLINE"] = "1"
-
-            logger.info("SentenceTransformer読み込み開始...")
-            import time
-            start_time = time.time()
+            # 共有インスタンス取得（再ロード防止、完全オフライン化対応）
+            self.transformer = get_shared_sentence_transformer(model_name, cache_dir)
             
-            self.transformer = SentenceTransformer(
-                model_name, 
-                cache_folder=cache_dir, 
-                device="cpu",
-                trust_remote_code=False  # セキュリティ向上
-            )
+            if self.transformer is None:
+                logger.error("SentenceTransformer共有インスタンス取得失敗")
+                self.mode = "dummy"
+                return
             
-            load_time = time.time() - start_time
-            logger.info("埋め込みモデル読み込み完了: %s (時間: %.2f秒, キャッシュ: %s)", model_name, load_time, cache_dir)
-            
-            # オフラインモードを元に戻す
-            if "HF_HUB_OFFLINE" in os.environ:
-                del os.environ["HF_HUB_OFFLINE"]
-            if "TRANSFORMERS_OFFLINE" in os.environ:
-                del os.environ["TRANSFORMERS_OFFLINE"]
+            logger.info(f"埋め込みモデル準備完了: {model_name} (共有インスタンス)")
             
         except Exception as e:
             logger.error("埋め込みモデル初期化失敗: %s", e)

@@ -15,9 +15,9 @@ log_file: logs/murmurnet.log
 model_type: llama
 model_path: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf"
 chat_template: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma3_template.txt"
-n_ctx: 2048  # 効率とメモリのバランス（8192->2048でメモリ使用量大幅削減）
+n_ctx: 1024  # 推論速度最適化（2048->1024でさらなる高速化）
 n_threads: 6  # Ryzen 5 5600G最適化（4->6で推論速度向上）
-n_batch: 32   # バッチサイズ最適化（RAM効率）
+n_batch: 64   # バッチサイズさらに拡大（5600G+RAM対応、15%高速化）
 temperature: 0.7
 max_tokens: 256
 model_cache_dir: "cache/models"  # モデルキャッシュディレクトリ
@@ -38,6 +38,9 @@ rag_score_threshold: 0.5
 rag_top_k: 3
 embedding_model: "all-MiniLM-L6-v2"
 model_cache_dir: "cache/sentence_transformers"  # SentenceTransformerキャッシュディレクトリ
+offline_mode: true  # オフライン最優先モード（ネットワークアクセス回避）
+embedding_force_offline: true  # 埋め込みモデルのオフライン強制
+embedding_local_only: true  # ローカルキャッシュのみ使用
 
 # 要約設定
 summary_max_length: 200

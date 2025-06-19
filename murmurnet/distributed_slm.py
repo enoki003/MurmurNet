@@ -221,8 +221,7 @@ class DistributedSLM:
             r"(覚え|おぼえ)てます",
             r"(私|僕|俺|わたし|ぼく|おれ)について",
         ]
-        
-        # いずれかのパターンにマッチしたら記憶関連の質問と判定
+          # いずれかのパターンにマッチしたら記憶関連の質問と判定
         for pattern in memory_patterns:
             if re.search(pattern, text, re.IGNORECASE):
                 return True
@@ -239,6 +238,9 @@ class DistributedSLM:
         戻り値：
             生成された応答文字列
         """
+        import time
+        total_start_time = time.time()
+        
         self.logger.info("応答生成プロセスを開始")
         
         # 新しいターンのために黒板をクリア（会話履歴は保持）
@@ -249,7 +251,8 @@ class DistributedSLM:
             # 会話記憶から回答を取得
             memory_answer = self.conversation_memory.get_answer_for_question(input_text)
             if memory_answer:
-                self.logger.info("会話記憶から回答を取得しました")
+                elapsed = time.time() - total_start_time
+                self.logger.info(f"会話記憶から回答を取得しました (時間: {elapsed:.2f}秒)")
                 # 会話記憶を更新
                 self.conversation_memory.add_conversation_entry(
                     user_input=input_text,
@@ -258,11 +261,15 @@ class DistributedSLM:
                 return memory_answer
                 
         # 1. 入力受付・前処理
+        step_start = time.time()
         processed = self.input_reception.process(input_text)
         self.blackboard.write('input', processed)
+        step_time = time.time() - step_start
+        self.logger.info(f"[ステップ1] 入力処理完了: {step_time:.2f}秒")
         
         # 2. 会話履歴の追加（使用する場合）
         if self.use_memory:
+            step_start = time.time()
             conversation_context = self.conversation_memory.get_conversation_context()
             if conversation_context and conversation_context != "過去の会話はありません。":
                 # 会話コンテキストを黒板に書き込む
@@ -273,23 +280,37 @@ class DistributedSLM:
                 if isinstance(processed, dict) and 'normalized' in processed:
                     processed['context'] = conversation_context
                     self.blackboard.write('input', processed)
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ2] 会話履歴処理完了: {step_time:.2f}秒")
         
         # 3. RAG検索
+        step_start = time.time()
         rag_result = self.rag_retriever.retrieve(input_text)
         self.blackboard.write('rag', rag_result)
-        
-        # 4. 初期要約の実行（オプション）
+        step_time = time.time() - step_start
+        self.logger.info(f"[ステップ3] RAG検索完了: {step_time:.2f}秒")
+          # 4. 初期要約の実行（オプション）
         if self.use_summary:
+            step_start = time.time()
             initial_summary = f"ユーザー入力: {processed['normalized'] if isinstance(processed, dict) else processed}\n\n検索情報: {rag_result}"
             if self.use_memory and 'conversation_context' in self.blackboard.memory:
                 initial_summary += f"\n\n会話コンテキスト: {self.blackboard.read('conversation_context')}"
             self.blackboard.write('initial_summary', initial_summary)
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ4] 初期要約完了: {step_time:.2f}秒")
             
         # 5. 反復サイクルの実行
+        step_start = time.time()
         for i in range(self.iterations):
+            iteration_start = time.time()
             await self._run_iteration(i)
+            iteration_time = time.time() - iteration_start
+            self.logger.info(f"[イテレーション{i+1}] 完了: {iteration_time:.2f}秒")
+        step_time = time.time() - step_start
+        self.logger.info(f"[ステップ5] 全反復サイクル完了: {step_time:.2f}秒")
             
         # 6. 最終要約とエージェント出力の収集
+        step_start = time.time()
         entries = []
         # 各イテレーションの要約を収集
         if self.use_summary:
@@ -303,20 +324,29 @@ class DistributedSLM:
             agent_output = self.blackboard.read(f"agent_{i}_output")
             if agent_output:
                 entries.append({"type": "agent", "agent": i, "text": agent_output})
+        step_time = time.time() - step_start
+        self.logger.info(f"[ステップ6] 出力収集完了: {step_time:.2f}秒")
                 
         # 7. 最終応答生成
+        step_start = time.time()
         final_response = self.output_agent.generate(self.blackboard, entries)
         self.blackboard.write('final_response', final_response)
+        step_time = time.time() - step_start
+        self.logger.info(f"[ステップ7] 最終応答生成完了: {step_time:.2f}秒")
         
         # 8. 会話履歴に追加（使用する場合）
         if self.use_memory:
+            step_start = time.time()
             self.conversation_memory.add_conversation_entry(
                 user_input=input_text, 
                 system_response=final_response
             )
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ8] 会話記憶更新完了: {step_time:.2f}秒")
             self.logger.debug("会話記憶を更新しました")
         
-        self.logger.info(f"応答生成完了: {len(final_response)}文字")
+        total_time = time.time() - total_start_time
+        self.logger.info(f"=== 応答生成完了: {len(final_response)}文字 (合計時間: {total_time:.2f}秒) ===")
         return final_response
         
     def reset_memory(self) -> None:

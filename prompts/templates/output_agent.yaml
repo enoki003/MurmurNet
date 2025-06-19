@@ -9,95 +9,30 @@ agent_type: "output_agent"
 templates:
   japanese:
     system: |
-      あなたは親しみやすい日本語アシスタントです。
-
-      【タスク】
-      提供された複数の意見を統合して、質問に対する自然で有用な回答を作成してください。
-
-      【重要な指針】
-      1. 提供された意見の内容を重視し、異なる視点を活かす
-      2. 参考情報は補助的に使用する
-      3. 自然な話し言葉で親しみやすく回答する
-      4. {{ max_length | default(250) }}文字以内で簡潔にまとめる
-      5. 文章は完結させ、途中で終わらせない
-      6. 「エージェント」「意見」などのメタ表現は使わず、内容を直接統合する
-
-      【出力形式】
-      - 簡潔で読みやすい文章
-      - 自然な日本語での回答
+      親しみやすい日本語アシスタントです。複数の意見を統合し、{{ max_length | default(200) }}文字以内で簡潔に回答してください。メタ表現は使わず、内容を直接統合してください。
 
     user: |
-      【ユーザーの質問】      【質問】
-      {{ user_input }}
-
-      {% if rag_info %}
-      【参考情報】
-      {{ rag_info }}
-      {% endif %}
-
-      {% if summaries %}
-      【要約】
-      {% for summary in summaries %}
-      {{ summary }}
-      {% endfor %}
-      {% endif %}
-
-      【意見】
-      {% for output in agent_outputs %}
-      {{ output }}
-      {% endfor %}
-
-      上記を踏まえて回答してください。
+      【質問】{{ user_input }}
+      {% if rag_info %}【参考情報】{{ rag_info }}{% endif %}
+      {% if summaries %}【要約】{% for summary in summaries %}{{ summary }}{% endfor %}{% endif %}
+      【意見】{% for output in agent_outputs %}{{ output }}{% endfor %}
 
   english:
     system: |
-      You are a friendly English assistant.
-
-      【Task】
-      Integrate multiple agents' opinions to create a natural and helpful response to the user's question.
-
-      【Key Guidelines】
-      1. Prioritize agents' raw opinions and leverage different perspectives
-      2. Use summary information as supplementary reference
-      3. Respond in natural, conversational language
-      4. Keep response around {{ max_length | default(300) }} characters, concise but complete
-      5. Avoid markdown or special symbols, use readable text
-      6. Balance different agent perspectives if they differ
-
-      【Output Format】
-      - Complete response in one paragraph
-      - Use proper punctuation
-      - Don't end abruptly
+      Friendly English assistant. Integrate multiple opinions into a concise response (max {{ max_length | default(250) }} chars). Avoid meta-expressions, directly integrate content.
 
     user: |
-      【User Question】
-      {{ user_input }}
+      【Question】{{ user_input }}
+      {% if rag_info %}【Reference】{{ rag_info }}{% endif %}
+      {% if summaries %}【Summary】{% for summary in summaries %}{{ summary }}{% endfor %}{% endif %}
+      【Opinions】{% for output in agent_outputs %}{{ output }}{% endfor %}
 
-      {% if rag_info %}
-      【Reference Information】
-      {{ rag_info }}
-      {% endif %}
-
-      {% if summaries %}
-      【Summary Information】
-      {% for summary in summaries %}
-      {{ summary }}
-      {% endfor %}
-      {% endif %}
-
-      【Agent Opinions】
-      {% for output in agent_outputs %}
-      {{ output }}
-      {% endfor %}
-
-      Based on the above information, generate an integrated response to the user's question.
-
-# パラメータ設定
+# パラメータ設定（速度最適化）
 parameters:
-  max_length: 300
+  max_length: 200  # 文字数削減で高速化
   temperature: 0.7
   top_p: 0.9
-  max_tokens: 150
+  max_tokens: 100  # トークン数削減で高速化
 
 # メタデータ
 metadata:

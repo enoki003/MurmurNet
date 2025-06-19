@@ -91,7 +91,7 @@ def _get_model_cache_key(config: Dict[str, Any]) -> str:
     """モデルキャッシュ用のキーを生成"""
     model_path = config.get('model_path', '')
     model_type = config.get('model_type', '')
-    n_ctx = config.get('n_ctx', 2048)
+    n_ctx = config.get('n_ctx', 1024)  # デフォルト1024に変更（高速化）
     cache_key = f"{model_type}:{model_path}:{n_ctx}"
     logging.info(f"モデルキャッシュキー生成: {cache_key}")  # DEBUGからINFOに変更
     return cache_key
@@ -137,7 +137,7 @@ class LlamaModel(BaseModel):
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         self.model_path = config.get('model_path')
-        self.n_ctx = config.get('n_ctx', 2048)
+        self.n_ctx = config.get('n_ctx', 1024)  # CLI引数を正しく反映（デフォルト1024）
         self.n_threads = config.get('n_threads', 4)
         self.temperature = config.get('temperature', 0.7)
         self.max_tokens = config.get('max_tokens', 256)
@@ -177,17 +177,17 @@ class LlamaModel(BaseModel):
     def _init_model(self):
         """Llamaモデルを初期化（内部メソッド）"""
         import time
-        start_time = time.time()
-        
+        start_time = time.time()        
         try:
             self.logger.info(f"Llamaモデルの実際のロード開始: {self.model_path}")
-            
             llama_kwargs = {
                 'model_path': self.model_path,
                 'n_ctx': self.n_ctx,
                 'n_threads': self.n_threads,
-                'use_mmap': True,
-                'use_mlock': False,
+                'n_batch': self.config.get('n_batch', 64),  # バッチサイズ拡大（5600G対応）
+                'use_mmap': self.config.get('use_mmap', True),
+                'use_mlock': self.config.get('use_mlock', False),
+                'logits_all': False,  # メモリ節約（全トークンlogits保持しない）
                 'n_gpu_layers': 0,
                 'seed': 42,
                 'chat_format': "gemma",
@@ -466,7 +466,7 @@ DEFAULT_MODEL_CONFIGS = [
         'model_type': 'llama',
         'model_path': os.path.abspath(os.path.join(os.path.dirname(__file__), 
                                                   '../../models/gemma-3-1b-it-q4_0.gguf')),
-        'n_ctx': 2048,
+        'n_ctx': 1024,  # デフォルト1024（高速化）
         'n_threads': 4,
         'temperature': 0.7,
         'max_tokens': 256,
