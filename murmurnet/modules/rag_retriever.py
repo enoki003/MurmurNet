@@ -121,8 +121,7 @@ class RAGRetriever:
         
         logger.info(f"RAGリトリーバーを初期化しました (モード: {self.mode})")
 
-    # ───────────────────── init helpers ─────────────────────
-    def _init_zim(self) -> None:
+    # ───────────────────── init helpers ─────────────────────    def _init_zim(self) -> None:
         """ZIMファイルを初期化（内部メソッド）"""
         if not HAS_LIBZIM:
             logger.warning("libzim absent → dummy mode")
@@ -154,8 +153,17 @@ class RAGRetriever:
             
         try:
             model_name = self.config.get("embedding_model", "all-MiniLM-L6-v2")
-            self.transformer = SentenceTransformer(model_name)
-            logger.info(f"Loaded embedding model: {model_name}")
+            
+            # ローカルキャッシュディレクトリを設定（起動時間短縮のため）
+            cache_dir = self.config.get("model_cache_dir")
+            if not cache_dir:
+                # デフォルトのキャッシュディレクトリを作成
+                cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "cache", "sentence_transformers")
+                os.makedirs(cache_dir, exist_ok=True)
+            
+            # キャッシュディレクトリを指定してモデルを初期化
+            self.transformer = SentenceTransformer(model_name, cache_folder=cache_dir)
+            logger.info(f"Loaded embedding model: {model_name} (cache: {cache_dir})")
         except Exception as e:
             logger.error(f"Embedding model init failed: {e}")
             self.mode = "dummy"

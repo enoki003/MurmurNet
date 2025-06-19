@@ -32,6 +32,29 @@ except ImportError:
     torch = None
 
 
+# モデルキャッシュ用のグローバル変数
+_MODEL_CACHE = {}
+_CACHE_LOCK = None
+
+try:
+    import threading
+    _CACHE_LOCK = threading.Lock()
+except ImportError:
+    # スレッドロックが利用できない場合は単純な実装
+    class DummyLock:
+        def __enter__(self): pass
+        def __exit__(self, *args): pass
+    _CACHE_LOCK = DummyLock()
+
+
+def _get_model_cache_key(config: Dict[str, Any]) -> str:
+    """モデルキャッシュ用のキーを生成"""
+    model_path = config.get('model_path', '')
+    model_type = config.get('model_type', '')
+    n_ctx = config.get('n_ctx', 2048)
+    return f"{model_type}:{model_path}:{n_ctx}"
+
+
 class BaseModel(ABC):
     """言語モデルの基底クラス"""
     
@@ -197,8 +220,7 @@ class LlamaModel(BaseModel):
             
         戻り値:
             チャット完了のレスポンス
-        """
-        # 遅延初期化を確実に実行
+        """        # 遅延初期化を確実に実行
         self._ensure_initialized()
         
         if not self._llm:
@@ -218,16 +240,19 @@ class LlamaModel(BaseModel):
             }
         
         try:
-            # パラメータの設定
+            # パラメータの設定（研究に基づく最適化）
             temperature = kwargs.get('temperature', self.temperature)
             max_tokens = kwargs.get('max_tokens', self.max_tokens)
+            top_p = kwargs.get('top_p', 0.95)  # 研究推奨値
+            repeat_penalty = kwargs.get('repeat_penalty', 1.2)  # 繰り返し抑制
             
-            # チャット完了を実行
+            # チャット完了を実行（出力崩壊防止パラメータ付き）
             response = self._llm.create_chat_completion(
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                top_p=kwargs.get('top_p', 0.9),
+                top_p=top_p,
+                repeat_penalty=repeat_penalty,  # 繰り返しペナルティ追加
                 stream=False
             )
             
@@ -268,7 +293,8 @@ class ModelFactory:
     言語モデルのファクトリクラス
     設定に基づいて適切なモデルインスタンスを作成
     """
-      # 利用可能なモデルタイプ
+    
+    # 利用可能なモデルタイプ
     MODEL_TYPES = {
         'llama': LlamaModel,
         'local': LlamaModel,  # localは LlamaModel にマッピング
@@ -293,7 +319,15 @@ class ModelFactory:
             model_type = 'llama'
         
         model_class = cls.MODEL_TYPES[model_type]
-        return model_class(config)
+        
+        # シングルトンパターンによるモデルインスタンスの再利用
+        cache_key = _get_model_cache_key(config)
+        
+        with _CACHE_LOCK:
+            if cache_key not in _MODEL_CACHE:
+                _MODEL_CACHE[cache_key] = model_class(config)
+        
+        return _MODEL_CACHE[cache_key]
     
     @classmethod
     def get_available_models(cls, configs: List[Dict[str, Any]]) -> List[BaseModel]:
