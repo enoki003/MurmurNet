@@ -381,3 +381,23 @@ class DistributedSLM:
             "parallel_enabled": self.use_parallel,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
         }
+    def _should_use_summary(self, user_input: str, rag_result: Optional[str]) -> bool:
+        """
+        要約処理を実行するかどうかを判定する簡易ロジック
+        - 入力が長い（例：150文字超）か
+        - RAG の返却が長い（例：500文字超）か
+        のどちらかなら True
+        """
+        LENGTH_THRESHOLD_INPUT = 150
+        LENGTH_THRESHOLD_RAG   = 500
+
+        try:
+            if len(user_input) > LENGTH_THRESHOLD_INPUT:
+                return True
+            if rag_result and len(rag_result) > LENGTH_THRESHOLD_RAG:
+                return True
+            return False
+        except Exception as e:
+            # 失敗したら安全側（要約する）に倒す
+            self.logger.warning(f"_should_use_summary 判定で例外: {e}")
+            return True

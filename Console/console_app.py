@@ -28,19 +28,10 @@ from MurmurNet.distributed_slm import DistributedSLM
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
 parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
-parser.add_argument('--performance', action='store_true', help='詳細なパフォーマンス情報を表示')
-parser.add_argument('--rag', choices=['dummy', 'zim', 'none'], default='dummy', 
-                   help='RAGモード選択: dummy(基本知識), zim(Wikipedia), none(RAG無効)')
-parser.add_argument('--threads', type=int, help='推論スレッド数の上書き')
-parser.add_argument('--ctx', type=int, help='コンテキスト長の上書き')
 parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
 parser.add_argument('--iter', type=int, default=1, help='反復回数（デフォルト: 1）')
 parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
-parser.add_argument('--no-summary', action='store_true', help='要約機能を完全無効化')
-parser.add_argument('--summary', choices=['on', 'off', 'smart'], default='smart', 
-                   help='要約設定: on(常時), off(無効), smart(自動判定)')
-parser.add_argument('--summary-threshold', type=int, default=1000, 
-                   help='smart要約の閾値（トークン数、デフォルト1000）')
+parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
 parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
 # RAGモードのオプションを追加
 parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
@@ -61,18 +52,6 @@ logging.basicConfig(
     level=log_level,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
-# パフォーマンス情報をコンソールに表示するためのハンドラー
-if args.performance or args.debug:
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    console.setFormatter(logging.Formatter('[PERF] %(message)s'))  # パフォーマンス情報用
-    
-    # MurmurNetのロガーにコンソールハンドラーを追加
-    murmur_logger = logging.getLogger('MurmurNet')
-    murmur_logger.addHandler(console)
-    murmur_logger.setLevel(logging.INFO)
-
 # コンソールにもログ出力（ファイル出力時のみ追加）
 if args.log:
     console = logging.StreamHandler()
@@ -124,54 +103,28 @@ def print_debug(slm):
 
 async def chat_loop():
     """会話ループのメイン関数"""
-    
-    # config.yamlからベース設定を読み込み
-    config_path = "config.yaml"
-    base_config = {}
-    if os.path.exists(config_path):
-        try:
-            import yaml
-            with open(config_path, 'r', encoding='utf-8') as f:
-                base_config = yaml.safe_load(f) or {}
-            print(f"設定ファイルを読み込みました: {config_path}")
-        except Exception as e:
-            print(f"設定ファイル読み込みエラー: {e}")
-            base_config = {}
-      # 設定（config.yamlをベースにコマンドライン引数で上書き）
-    config = base_config.copy()  # ベース設定から開始
-    
-    # 基本設定（常に上書き）
-    config.update({
+    # 設定
+    config = {
+        # "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
+        # "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
         "model_path": r"C:\Users\admin\Desktop\課題研究\models\gemma-3-1b-it-q4_0.gguf",
         "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
+
         "num_agents": args.agents,
         "iterations": args.iter,
-        "use_summary": not args.no_summary and args.summary != 'off',
-        "summary_mode": args.summary,  # on, off, smart
-        "summary_threshold": args.summary_threshold,  # smart要約の閾値
+        "use_summary": not args.no_summary,
         "use_parallel": args.parallel,
         "debug": args.debug,
-        "performance_monitoring": True,  # パフォーマンス測定を有効化
-        "show_performance": args.performance or args.debug,  # パフォーマンス表示設定
-        
-        # RAG設定（コマンドライン引数から上書き）
-        "rag_mode": args.rag,  # dummy, zim, none
-        "rag_enabled": args.rag != 'none',  # RAG無効化対応
+        # RAG設定
+        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
         "rag_score_threshold": 0.5,
         "rag_top_k": 3,
         "embedding_model": "all-MiniLM-L6-v2",
-        
         # 並列処理の安全性向上オプション
         "safe_parallel": args.safe_parallel,
         "max_workers": args.max_workers if args.max_workers > 0 else None,
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
-    })
-    
-    # パフォーマンス設定（コマンドライン引数で上書き、なければconfig.yamlの値を使用）
-    if args.threads:
-        config["n_threads"] = args.threads
-    if args.ctx:
-        config["n_ctx"] = args.ctx
+    }
 
     # ZIMモードの場合、パスを追加
     if args.rag_mode == "zim":
@@ -185,7 +138,8 @@ async def chat_loop():
     
     # SLMインスタンス作成
     slm = DistributedSLM(config)
-      # RAGモードのチェック
+    
+    # RAGモードのチェック
     from MurmurNet.modules.rag_retriever import RAGRetriever
     rag = RAGRetriever(config)
     if args.rag_mode == "zim" and rag.mode == "dummy":
@@ -198,14 +152,6 @@ async def chat_loop():
     print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
     print("終了するには 'quit' または 'exit' を入力してください")
     
-    # 最適化設定の表示
-    print("\n[最適化設定]")
-    print(f"  コンテキスト長: {config.get('n_ctx', 'N/A')}")
-    print(f"  バッチサイズ: {config.get('n_batch', 'N/A')}")
-    print(f"  推論スレッド数: {config.get('n_threads', 'N/A')}")
-    if args.performance:
-        print("  パフォーマンス測定: 有効 ⚡")
-    
     if args.parallel:
         print("[設定] 並列処理: 有効")
         if args.safe_parallel:
@@ -213,7 +159,7 @@ async def chat_loop():
         if args.max_workers > 0:
             print(f"[設定] 最大並列ワーカー数: {args.max_workers}")
     if not args.no_summary:
-        print(f"[設定] 要約機能: 有効 (モード: {args.summary})")
+        print("[設定] 要約機能: 有効")
     print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
     if args.rag_mode == "zim":
         print(f"[設定] ZIMファイル: {args.zim_path}")
@@ -230,47 +176,24 @@ async def chat_loop():
             # 空入力はスキップ
             if not user_input.strip():
                 continue
-              # 履歴に追加
+            
+            # 履歴に追加
             history.append({"role": "user", "content": user_input})
             
             # 生成開始
             print("AI> ", end="", flush=True)
             
-            import time
-            start_time = time.time()
+            start_time = asyncio.get_event_loop().time()
             response = await slm.generate(user_input)
-            elapsed = time.time() - start_time
-              # 応答表示（応答時間を常に表示）
+            elapsed = asyncio.get_event_loop().time() - start_time
+            
+            # 応答表示
             print(f"{response}")
-            print(f"[応答時間: {elapsed:.2f}秒]")
-            
-            # パフォーマンス最適化効果を表示
-            if elapsed <= 3.0:
-                print("⚡ 高速応答!")
-            elif elapsed <= 6.0:
-                print("✅ 良好な応答速度")
-            elif elapsed <= 10.0:
-                print("⚠️  やや低速")
-            else:
-                print("🐌 最適化が必要")
-            
-            # 詳細なパフォーマンス情報を表示（--performance または --debug フラグ）
-            if args.performance or args.debug:
-                print(f"[詳細] n_ctx: {config.get('n_ctx', 'N/A')}, n_batch: {config.get('n_batch', 'N/A')}, スレッド: {config.get('n_threads', 'N/A')}")
-                print(f"[詳細] RAGモード: {config.get('rag_mode', 'N/A')}, 要約: {config.get('summary_mode', 'N/A')}")
-                
-                # メモリ使用量を表示（可能であれば）
-                try:
-                    import psutil
-                    process = psutil.Process()
-                    memory_mb = process.memory_info().rss / 1024 / 1024
-                    print(f"[詳細] メモリ使用量: {memory_mb:.1f} MB")
-                except ImportError:
-                    pass
             
             # デバッグ情報表示
             if args.debug:
                 print_debug(slm)
+                print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
             
             # 履歴に追加
             history.append({"role": "assistant", "content": response})

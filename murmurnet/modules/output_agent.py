@@ -14,7 +14,6 @@ import re
 import time
 from typing import Dict, Any, List, Optional
 from MurmurNet.modules.model_factory import ModelFactory
-from MurmurNet.modules.prompt_manager import get_prompt_manager
 
 logger = logging.getLogger('MurmurNet.OutputAgent')
 
@@ -30,6 +29,7 @@ class OutputAgent:
         config: 設定辞書
         max_output_tokens: 最終出力の最大トークン数
     """
+    
     def __init__(self, config: Dict[str, Any] = None):
         """
         出力エージェントの初期化
@@ -41,16 +41,13 @@ class OutputAgent:
         self.debug = self.config.get('debug', False)
         self.max_output_tokens = self.config.get('max_output_tokens', 250)  # より短い制限
         
-        # プロンプトテンプレートマネージャーの初期化
-        self.prompt_manager = get_prompt_manager()
-        
         # デバッグモードを強制的に有効にする
         logger.setLevel(logging.DEBUG)
         
         # ModelFactoryからモデルを取得
         self.llm = ModelFactory.create_model(self.config)
         
-        logger.info("出力エージェントを初期化しました（プロンプトテンプレート対応）")
+        logger.info("出力エージェントを初期化しました")
         logger.debug(f"OutputAgent初期化: debug={self.debug}, max_tokens={self.max_output_tokens}")
 
     def _detect_language(self, text: str) -> str:
@@ -113,6 +110,7 @@ class OutputAgent:
                 
                 if self.debug:
                     logger.debug(f"OutputAgent: エントリタイプ={entry_type}, テキスト長={len(text)}")
+                
                 if entry_type == 'summary':
                     iteration = entry.get('iteration', 0)
                     summaries.append(f"要約 {iteration+1}: {text}")
@@ -122,64 +120,60 @@ class OutputAgent:
             
             if self.debug:
                 logger.debug(f"OutputAgent: 要約数={len(summaries)}, エージェント出力数={len(agent_outputs)}")
+                  # 4) システムプロンプト作成 - 研究に基づく最適化
+            if lang == 'ja':
+                sys_prompt = (
+                    "あなたは親しみやすい日本語アシスタントです。\n\n"
+                    "【タスク】\n"
+                    "複数のエージェントの意見を統合して、ユーザーの質問に対する自然で有用な回答を作成してください。\n\n"
+                    "【重要な指針】\n"
+                    "1. エージェントの生の意見を最重視し、各エージェントの異なる視点を活かす\n"
+                    "2. 要約情報は補助的な参考として使用する\n"
+                    "3. 自然な話し言葉で親しみやすく回答する\n"
+                    "4. 250-300文字程度で簡潔かつ完全にまとめる\n"
+                    "5. マークダウンや特殊記号は使わず、読みやすい文章にする\n"
+                    "6. エージェント間の意見の違いがあれば、バランスよく統合する\n\n"
+                    "【出力形式】\n"
+                    "- 一つの段落で完結した回答\n"
+                    "- 句読点を適切に使用\n"
+                    "- 文章の途中で終わらせない"
+                )
+            else:
+                sys_prompt = (
+                    "You are a friendly English assistant.\n\n"
+                    "【Task】\n"
+                    "Integrate multiple agents' opinions to create a natural and helpful response to the user's question.\n\n"
+                    "【Key Guidelines】\n"
+                    "1. Prioritize agents' raw opinions and leverage different perspectives\n"
+                    "2. Use summary information as supplementary reference\n"
+                    "3. Respond in natural, conversational language\n"
+                    "4. Keep response around 250-300 characters, concise but complete\n"
+                    "5. Avoid markdown or special symbols, use readable text\n"
+                    "6. If agents have different opinions, integrate them in a balanced way\n\n"
+                    "【Output Format】\n"
+                    "- Single paragraph with complete response\n"
+                    "- Use proper punctuation\n"
+                    "- Do not end mid-sentence"
+                )            # 5) ユーザープロンプト作成（構造化された研究ベースの形式）
+            user_prompt = f"【ユーザーの質問】\n{user_input}\n\n"
             
-            # 4) プロンプトテンプレートマネージャーを使用してプロンプト生成
-            try:
-                # システムプロンプトをテンプレートから生成
-                sys_prompt = self.prompt_manager.render_prompt(
-                    template_name='output_agent',
-                    template_type='system',
-                    language='japanese' if lang == 'ja' else 'english',
-                    max_length=self.max_output_tokens
-                )
-                
-                # ユーザープロンプトをテンプレートから生成
-                user_prompt = self.prompt_manager.render_prompt(
-                    template_name='output_agent',
-                    template_type='user',
-                    language='japanese' if lang == 'ja' else 'english',
-                    user_input=user_input,
-                    rag_info=rag if rag else None,
-                    summaries=summaries,
-                    agent_outputs=agent_outputs
-                )
-                
-                logger.debug("テンプレートからプロンプトを生成しました")
-                
-            except Exception as e:
-                logger.error(f"テンプレートプロンプト生成エラー: {e}")
-                # フォールバック: 従来のハードコードプロンプト
-                if lang == 'ja':
-                    sys_prompt = (
-                        "あなたは親しみやすい日本語アシスタントです。\n\n"
-                        "複数のエージェントの意見を統合して、ユーザーの質問に対する自然で有用な回答を作成してください。"
-                    )
-                else:
-                    sys_prompt = (
-                        "You are a friendly English assistant.\n\n"
-                        "Integrate multiple agents' opinions to create a natural and helpful response to the user's question."
-                    )
-                
-                # フォールバック: 基本的なユーザープロンプト
-                user_prompt = f"【ユーザーの質問】\n{user_input}\n\n"
-                
-                # RAG情報があれば追加
-                if rag:
-                    user_prompt += f"【参考情報】\n{rag}\n\n"
-                
-                # エージェント出力を追加
-                if agent_outputs:
-                    user_prompt += "【エージェントの意見】\n"
-                    for i, output in enumerate(agent_outputs, 1):
-                        user_prompt += f"{i}. {output}\n"
-                    user_prompt += "\n"
-                
-                # 要約情報を追加
-                if summaries:
-                    user_prompt += "【要約情報（参考）】\n"
-                    for i, summary in enumerate(summaries, 1):
-                        user_prompt += f"{i}. {summary}\n"
-                    user_prompt += "\n"
+            # RAG情報があれば追加（明確にラベル付け）
+            if rag:
+                user_prompt += f"【参考情報】\n{rag}\n\n"
+            
+            # エージェント出力を最初に配置（最も重要な情報源）
+            if agent_outputs:
+                user_prompt += "【エージェントの意見】\n"
+                for i, output in enumerate(agent_outputs, 1):
+                    user_prompt += f"{i}. {output}\n"
+                user_prompt += "\n"
+            
+            # 要約情報は参考として配置
+            if summaries:
+                user_prompt += "【要約情報（参考）】\n"
+                for i, summary in enumerate(summaries, 1):
+                    user_prompt += f"{i}. {summary}\n"
+                user_prompt += "\n"
             
             # 明確な指示を追加（研究で重要とされる明示的な指示）
             if lang == 'ja':
@@ -203,7 +197,8 @@ class OutputAgent:
             
             if self.debug:
                 logger.debug(f"OutputAgent: システムプロンプト: {sys_prompt[:100]}...")
-                logger.debug(f"OutputAgent: ユーザープロンプト: {user_prompt[:300]}...")            # 6) 出力生成（研究に基づく最適化パラメータ）
+                logger.debug(f"OutputAgent: ユーザープロンプト: {user_prompt[:300]}...")
+              # 6) 出力生成（研究に基づく最適化パラメータ）
             logger.info("Step 6: LLMによる出力生成を開始...")
             logger.info(f"システムプロンプト: {sys_prompt[:100]}...")
             logger.info(f"ユーザープロンプト: {user_prompt[:300]}...")
@@ -213,11 +208,10 @@ class OutputAgent:
                     {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=150,  # より短く制限して出力崩壊を防止
-                temperature=0.6,  # 温度を下げて一貫性を向上
-                top_p=0.9,       # top_pを下げて安定性を向上
-                repeat_penalty=1.3,  # 繰り返しペナルティを強化
-                stop=["。\n\n", "\n\n\n", "###", "---", "```"]  # 停止条件を追加
+                max_tokens=self.max_output_tokens,
+                temperature=0.7,  # 研究推奨: 0.7-0.8の範囲、創造性と一貫性のバランス
+                top_p=0.95,  # 研究推奨: 0.9-0.95、多様性を保ちつつ品質維持
+                repeat_penalty=1.2  # 研究推奨: 1.1-1.3、繰り返し抑制で出力崩壊防止
             )
             logger.info("LLM応答を受信しました")
               # レスポンスの形式によって適切にアクセス

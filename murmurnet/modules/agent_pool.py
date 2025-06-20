@@ -55,9 +55,8 @@ class AgentPoolManager:
             logger.setLevel(logging.DEBUG)
           # 安全のため、デフォルトでは並列モードを無効化
         self.parallel_mode = config.get('parallel_mode', False)
-        
-        # ModelFactoryからモデルを取得
-        self.llm = ModelFactory.create_model(self.config)
+          # ModelFactoryからモデルを取得（共有インスタンス）
+        self.llm = ModelFactory.get_shared_model(self.config)
         
         self._load_role_templates()
         self._load_roles()

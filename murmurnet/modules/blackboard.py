@@ -4,7 +4,7 @@
 Blackboard モジュール
 ~~~~~~~~~~~~~~~~~~~
 エージェント間の共有メモリとして機能する黒板パターン実装
-データの読み書き、監視、履歴管理を提供（スレッドセーフ対応）
+データの読み書き、監視、履歴管理を提供
 
 作者: Yuhi Sonoki
 """
@@ -13,17 +13,12 @@ Blackboard モジュール
 from typing import Dict, Any, List, Optional
 import time
 import numpy as np
-import threading
-import logging
-
-logger = logging.getLogger('MurmurNet.Blackboard')
 
 class Blackboard:
     """
-    分散エージェント間の共有メモリ実装（スレッドセーフ）
+    分散エージェント間の共有メモリ実装
     - シンプルなkey-value保存
     - 時系列的な記録と管理
-    - RLockによる並行アクセス制御
     """
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -31,33 +26,23 @@ class Blackboard:
         self.history: List[Dict[str, Any]] = []
         self.debug = config.get('debug', False)
         self.persistent_keys = ['conversation_context']  # 保持するキー
-          # スレッドセーフのためのロック（再帰ロック）
-        self._lock = threading.RLock()
-        
-        if self.debug:
-            logger.debug("黒板を初期化しました（スレッドセーフ対応）")
 
     def write(self, key: str, value: Any) -> Dict[str, Any]:
         """
-        黒板に情報を書き込む（スレッドセーフ）
+        黒板に情報を書き込む
         埋め込みベクトルは表示用に簡略化
         """
-        with self._lock:
-            # 埋め込みベクトルの場合は表示用に圧縮
-            stored_value = self._process_value_for_storage(value)
-            self.memory[key] = stored_value
-            
-            entry = {
-                'timestamp': time.time(),
-                'key': key,
-                'value': stored_value
-            }
-            self.history.append(entry)
-            
-            if self.debug:
-                logger.debug(f"黒板書き込み: {key} = {type(stored_value).__name__}")
-            
-            return entry
+        # 埋め込みベクトルの場合は表示用に圧縮
+        stored_value = self._process_value_for_storage(value)
+        self.memory[key] = stored_value
+        
+        entry = {
+            'timestamp': time.time(),
+            'key': key,
+            'value': stored_value
+        }
+        self.history.append(entry)
+        return entry
 
     def _process_value_for_storage(self, value: Any) -> Any:
         """表示用に値を加工"""
@@ -77,22 +62,15 @@ class Blackboard:
 
     def read(self, key: str) -> Any:
         """
-        黒板から情報を読み込む（スレッドセーフ）
+        黒板から情報を読み込む
         """
-        with self._lock:
-            value = self.memory.get(key)
-            if self.debug and value is not None:
-                logger.debug(f"黒板読み込み: {key} = {type(value).__name__}")
-            return value
+        return self.memory.get(key)
         
     def read_all(self) -> Dict[str, Any]:
         """
-        黒板のすべての現在値を取得（スレッドセーフ）
+        黒板のすべての現在値を取得
         """
-        with self._lock:
-            if self.debug:
-                logger.debug(f"黒板全読み込み: {len(self.memory)}個のキー")
-            return self.memory.copy()
+        return self.memory.copy()
 
     def clear_current_turn(self) -> None:
         """
