@@ -133,8 +133,7 @@ class DistributedSLM:
             agent_output = self.blackboard.read(f"agent_{i}_output")
             if agent_output:
                 agent_entries.append({"agent": i, "text": agent_output})
-        
-        # 3. 出力の要約（使用する場合）
+          # 3. 出力の要約（使用する場合）
         if self.use_summary and agent_entries:
             summary_start = self.performance.start_timer(f"summary_iteration_{iteration+1}")
             summary = self.summary_engine.summarize_blackboard(agent_entries)
@@ -149,9 +148,32 @@ class DistributedSLM:
         エージェントを並列実行（内部メソッド）
         
         複数のエージェントを並列に実行し、結果を黒板に書き込む
+        CPU最適化版の並列処理を使用
         """
-        self.logger.info("エージェントを並列実行中...")
+        self.logger.info("エージェントを並列実行中（CPU最適化版）...")
         
+        # パフォーマンス統計の記録
+        if hasattr(self.performance, 'record_parallel_execution'):
+            self.performance.record_parallel_execution('parallel')
+        
+        try:
+            # AgentPoolManagerの最適化された並列実行を使用
+            if hasattr(self.agent_pool, 'run_agents_parallel'):
+                await self.agent_pool.run_agents_parallel(self.blackboard)
+            else:
+                # フォールバック: 従来の並列実行
+                await self._run_agents_parallel_fallback()
+                    
+        except Exception as e:
+            self.logger.error(f"並列実行エラー: {str(e)}")
+            # エラーが発生した場合は逐次実行にフォールバック
+            self.logger.info("逐次実行にフォールバックします")
+            self.agent_pool.run_agents(self.blackboard)
+
+    async def _run_agents_parallel_fallback(self) -> None:
+        """
+        フォールバック用の並列実行（従来版）
+        """
         # スレッドプール内でエージェントタスクを実行するラッパー
         def run_agent_task(agent_id: int) -> str:
             """エージェントタスクのスレッドプールラッパー"""
@@ -167,38 +189,25 @@ class DistributedSLM:
         # イベントループを取得
         loop = asyncio.get_event_loop()
         
-        try:
-            # 真の並列実行：すべてのエージェントを同時に実行
-            tasks = []
-            for i in range(self.num_agents):
-                # 各エージェントのタスクを作成
-                task = loop.run_in_executor(None, run_agent_task, i)
-                tasks.append(task)
-            
-            # すべてのタスクを同時に実行して結果を取得
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # 結果を黒板に書き込み
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-                elif result:
-                    self.blackboard.write(f'agent_{i}_output', result)
-                else:
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
-                    
-        except Exception as e:
-            self.logger.error(f"並列実行エラー: {str(e)}")
-            # エラーが発生した場合は逐次実行にフォールバック
-            self.logger.info("逐次実行にフォールバックします")
-            for i in range(self.num_agents):
-                try:
-                    result = self.agent_pool._agent_task(i)
-                    self.blackboard.write(f'agent_{i}_output', result)
-                except Exception as inner_e:
-                    self.logger.error(f"エージェント {i} フォールバック実行エラー: {str(inner_e)}")
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+        # 真の並列実行：すべてのエージェントを同時に実行
+        tasks = []
+        for i in range(self.num_agents):
+            # 各エージェントのタスクを作成
+            task = loop.run_in_executor(None, run_agent_task, i)
+            tasks.append(task)
+        
+        # すべてのタスクを同時に実行して結果を取得
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 結果を黒板に書き込み
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+            elif result:
+                self.blackboard.write(f'agent_{i}_output', result)
+            else:
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
     
     def _is_memory_related_question(self, text: str) -> bool:
         """

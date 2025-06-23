@@ -10,6 +10,7 @@ MurmurNet モデルファクトリモジュール
 
 import logging
 import os
+import psutil
 from typing import Dict, Any, Optional, Union, List
 from abc import ABC, abstractmethod
 
@@ -99,16 +100,30 @@ class LlamaModel(BaseModel):
             self.logger.info(f"モデル読み込み開始: {self.model_path}")
             self.logger.info("モデルサイズによっては30秒以上かかる場合があります...")
             
+            # CPU最適化設定
+            cpu_count_physical = psutil.cpu_count(logical=False) or 4
+            cpu_count_logical = psutil.cpu_count(logical=True) or 8
+            
+            # CPUスレッド数を動的に調整
+            optimal_threads = min(self.n_threads, cpu_count_logical)
+            self.logger.info(f"CPU最適化: {optimal_threads}スレッド使用 (物理:{cpu_count_physical}, 論理:{cpu_count_logical})")
+            
             llama_kwargs = {
                 'model_path': self.model_path,
                 'n_ctx': self.n_ctx,
-                'n_threads': self.n_threads,
+                'n_threads': optimal_threads,
                 'use_mmap': True,
                 'use_mlock': False,
-                'n_gpu_layers': 0,
+                'n_gpu_layers': 0,  # GPU使用禁止
                 'seed': 42,
                 'chat_format': "gemma",
-                'verbose': True  # 進捗表示を有効化
+                'verbose': True,  # 進捗表示を有効化
+                # CPU最適化パラメータ
+                'n_batch': 512,  # バッチサイズ最適化
+                'last_n_tokens_size': 64,  # コンテキスト最適化
+                'rope_scaling_type': 0,  # RoPE最適化
+                'rope_freq_base': 10000.0,
+                'rope_freq_scale': 1.0,
             }
             if self.chat_template and os.path.exists(self.chat_template):
                 try:

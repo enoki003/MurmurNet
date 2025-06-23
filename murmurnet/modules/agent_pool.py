@@ -14,9 +14,12 @@ import os
 import json
 import re
 import threading
-from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import psutil
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from typing import Dict, Any, List, Optional, Tuple, Callable
 from MurmurNet.modules.model_factory import ModelFactory
+from MurmurNet.modules.performance import cpu_profile
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
@@ -31,12 +34,14 @@ class AgentPoolManager:
     - 複数エージェントの生成と実行管理
     - 役割ベースの分担処理
     - 並列/逐次実行の制御
+    - CPU最適化された実行
     
     属性:
         config: 設定辞書
         blackboard: 共有黒板
         num_agents: エージェント数
         roles: 役割リスト
+        performance: パフォーマンスモニター
     """
     def __init__(self, config: Dict[str, Any], blackboard):
         """
@@ -51,11 +56,20 @@ class AgentPoolManager:
         self.debug = config.get('debug', False)
         self.num_agents = config.get('num_agents', 2)
         
+        # パフォーマンスモニターへの参照を取得
+        self.performance = getattr(blackboard, 'performance', None)
+        
         if self.debug:
             logger.setLevel(logging.DEBUG)
-          # 安全のため、デフォルトでは並列モードを無効化
-        self.parallel_mode = config.get('parallel_mode', False)
-          # ModelFactoryからモデルを取得（共有インスタンス）
+          
+        # CPU最適化のための設定        self.cpu_count = psutil.cpu_count(logical=True) or 8
+        self.cpu_count_physical = psutil.cpu_count(logical=False) or 4
+        
+        # 並列処理の設定
+        self.parallel_mode = config.get('use_parallel', False)
+        self.optimal_threads = self._calculate_optimal_threads()
+        
+        # ModelFactoryからモデルを取得（共有インスタンス）
         self.llm = ModelFactory.get_shared_model(self.config)
         
         self._load_role_templates()
@@ -63,11 +77,38 @@ class AgentPoolManager:
         
         # 並列モードの場合の設定
         if self.parallel_mode:
-            # スレッド間の同期のためにロックを作成
-            self.model_lock = threading.Lock()
-            logger.info("並列処理モードを初期化しました")
+            # CPU最適化されたスレッドプールを作成
+            self.thread_pool = ThreadPoolExecutor(
+                max_workers=self.optimal_threads,
+                thread_name_prefix="MurmurNet-Agent"
+            )
+            logger.info(f"並列処理モードを初期化: {self.optimal_threads}スレッド")
         
-        logger.info(f"エージェントプールを初期化しました (エージェント数: {self.num_agents})")
+        logger.info(f"エージェントプールを初期化 (エージェント数: {self.num_agents}, CPU最適化: {self.optimal_threads}スレッド)")
+
+    def _calculate_optimal_threads(self) -> int:
+        """
+        CPU最適化のための最適スレッド数を計算
+        
+        戻り値:
+            最適なスレッド数
+        """
+        # エージェント数とCPUコア数を考慮
+        base_threads = min(self.num_agents, self.cpu_count_physical)
+        
+        # システム負荷に基づく調整
+        try:
+            load_avg = psutil.getloadavg()[0] if hasattr(psutil, 'getloadavg') else 0.5
+            if load_avg > self.cpu_count_physical * 0.8:
+                # 高負荷時は控えめに
+                optimal = max(base_threads // 2, 2)
+            else:
+                # 低負荷時は積極的に並列化
+                optimal = min(base_threads * 2, self.cpu_count)
+        except:
+            optimal = base_threads
+        
+        return max(optimal, 2)  # 最低2スレッド
 
     def _load_role_templates(self) -> None:
         """
@@ -135,6 +176,7 @@ class AgentPoolManager:
             roles_info = ", ".join(role["role"] for role in self.roles)
             logger.debug(f"割り当てられた役割: {roles_info}")
 
+    @cpu_profile
     def run_agents(self, blackboard) -> None:
         """
         すべてのエージェントを逐次実行
@@ -143,6 +185,10 @@ class AgentPoolManager:
             blackboard: 共有黒板
         """
         logger.info("エージェントを逐次実行中...")
+        
+        # パフォーマンス統計の記録
+        if self.performance:
+            self.performance.record_parallel_execution('sequential')
         
         # 各エージェントを順番に実行
         for i in range(self.num_agents):
@@ -161,6 +207,118 @@ class AgentPoolManager:
                 if self.debug:
                     import traceback
                     logger.debug(traceback.format_exc())
+
+    @cpu_profile
+    async def run_agents_parallel(self, blackboard) -> None:
+        """
+        エージェントを並列実行（CPU最適化版）
+        
+        引数:
+            blackboard: 共有黒板
+        """
+        logger.info(f"エージェントを並列実行中: {self.optimal_threads}スレッド")
+        
+        # パフォーマンス統計の記録
+        if self.performance:
+            self.performance.record_parallel_execution('parallel')
+            self.performance.record_parallel_execution('thread_pool')
+        
+        # スレッドプール内でエージェントタスクを実行するラッパー
+        def run_agent_task(agent_id: int) -> Tuple[int, str]:
+            """エージェントタスクのスレッドプールラッパー"""
+            try:
+                # CPU最適化されたエージェント実行
+                result = self._agent_task_optimized(agent_id)
+                return agent_id, result
+            except Exception as e:
+                logger.error(f"エージェント {agent_id} 実行エラー: {str(e)}")
+                if self.debug:
+                    import traceback
+                    logger.debug(traceback.format_exc())
+                return agent_id, f"エージェント{agent_id}は応答できませんでした"
+        
+        # イベントループを取得
+        loop = asyncio.get_event_loop()
+        
+        try:
+            # 並列実行：すべてのエージェントを同時に実行
+            tasks = []
+            for i in range(self.num_agents):
+                # 各エージェントのタスクを作成
+                task = loop.run_in_executor(self.thread_pool, run_agent_task, i)
+                tasks.append(task)
+            
+            # すべてのタスクを同時に実行して結果を取得
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # 結果を黒板に書き込み
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.error(f"エージェント処理エラー: {str(result)}")
+                    # エラーの場合、エージェントIDを特定できないため、順番に処理
+                    continue
+                elif isinstance(result, tuple) and len(result) == 2:
+                    agent_id, output = result
+                    if output:
+                        blackboard.write(f'agent_{agent_id}_output', output)
+                    else:
+                        blackboard.write(f'agent_{agent_id}_output', f"エージェント{agent_id}は空の応答を返しました")
+                        
+        except Exception as e:
+            logger.error(f"並列実行エラー: {str(e)}")
+            # エラーが発生した場合は逐次実行にフォールバック
+            logger.info("逐次実行にフォールバックします")
+            self.run_agents(blackboard)
+
+    def _agent_task_optimized(self, agent_id: int) -> str:
+        """
+        CPU最適化されたエージェントタスク実行
+        
+        引数:
+            agent_id: エージェントID
+            
+        戻り値:
+            エージェントの応答テキスト
+        """
+        # プロンプトの構築
+        prompt = self._format_prompt(agent_id)
+        
+        # エージェントの役割と設定
+        role = self.roles[agent_id]
+        temperature = role.get('temperature', 0.7)
+        
+        try:
+            # CPU最適化されたモデル出力の生成
+            with _global_llama_lock:
+                # 短いトークン数でCPU負荷を軽減
+                resp = self.llm.create_chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=200,  # CPUパフォーマンスのため短めに
+                    temperature=temperature,
+                    top_p=0.9,
+                    top_k=40,  # CPU最適化
+                    repeat_penalty=1.1,  # 繰り返し防止
+                    mirostat=0,  # CPU最適化のため無効化
+                )
+            
+            # レスポンスの形式によって適切にアクセス
+            if isinstance(resp, dict):
+                output = resp['choices'][0]['message']['content'].strip()
+            else:
+                output = resp.choices[0].message.content.strip()
+                  
+            # 出力を制限（200文字以内、CPU負荷軽減）
+            if len(output) > 200:
+                output = output[:200] + "..."
+                
+            return output
+            
+        except Exception as e:
+            logger.error(f"エージェント{agent_id}のタスク実行エラー: {str(e)}")
+            if self.debug:
+                import traceback
+                logger.debug(traceback.format_exc())
+            return f"エージェント{agent_id}は応答できませんでした"
 
     def _format_prompt(self, agent_id: int) -> str:
         """
@@ -199,30 +357,25 @@ class AgentPoolManager:
                 output = self.blackboard.read(f'agent_{i}_output')
                 if output:
                     other_role = self.roles[i].get('role', f"エージェント{i}")
-                    other_agents_output.append(f"{other_role}の回答: {output[:200]}...")
+                    other_agents_output.append(f"{other_role}の回答: {output[:150]}...")
                     
         other_agents_text = "\n\n".join(other_agents_output) if other_agents_output else "他のエージェントの出力はまだありません。"
-                  # プロンプトの構築（話し言葉重視）
-        prompt = f"""こんにちは！私は「{role_name}」だよ。
+                  
+        # CPU最適化されたプロンプト（短縮版）
+        prompt = f"""私は「{role_name}」です。
 
 {role_desc}
 
 質問: {input_text}
 
-参考になりそうな情報: {rag_text}
+参考情報: {rag_text[:300]}...
 
-これまでの会話: {context_text}
+会話履歴: {context_text[:200]}...
 
-仲間たちの意見:
+仲間の意見:
 {other_agents_text}
 
-お願い:
-- 私らしい視点で話すね
-- わかりやすく具体的に説明するよ
-- みんなの意見も参考にして、より良い答えを考えてみる
-- 150〜250文字くらいで話し言葉でお答えするね
-
-それじゃあ、{role_name}として答えるよ:"""
+150文字以内で簡潔に回答してください:"""
 
         return prompt
 
@@ -236,6 +389,10 @@ class AgentPoolManager:
         戻り値:
             エージェントの応答テキスト
         """
+        # 最適化版があれば優先して使用
+        if hasattr(self, '_agent_task_optimized'):
+            return self._agent_task_optimized(agent_id)
+        
         # プロンプトの構築
         prompt = self._format_prompt(agent_id)
         
@@ -245,7 +402,8 @@ class AgentPoolManager:
         
         try:
             # モデル出力の生成（グローバルロックで保護）
-            with _global_llama_lock:                resp = self.llm.create_chat_completion(
+            with _global_llama_lock:
+                resp = self.llm.create_chat_completion(
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=300,  # 話し言葉に適したトークン数
                     temperature=temperature,
@@ -257,7 +415,8 @@ class AgentPoolManager:
                 output = resp['choices'][0]['message']['content'].strip()
             else:
                 output = resp.choices[0].message.content.strip()
-                  # 出力を制限（250文字以内、話し言葉に適したサイズ）
+                  
+            # 出力を制限（250文字以内、話し言葉に適したサイズ）
             if len(output) > 250:
                 output = output[:250]
                 
@@ -299,79 +458,83 @@ class AgentPoolManager:
         引数:
             question: 入力された質問
         """
-        # 質問タイプを判定
-        question_type = self._classify_question_type(question)
+        # 質問の分析
+        question_type = self._analyze_question_type(question)
         
-        # 黒板に質問タイプを書き込み
-        self.blackboard.write('question_type', question_type)
-        
-        # 質問タイプに基づいて役割を更新
+        # 役割の再割り当て
         if question_type in self.role_templates:
             available_roles = self.role_templates[question_type]
-        else:
-            available_roles = self.role_templates['default']
-        
-        # エージェント数に合わせて役割を再割り当て
-        self.roles = []
-        for i in range(self.num_agents):
-            role_index = i % len(available_roles)
-            self.roles.append(available_roles[role_index])
-        
-        # agent_rolesという属性も設定（テストコードで使用されている）
-        self.agent_roles = self.roles
-        
-        if self.debug:
-            roles_info = ", ".join(role["role"] for role in self.roles)
-            logger.debug(f"質問タイプ '{question_type}' に基づいて役割を更新: {roles_info}")
+            self.roles = []
+            
+            for i in range(self.num_agents):
+                role_index = i % len(available_roles)
+                self.roles.append(available_roles[role_index])
+                
+            logger.info(f"質問タイプ '{question_type}' に基づいて役割を更新しました")
+            
+            if self.debug:
+                roles_info = ", ".join(role["role"] for role in self.roles)
+                logger.debug(f"新しい役割: {roles_info}")
 
-    def _classify_question_type(self, question: str) -> str:
+    def _analyze_question_type(self, question: str) -> str:
         """
-        質問のタイプを分類（内部メソッド）
+        質問のタイプを分析
         
         引数:
-            question: 分析する質問
+            question: 質問文
             
         戻り値:
-            質問タイプ ('discussion', 'planning', 'informational', 'conversational', 'default')
+            質問タイプ
         """
         question_lower = question.lower()
         
-        # 議論型のキーワード
-        discussion_keywords = [
-            'について議論', '議論して', '賛成', '反対', '問題', '課題', '影響',
-            'どう思う', 'どう考える', 'メリット', 'デメリット', '比較',
-            'discuss', 'debate', 'argue', 'opinion', 'think', 'pros', 'cons'
-        ]
-        
-        # 計画・構想型のキーワード
-        planning_keywords = [
-            'どうすれば', 'どのように', '方法', '手順', '計画', '戦略',
-            '実現', '達成', '解決', '改善', '対策', '案', '提案',
-            'how to', 'plan', 'strategy', 'solve', 'achieve', 'implement'
-        ]
-        
-        # 情報提供型のキーワード
-        informational_keywords = [
-            'とは', 'なに', '何', '定義', '説明', '詳細', '仕組み',
-            '原因', '理由', 'なぜ', '歴史', '背景', '特徴',
-            'what is', 'define', 'explain', 'why', 'how', 'cause', 'reason'
-        ]
-        
-        # 会話型のキーワード
-        conversational_keywords = [
-            'こんにちは', 'はじめまして', 'おはよう', 'こんばんは',
-            'ありがとう', 'すみません', 'お疲れ', '元気',
-            'hello', 'hi', 'good morning', 'thank you', 'sorry'
-        ]
-        
-        # キーワードマッチング
+        # 議論型質問の判定
+        discussion_keywords = ['なぜ', 'どう思う', '議論', '意見', '考え', '賛成', '反対', '問題', '課題']
         if any(keyword in question_lower for keyword in discussion_keywords):
             return 'discussion'
-        elif any(keyword in question_lower for keyword in planning_keywords):
+        
+        # 計画型質問の判定
+        planning_keywords = ['どうやって', 'どのように', '方法', '手順', '計画', '戦略', '進め方', 'アプローチ']
+        if any(keyword in question_lower for keyword in planning_keywords):
             return 'planning'
-        elif any(keyword in question_lower for keyword in informational_keywords):
+        
+        # 情報提供型質問の判定
+        info_keywords = ['何', '誰', 'いつ', 'どこ', '教えて', '説明', '情報', '知りたい', 'について']
+        if any(keyword in question_lower for keyword in info_keywords):
             return 'informational'
-        elif any(keyword in question_lower for keyword in conversational_keywords):
+        
+        # 会話型質問の判定
+        conv_keywords = ['こんにちは', 'ありがとう', 'お疲れ', '元気', '調子', '気分']
+        if any(keyword in question_lower for keyword in conv_keywords):
             return 'conversational'
-        else:
-            return 'default'
+        
+        return 'default'
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """
+        エージェントプールのパフォーマンス統計を取得
+        
+        戻り値:
+            パフォーマンス統計
+        """
+        stats = {
+            'num_agents': self.num_agents,
+            'parallel_mode': self.parallel_mode,
+            'optimal_threads': self.optimal_threads,
+            'cpu_count_logical': self.cpu_count,
+            'cpu_count_physical': self.cpu_count_physical,
+            'roles_count': len(self.roles)
+        }
+        
+        if self.performance:
+            stats.update(self.performance.get_performance_summary())
+        
+        return stats
+
+    def __del__(self):
+        """デストラクタ：リソースのクリーンアップ"""
+        if hasattr(self, 'thread_pool'):
+            try:
+                self.thread_pool.shutdown(wait=False)
+            except:
+                pass
