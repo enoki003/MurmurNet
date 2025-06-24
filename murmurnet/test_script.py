@@ -567,13 +567,35 @@ async def main():
         # 最後に単体テスト（LLMを使わない軽量テスト）
         print_header("モジュール単体テスト")
         unittest.main(argv=['first-arg-is-ignored'], exit=False)
-        
-        # リソース解放
+          # リソース解放
         global _slm_instance
         if (_slm_instance is not None):
-            del _slm_instance
-            _slm_instance = None
-            gc.collect()
+            try:
+                # 完全シャットダウンの実行
+                print_header("システムシャットダウン")
+                print("システムの完全シャットダウンを開始...")
+                
+                # 非同期シャットダウンを実行
+                if hasattr(_slm_instance, 'shutdown'):
+                    await _slm_instance.shutdown()
+                
+                # ShutdownManagerによる統合シャットダウン
+                try:
+                    from MurmurNet.modules.shutdown_manager import shutdown_system
+                    shutdown_system(timeout=10.0)
+                except ImportError:
+                    print("ShutdownManagerが利用できません")
+                
+                print("システムシャットダウン完了")
+                
+            except Exception as e:
+                print(f"シャットダウンエラー: {e}")
+                import traceback
+                traceback.print_exc()
+            finally:
+                del _slm_instance
+                _slm_instance = None
+                gc.collect()
         
         print("\nテスト完了")
     except Exception as e:

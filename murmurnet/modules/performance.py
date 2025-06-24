@@ -502,10 +502,70 @@ class PerformanceMonitor:
         with self.lock:
             self.timers.clear()
             self.memory_snapshots.clear()
-            self.processing_steps.clear()
-            self.profile_results.clear()
-            # CPU最適化統計はリセットしない（累積データとして保持）
 
+    def shutdown(self):
+        """
+        PerformanceMonitorの完全なシャットダウン処理
+        
+        全ての監視データを記録し、リソースを解放する
+        """
+        if not self.enabled:
+            return
+        
+        try:
+            # 1. 最終統計の記録
+            with self.lock:
+                final_summary = self.get_performance_summary()
+                if hasattr(self, '_logger'):
+                    self._logger.info(f"PerformanceMonitor最終統計: {final_summary}")
+                
+                # 2. メモリスナップショットの最終記録
+                if self.memory_tracking:
+                    final_snapshot = self.take_memory_snapshot("shutdown_final")
+                    if final_snapshot and hasattr(self, '_logger'):
+                        self._logger.info(f"最終メモリ使用量: RSS={format_memory_size(final_snapshot.rss)}, "
+                                        f"使用率={final_snapshot.percent:.1f}%")
+                
+                # 3. タイマー統計の出力
+                if self.timers:
+                    timer_summary = {}
+                    for name, times in self.timers.items():
+                        if times:
+                            timer_summary[name] = {
+                                'count': len(times),
+                                'total': sum(times),
+                                'average': sum(times) / len(times),
+                                'min': min(times),
+                                'max': max(times)
+                            }
+                    
+                    if timer_summary and hasattr(self, '_logger'):
+                        self._logger.info(f"タイマー統計: {timer_summary}")
+                
+                # 4. データクリア
+                self.clear()
+                
+                # 5. 実行プールのシャットダウン（存在する場合）
+                if hasattr(self, 'executor') and self.executor:
+                    try:
+                        self.executor.shutdown(wait=True, timeout=2.0)
+                    except:
+                        self.executor.shutdown(wait=False)
+                    finally:
+                        self.executor = None
+                
+                # 6. スレッド関連リソースのクリア
+                self.process = None
+                
+        except Exception as e:
+            # ログが利用できない場合はprintで出力
+            try:
+                if hasattr(self, '_logger'):
+                    self._logger.error(f"PerformanceMonitorシャットダウンエラー: {e}")
+                else:
+                    print(f"PerformanceMonitorシャットダウンエラー: {e}")
+            except:
+                pass
 
 def time_function(func: Callable) -> Callable:
     """

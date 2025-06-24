@@ -538,3 +538,52 @@ class AgentPoolManager:
                 self.thread_pool.shutdown(wait=False)
             except:
                 pass
+
+    def shutdown(self):
+        """
+        AgentPoolManagerの完全なシャットダウン処理
+        
+        スレッドプールと全てのリソースを適切に終了する
+        """
+        logger.info("AgentPoolManagerシャットダウン開始")
+        
+        try:
+            # 1. スレッドプールのシャットダウン
+            if hasattr(self, 'thread_pool') and self.thread_pool:
+                logger.info("スレッドプールをシャットダウン中...")
+                try:
+                    # 進行中のタスクの完了を待つ（最大3秒）
+                    self.thread_pool.shutdown(wait=True, timeout=3.0)
+                    logger.debug("スレッドプールシャットダウン完了")
+                except Exception as e:
+                    logger.warning(f"スレッドプール強制終了: {e}")
+                    # 強制終了
+                    try:
+                        self.thread_pool.shutdown(wait=False)
+                    except:
+                        pass
+                finally:
+                    self.thread_pool = None
+            
+            # 2. モデル参照のクリア
+            if hasattr(self, 'llm'):
+                logger.debug("モデル参照をクリア中...")
+                self.llm = None
+            
+            # 3. 役割テンプレートとロールのクリア
+            if hasattr(self, 'role_templates'):
+                self.role_templates.clear()
+            if hasattr(self, 'roles'):
+                self.roles.clear()
+            
+            # 4. パフォーマンス参照のクリア
+            self.performance = None
+            self.blackboard = None
+            
+            logger.info("AgentPoolManagerシャットダウン完了")
+            
+        except Exception as e:
+            logger.error(f"AgentPoolManagerシャットダウンエラー: {e}")
+            # エラーが発生してもシャットダウンを継続
+            import traceback
+            logger.debug(traceback.format_exc())

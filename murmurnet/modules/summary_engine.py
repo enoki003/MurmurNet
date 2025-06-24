@@ -346,5 +346,65 @@ class SummaryEngine:
             'cache_stats': cache_stats
         }
 
+    def shutdown(self):
+        """
+        SummaryEngineの完全なシャットダウン処理
+        
+        全てのリソースを適切に終了し、統計情報を記録する
+        """
+        logger.info("SummaryEngineシャットダウン開始")
+        
+        try:
+            # 1. 実行プールのシャットダウン
+            if hasattr(self, 'executor') and self.executor:
+                logger.debug("ThreadPoolExecutorをシャットダウン中...")
+                try:
+                    # 進行中のタスクの完了を待つ（最大3秒）
+                    self.executor.shutdown(wait=True, timeout=3.0)
+                    logger.debug("ThreadPoolExecutorシャットダウン完了")
+                except Exception as e:
+                    logger.warning(f"ThreadPoolExecutor強制終了: {e}")
+                    # 強制終了
+                    try:
+                        self.executor.shutdown(wait=False)
+                    except:
+                        pass
+                finally:
+                    self.executor = None
+            
+            # 2. 最終統計の記録
+            if hasattr(self, 'stats'):
+                final_stats = self.get_performance_stats()
+                logger.info(f"SummaryEngine最終統計: {final_stats}")
+            
+            # 3. キャッシュのクリア
+            if hasattr(self, 'summary_cache'):
+                try:
+                    cache_size = self.summary_cache.size()
+                    self.summary_cache.clear()
+                    logger.debug(f"要約キャッシュをクリア: {cache_size}エントリ")
+                except Exception as e:
+                    logger.warning(f"キャッシュクリアエラー: {e}")
+            
+            # 4. モデル参照のクリア
+            if hasattr(self, 'llm'):
+                self.llm = None
+            
+            # 5. メモリクリーンアップ
+            try:
+                import gc
+                collected = gc.collect()
+                logger.debug(f"SummaryEngine: ガベージコレクション完了 ({collected}個)")
+            except Exception as e:
+                logger.warning(f"ガベージコレクションエラー: {e}")
+            
+            logger.info("SummaryEngineシャットダウン完了")
+            
+        except Exception as e:
+            logger.error(f"SummaryEngineシャットダウンエラー: {e}")
+            # エラーが発生してもシャットダウンを継続
+            import traceback
+            logger.debug(traceback.format_exc())
+
 # 下位互換性のためのエイリアス  
 # 既存のクラス名がSummaryEngineなので追加不要（クラス名変更なし）

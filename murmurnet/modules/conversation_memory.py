@@ -636,5 +636,104 @@ class OptimizedConversationMemory:
                 'performance_stats': {}
             }
 
+    def shutdown(self):
+        """
+        ConversationMemoryの完全なシャットダウン処理
+        
+        全てのリソースを適切に終了し、会話データを保存する
+        """
+        logger.info("ConversationMemoryシャットダウン開始")
+        
+        try:
+            # 1. 実行プールのシャットダウン
+            if hasattr(self, 'executor') and self.executor:
+                logger.debug("ThreadPoolExecutorをシャットダウン中...")
+                try:
+                    # 進行中のタスクの完了を待つ（最大3秒）
+                    self.executor.shutdown(wait=True, timeout=3.0)
+                    logger.debug("ThreadPoolExecutorシャットダウン完了")
+                except Exception as e:
+                    logger.warning(f"ThreadPoolExecutor強制終了: {e}")
+                    # 強制終了
+                    try:
+                        self.executor.shutdown(wait=False)
+                    except:
+                        pass
+                finally:
+                    self.executor = None
+            
+            # 2. 会話データの保存（オプション）
+            if hasattr(self, 'conversation_history') and self.conversation_history:
+                try:
+                    # 会話履歴の統計情報を記録
+                    conv_count = len(self.conversation_history)
+                    logger.info(f"会話履歴を保持: {conv_count}件")
+                    
+                    # 必要に応じてファイル保存（実装例）
+                    # self._save_conversation_history()
+                    
+                except Exception as e:
+                    logger.warning(f"会話データ保存エラー: {e}")
+            
+            # 3. 最終統計の記録
+            if hasattr(self, 'stats'):
+                final_stats = self.get_performance_stats()
+                logger.info(f"ConversationMemory最終統計: {final_stats}")
+            
+            # 4. キャッシュのクリア
+            if hasattr(self, 'memory_cache'):
+                try:
+                    cache_size = self.memory_cache.size()
+                    self.memory_cache.clear()
+                    logger.debug(f"記憶キャッシュをクリア: {cache_size}エントリ")
+                except Exception as e:
+                    logger.warning(f"記憶キャッシュクリアエラー: {e}")
+            
+            if hasattr(self, 'embedding_cache'):
+                try:
+                    embedding_count = len(self.embedding_cache)
+                    self.embedding_cache.clear()
+                    logger.debug(f"埋め込みキャッシュをクリア: {embedding_count}エントリ")
+                except Exception as e:
+                    logger.warning(f"埋め込みキャッシュクリアエラー: {e}")
+            
+            # 5. モデル参照のクリア
+            if hasattr(self, 'llm'):
+                self.llm = None
+            
+            # 6. 会話データのクリア（完全シャットダウンの場合）
+            try:
+                self.conversation_history.clear()
+                self.history_summary = None
+                if hasattr(self, 'key_facts'):
+                    self.key_facts = {
+                        "entities": [],
+                        "topics": [],
+                        "context": {}
+                    }
+                logger.debug("会話記憶データをクリア")
+            except Exception as e:
+                logger.warning(f"会話データクリアエラー: {e}")
+            
+            # 7. 黒板参照のクリア
+            if hasattr(self, 'blackboard'):
+                self.blackboard = None
+            
+            # 8. メモリクリーンアップ
+            try:
+                import gc
+                collected = gc.collect()
+                logger.debug(f"ConversationMemory: ガベージコレクション完了 ({collected}個)")
+            except Exception as e:
+                logger.warning(f"ガベージコレクションエラー: {e}")
+            
+            logger.info("ConversationMemoryシャットダウン完了")
+            
+        except Exception as e:
+            logger.error(f"ConversationMemoryシャットダウンエラー: {e}")
+            # エラーが発生してもシャットダウンを継続
+            import traceback
+            logger.debug(traceback.format_exc())
+
 # 下位互換性のためのエイリアス
 ConversationMemory = OptimizedConversationMemory

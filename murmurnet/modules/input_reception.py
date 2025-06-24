@@ -14,6 +14,10 @@ import logging
 import numpy as np
 import time
 import hashlib
+import signal
+import sys
+import threading
+import atexit
 from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from typing import Dict, Any, List, Optional, Union, Tuple
@@ -68,16 +72,130 @@ class InputReception:
             'embedding_time': 0.0,
             'tokenization_time': 0.0
         }
-        
-        # 埋め込みキャッシュ（LRU）
+          # 埋め込みキャッシュ（LRU）
         if self.enable_caching:
             self.embedding_cache = {}
             self.cache_order = []  # 簡易LRU実装
+          # シャットダウン状態の管理
+        self._is_shutdown = False
+        self._shutdown_lock = threading.Lock()
+        self._shutdown_requested = False
+        self._shutdown_event = threading.Event()
+        
+        # シグナルハンドラーの設定
+        self._setup_signal_handlers()
+        
+        # atexitハンドラーの登録（プログラム終了時の確実なクリーンアップ）
+        atexit.register(self._emergency_shutdown)
         
         if self.debug:
             logger.setLevel(logging.DEBUG)
         
         logger.info(f"InputReception初期化完了 - バッチ処理: {self.batch_size}, ワーカー: {self.max_workers}")
+    
+    def __enter__(self):
+        """コンテキストマネージャーのエントリ"""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """コンテキストマネージャーの終了時にシャットダウン"""
+        self.shutdown()
+    def shutdown(self) -> None:
+        """
+        リソースのクリーンアップとシャットダウン処理
+        
+        - ThreadPoolExecutorの終了
+        - キャッシュのクリア
+        - モデルリソースの解放
+        """
+        with self._shutdown_lock:
+            if self._is_shutdown:
+                return
+            
+            try:
+                if self.debug:
+                    logger.debug("InputReceptionのシャットダウンを開始...")
+                  # ThreadPoolExecutorの強制終了
+                if hasattr(self, 'thread_pool') and self.thread_pool:
+                    try:
+                        # 実行中のタスクをキャンセル
+                        self.thread_pool.shutdown(wait=False)
+                        
+                        # プライベートメンバーへの直接アクセスで強制終了
+                        if hasattr(self.thread_pool, '_shutdown'):
+                            self.thread_pool._shutdown = True
+                        
+                        # 全スレッドを強制終了
+                        if hasattr(self.thread_pool, '_threads'):
+                            for thread in list(self.thread_pool._threads):
+                                if thread.is_alive():
+                                    try:
+                                        thread.join(timeout=0.1)  # 短いタイムアウト
+                                    except:
+                                        pass
+                        
+                        # 完全に削除
+                        del self.thread_pool
+                        self.thread_pool = None
+                        
+                        if self.debug:
+                            logger.debug("ThreadPoolExecutorを強制終了しました")
+                    except Exception as e:
+                        logger.warning(f"ThreadPoolExecutor終了エラー: {e}")
+                
+                # キャッシュのクリア
+                if self.enable_caching:
+                    if hasattr(self, 'embedding_cache'):
+                        self.embedding_cache.clear()
+                    if hasattr(self, 'cache_order'):
+                        self.cache_order.clear()
+                    if self.debug:
+                        logger.debug("埋め込みキャッシュをクリアしました")
+                
+                # モデルリソースの解放
+                if self._transformer is not None:
+                    # SentenceTransformerモデルのメモリ解放
+                    try:
+                        if hasattr(self._transformer, 'cpu'):
+                            self._transformer.cpu()
+                        del self._transformer
+                        self._transformer = None
+                        if self.debug:
+                            logger.debug("埋め込みモデルを解放しました")
+                    except Exception as e:
+                        logger.warning(f"モデル解放時にエラー: {e}")
+                
+                # 統計情報の最終出力
+                if self.debug:
+                    self._log_final_stats()
+                
+                self._is_shutdown = True
+                logger.info("InputReceptionのシャットダウンが完了しました")
+            except Exception as e:
+                logger.error(f"シャットダウン処理中にエラー: {e}")
+                if self.debug:
+                    import traceback
+                    logger.debug(traceback.format_exc())
+            finally:
+                self._is_shutdown = True
+    
+    def _log_final_stats(self) -> None:
+        """最終統計情報をログ出力"""
+        total_requests = self.stats['cache_hits'] + self.stats['cache_misses']
+        cache_hit_rate = (self.stats['cache_hits'] / total_requests * 100) if total_requests > 0 else 0
+        
+        logger.debug("=== 最終統計情報 ===")
+        logger.debug(f"総処理数: {self.stats['total_processed']}")
+        logger.debug(f"バッチ処理数: {self.stats['batch_processes']}")
+        logger.debug(f"キャッシュヒット率: {cache_hit_rate:.1f}% ({self.stats['cache_hits']}/{total_requests})")
+        logger.debug(f"総処理時間: {self.stats['total_time']:.3f}秒")
+        logger.debug(f"埋め込み生成時間: {self.stats['embedding_time']:.3f}秒")
+        logger.debug(f"トークン化時間: {self.stats['tokenization_time']:.3f}秒")
+    
+    def _check_shutdown(self) -> None:
+        """シャットダウン状態をチェックし、必要に応じて例外を発生"""
+        if self._is_shutdown or self._shutdown_requested:
+            raise RuntimeError("InputReceptionは既にシャットダウンされています")
         
     def _get_cache_key(self, text: str) -> str:
         """テキストのキャッシュキーを生成"""
@@ -217,6 +335,8 @@ class InputReception:
         戻り値:
             処理結果のリスト
         """
+        self._check_shutdown()  # シャットダウン状態をチェック
+        
         start_time = time.time()
         self.stats['batch_processes'] += 1
         
@@ -283,6 +403,8 @@ class InputReception:
         戻り値:
             処理結果を含む辞書（正規化テキスト、トークン、埋め込み）
         """
+        self._check_shutdown()  # シャットダウン状態をチェック
+        
         try:
             # 入力の検証
             if not input_text or not isinstance(input_text, str):
@@ -321,8 +443,7 @@ class InputReception:
                         logger.warning("ダミー埋め込みを使用")
                 except Exception as e:
                     logger.error(f"埋め込み生成エラー: {e}")
-                    result['embedding'] = np.zeros(384)  # ダミー埋め込み
-            
+                    result['embedding'] = np.zeros(384)  # ダミー埋め込み            
             return result
             
         except Exception as e:
@@ -333,3 +454,80 @@ class InputReception:
                 
             # エラー時のフォールバック
             return {'normalized': input_text[:100], 'tokens': input_text.split()[:10], 'embedding': np.zeros(384)}
+    
+    def _setup_signal_handlers(self) -> None:
+        """
+        シグナルハンドラーの設定
+        Ctrl+Cやプログラム終了時の適切なクリーンアップを確保
+        """
+        def signal_handler(signum, frame):
+            signal_name = signal.Signals(signum).name
+            logger.info(f"シグナル {signal_name} を受信しました。シャットダウンを開始...")
+            
+            # フリーズを防ぐため、シャットダウンフラグを設定してメインスレッドに処理を委ねる
+            self._shutdown_requested = True
+            self._shutdown_event.set()
+            
+            # 別スレッドでシャットダウン処理を実行（デッドロック回避）
+            def async_shutdown():
+                try:
+                    time.sleep(0.1)  # 少し待機してからシャットダウン
+                    self.shutdown()
+                    # 強制終了（ただし即座ではなく少し待機後）
+                    time.sleep(0.5)
+                    import os
+                    os._exit(0)  # sys.exit()よりも強制的
+                except Exception as e:
+                    logger.error(f"非同期シャットダウンエラー: {e}")
+                    import os
+                    os._exit(1)
+            
+            # バックグラウンドでシャットダウン実行
+            shutdown_thread = threading.Thread(target=async_shutdown, daemon=True)
+            shutdown_thread.start()
+        
+        try:
+            # SIGINT (Ctrl+C) のハンドラー設定
+            signal.signal(signal.SIGINT, signal_handler)
+            
+            # Windows/Unix両対応のためのSIGTERM設定
+            if hasattr(signal, 'SIGTERM'):
+                signal.signal(signal.SIGTERM, signal_handler)
+            
+            if self.debug:
+                logger.debug("シグナルハンドラーを設定しました")
+                
+        except Exception as e:
+            logger.warning(f"シグナルハンドラー設定エラー: {e}")
+    
+    def _emergency_shutdown(self) -> None:
+        """
+        緊急シャットダウン処理（atexitハンドラー）
+        プログラム終了時に確実にリソースをクリーンアップ
+        """
+        if not self._is_shutdown:
+            logger.info("緊急シャットダウンを実行中...")
+            self.shutdown()
+    
+    @classmethod
+    def force_exit_all(cls):
+        """
+        全てのInputReceptionインスタンスを強制終了し、プロセスを終了
+        メインプログラムから呼び出し可能な静的メソッド
+        """
+        logger.info("全InputReceptionインスタンスの強制終了を開始...")
+        
+        # すべてのThreadPoolExecutorを強制終了
+        import concurrent.futures
+        import threading
+        
+        # アクティブなスレッドを強制終了
+        for thread in threading.enumerate():
+            if thread != threading.current_thread() and thread.is_alive():
+                if hasattr(thread, '_stop'):
+                    thread._stop()
+        
+        # プロセス全体を強制終了
+        logger.info("プロセスを強制終了します...")
+        import os
+        os._exit(0)

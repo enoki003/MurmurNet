@@ -13,8 +13,16 @@ import sys
 import os
 import argparse
 import asyncio
+import signal
 from pathlib import Path
 import logging
+import atexit
+
+# MurmurNetパッケージへのパスを追加
+current_dir = Path(__file__).parent
+murmur_net_dir = current_dir.parent / "MurmurNet"
+if str(murmur_net_dir) not in sys.path:
+    sys.path.insert(0, str(murmur_net_dir))
 
 # murmurnetパスを追加
 current_dir = Path(__file__).resolve().parent
@@ -24,6 +32,9 @@ sys.path.append(str(project_root))  # プロジェクトルートをパスに追
 
 # ここでモジュールをインポート
 from MurmurNet.distributed_slm import DistributedSLM
+
+# グローバルなSLMインスタンス（シャットダウン用）
+_global_slm = None
 
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App")
@@ -101,6 +112,44 @@ def print_debug(slm):
             print(f"  エージェント{i+1}: {output}")
     print()
 
+async def safe_shutdown(slm):
+    """安全なシャットダウン処理"""
+    global _global_slm
+    
+    try:
+        # 1. SLMのシャットダウン
+        if hasattr(slm, 'shutdown'):
+            print("SLMシステムをシャットダウン中...")
+            await slm.shutdown()
+        
+        # 2. InputReceptionの強制終了
+        try:
+            from MurmurNet.modules.input_reception import InputReception
+            print("InputReceptionを終了中...")
+            InputReception.force_exit_all()
+        except Exception as e:
+            print(f"InputReception終了エラー: {e}")
+          # 3. DistributedSLMのシャットダウン（タイムアウト付き）
+        if _global_slm:
+            try:
+                print("DistributedSLMをシャットダウン中...")
+                # 15秒のタイムアウト付きでシャットダウン
+                await asyncio.wait_for(_global_slm.shutdown(), timeout=15.0)
+                print("DistributedSLMシャットダウン完了")
+            except asyncio.TimeoutError:
+                print("DistributedSLMシャットダウンがタイムアウトしました - 強制終了します")
+            except Exception as e:
+                print(f"DistributedSLMシャットダウンエラー: {e}")
+        
+        # 4. 最終クリーンアップ
+        _global_slm = None
+        
+        print("全てのシャットダウン処理が完了しました")
+        
+    except Exception as e:
+        print(f"safe_shutdown内でエラーが発生: {e}")
+        raise
+
 async def chat_loop():
     """会話ループのメイン関数"""
     # 設定
@@ -135,9 +184,10 @@ async def chat_loop():
             print("ファイルパスが正しいか確認してください")
         else:
             print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
-    
-    # SLMインスタンス作成
+      # SLMインスタンス作成
+    global _global_slm
     slm = DistributedSLM(config)
+    _global_slm = slm  # グローバル参照を設定
     
     # RAGモードのチェック
     from MurmurNet.modules.rag_retriever import RAGRetriever
@@ -165,12 +215,25 @@ async def chat_loop():
         print(f"[設定] ZIMファイル: {args.zim_path}")
     
     history = []
-    
     while True:
-        try:
-            # ユーザー入力
+        try:            # ユーザー入力
             user_input = input("\nあなた> ")
             if user_input.lower() in ["quit", "exit", "終了"]:
+                print("システムを終了しています...")
+                # 適切なシャットダウン処理
+                try:
+                    print("完全シャットダウンを開始...")
+                    await safe_shutdown(slm)
+                    print("シャットダウン完了")
+                except Exception as e:
+                    print(f"シャットダウンエラー: {e}")
+                    # フォールバック：強制終了
+                    try:
+                        cleanup_system()
+                    except:
+                        pass
+                    import os
+                    os._exit(0)
                 break
             
             # 空入力はスキップ
@@ -194,17 +257,58 @@ async def chat_loop():
             if args.debug:
                 print_debug(slm)
                 print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
-            
-            # 履歴に追加
+              # 履歴に追加
             history.append({"role": "assistant", "content": response})
             
         except KeyboardInterrupt:
-            print("\n中断されました。終了するには 'exit' を入力してください。")
+            print("\n中断されました。システムをシャットダウンします...")
+            try:
+                await safe_shutdown(slm)
+            except:
+                cleanup_system()
+            break
         except Exception as e:
             print(f"\nエラーが発生しました: {e}")
             if args.debug:
                 import traceback
                 traceback.print_exc()
+
+def cleanup_system():
+    """システムの緊急クリーンアップ"""
+    global _global_slm
+    if _global_slm:
+        try:
+            print("システムを緊急シャットダウン中...")
+            # 非同期関数を同期で実行
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 既にイベントループが動いている場合
+                    asyncio.create_task(_global_slm.shutdown())
+                else:
+                    loop.run_until_complete(_global_slm.shutdown())
+            except RuntimeError:
+                # イベントループがない場合は新しく作成
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(_global_slm.shutdown())
+                loop.close()
+        except Exception as e:
+            print(f"緊急シャットダウンエラー: {e}")
+        finally:
+            _global_slm = None
+
+def signal_handler(signum, frame):
+    """シグナルハンドラ"""
+    print(f"\nシグナル {signum} を受信しました。システムを終了します...")
+    cleanup_system()
+    sys.exit(0)
+
+# シグナルハンドラとatexit登録
+signal.signal(signal.SIGINT, signal_handler)
+if hasattr(signal, 'SIGTERM'):
+    signal.signal(signal.SIGTERM, signal_handler)
+atexit.register(cleanup_system)
 
 if __name__ == "__main__":
     asyncio.run(chat_loop())

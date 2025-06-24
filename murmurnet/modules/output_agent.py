@@ -574,5 +574,79 @@ class CPUOptimizedOutputAgent:
             else:
                 return "I apologize, but I couldn't generate an appropriate response."
 
+    def shutdown(self):
+        """
+        OutputAgentの完全なシャットダウン処理
+        
+        全てのリソースを適切に終了し、統計情報を記録する
+        """
+        logger.info("OutputAgentシャットダウン開始")
+        
+        try:
+            # 1. 実行プールのシャットダウン
+            if hasattr(self, 'executor') and self.executor:
+                logger.debug("ThreadPoolExecutorをシャットダウン中...")
+                try:
+                    # 進行中のタスクの完了を待つ（最大3秒）
+                    self.executor.shutdown(wait=True, timeout=3.0)
+                    logger.debug("ThreadPoolExecutorシャットダウン完了")
+                except Exception as e:
+                    logger.warning(f"ThreadPoolExecutor強制終了: {e}")
+                    # 強制終了
+                    try:
+                        self.executor.shutdown(wait=False)
+                    except:
+                        pass
+                finally:
+                    self.executor = None
+            
+            # 2. 最終統計の記録
+            if hasattr(self, 'stats'):
+                final_stats = {
+                    'cache_hit_rate': self.stats.get_cache_hit_rate(),
+                    'avg_response_time': self.stats.get_avg_response_time(),
+                    'total_requests': self.stats.total_requests,
+                    'llm_calls': self.stats.llm_calls,
+                    'parallel_processes': self.stats.parallel_processes,
+                    'memory_usage_mb': self.stats.memory_usage_mb
+                }
+                logger.info(f"OutputAgent最終統計: {final_stats}")
+            
+            # 3. キャッシュのクリア
+            if hasattr(self, 'response_cache'):
+                try:
+                    cache_size = self.response_cache.size()
+                    self.response_cache.clear()
+                    logger.debug(f"応答キャッシュをクリア: {cache_size}エントリ")
+                except Exception as e:
+                    logger.warning(f"応答キャッシュクリアエラー: {e}")
+            
+            if hasattr(self, 'template_cache'):
+                try:
+                    self.template_cache.clear()
+                    logger.debug("テンプレートキャッシュをクリア")
+                except Exception as e:
+                    logger.warning(f"テンプレートキャッシュクリアエラー: {e}")
+            
+            # 4. モデル参照のクリア
+            if hasattr(self, 'llm'):
+                self.llm = None
+            
+            # 5. メモリクリーンアップ
+            try:
+                import gc
+                collected = gc.collect()
+                logger.debug(f"OutputAgent: ガベージコレクション完了 ({collected}個)")
+            except Exception as e:
+                logger.warning(f"ガベージコレクションエラー: {e}")
+            
+            logger.info("OutputAgentシャットダウン完了")
+            
+        except Exception as e:
+            logger.error(f"OutputAgentシャットダウンエラー: {e}")
+            # エラーが発生してもシャットダウンを継続
+            import traceback
+            logger.debug(traceback.format_exc())
+
 # 下位互換性のためのエイリアス
 OutputAgent = CPUOptimizedOutputAgent

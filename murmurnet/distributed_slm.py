@@ -31,6 +31,7 @@ from MurmurNet.modules.rag_retriever import RAGRetriever
 from MurmurNet.modules.output_agent import OutputAgent
 from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.conversation_memory import ConversationMemory
+from MurmurNet.modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
 
 class DistributedSLM:
     """
@@ -102,9 +103,11 @@ class DistributedSLM:
         
         # パフォーマンスステータスを黒板に記録
         self.blackboard.write('performance_enabled', self.performance.enabled)
-        
-        # 初期化完了時のメモリスナップショット
+          # 初期化完了時のメモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
+        
+        # ShutdownManagerに自身を登録（最高優先度で）
+        register_for_shutdown(self, "DistributedSLM", priority=100)
         
         self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
         
@@ -374,7 +377,6 @@ class DistributedSLM:
             
         # 黒板のターン関連データもクリア
         self.blackboard.clear_current_turn()
-        
     def get_stats(self) -> Dict[str, Any]:
         """
         システムの統計情報を取得
@@ -390,6 +392,7 @@ class DistributedSLM:
             "parallel_enabled": self.use_parallel,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
         }
+    
     def _should_use_summary(self, user_input: str, rag_result: Optional[str]) -> bool:
         """
         要約処理を実行するかどうかを判定する簡易ロジック
@@ -410,3 +413,190 @@ class DistributedSLM:
             # 失敗したら安全側（要約する）に倒す
             self.logger.warning(f"_should_use_summary 判定で例外: {e}")
             return True
+
+    async def shutdown(self):
+        """
+        DistributedSLMシステムの完全なシャットダウン処理
+        
+        全てのモジュールとリソースを適切に終了し、メモリを解放する
+        途中で中断されることなく、安全にシステムを停止する
+        """
+        import time
+        self.logger.info("=== DistributedSLMシャットダウン開始 ===")
+        shutdown_start_time = time.time()
+        
+        try:
+            # 1. 進行中のタスクの状態を確認
+            if hasattr(self, '_current_generation_task'):
+                self.logger.info("進行中の生成タスクを停止中...")
+                try:
+                    self._current_generation_task.cancel()
+                    await asyncio.sleep(0.1)  # キャンセル処理の完了を待機
+                except:
+                    pass
+            
+            # 2. 各モジュールの個別シャットダウン
+            shutdown_tasks = []
+            
+            # エージェントプールのシャットダウン
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                self.logger.info("エージェントプールをシャットダウン中...")
+                try:
+                    if hasattr(self.agent_pool, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.agent_pool, "AgentPool"))
+                    elif hasattr(self.agent_pool, '__del__'):
+                        self.agent_pool.__del__()
+                except Exception as e:
+                    self.logger.warning(f"エージェントプールシャットダウンエラー: {e}")
+            
+            # RAGリトリーバーのシャットダウン
+            if hasattr(self, 'rag_retriever') and self.rag_retriever:
+                self.logger.info("RAGリトリーバーをシャットダウン中...")
+                try:
+                    if hasattr(self.rag_retriever, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.rag_retriever, "RAGRetriever"))
+                except Exception as e:
+                    self.logger.warning(f"RAGリトリーバーシャットダウンエラー: {e}")
+            
+            # 要約エンジンのシャットダウン
+            if hasattr(self, 'summary_engine') and self.summary_engine:
+                self.logger.info("要約エンジンをシャットダウン中...")
+                try:
+                    if hasattr(self.summary_engine, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.summary_engine, "SummaryEngine"))
+                except Exception as e:
+                    self.logger.warning(f"要約エンジンシャットダウンエラー: {e}")
+            
+            # 出力エージェントのシャットダウン
+            if hasattr(self, 'output_agent') and self.output_agent:
+                self.logger.info("出力エージェントをシャットダウン中...")
+                try:
+                    if hasattr(self.output_agent, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.output_agent, "OutputAgent"))
+                except Exception as e:
+                    self.logger.warning(f"出力エージェントシャットダウンエラー: {e}")
+            
+            # 会話記憶のシャットダウン
+            if hasattr(self, 'conversation_memory') and self.conversation_memory:
+                self.logger.info("会話記憶をシャットダウン中...")
+                try:
+                    if hasattr(self.conversation_memory, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.conversation_memory, "ConversationMemory"))
+                    else:
+                        # 会話記憶の保存処理
+                        self.conversation_memory.clear_memory()
+                except Exception as e:
+                    self.logger.warning(f"会話記憶シャットダウンエラー: {e}")
+            
+            # 黒板のシャットダウン
+            if hasattr(self, 'blackboard') and self.blackboard:
+                self.logger.info("黒板をシャットダウン中...")
+                try:
+                    if hasattr(self.blackboard, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.blackboard, "Blackboard"))
+                    else:
+                        # 黒板の最終クリア
+                        self.blackboard.clear_current_turn()
+                except Exception as e:
+                    self.logger.warning(f"黒板シャットダウンエラー: {e}")
+            
+            # パフォーマンスモニターのシャットダウン
+            if hasattr(self, 'performance') and self.performance:
+                self.logger.info("パフォーマンスモニターをシャットダウン中...")
+                try:
+                    if hasattr(self.performance, 'shutdown'):
+                        shutdown_tasks.append(self._safe_shutdown(self.performance, "PerformanceMonitor"))
+                    else:
+                        # パフォーマンス統計の最終記録
+                        final_summary = self.performance.get_performance_summary()
+                        self.logger.info(f"最終パフォーマンス統計: {final_summary}")
+                        self.performance.clear()
+                except Exception as e:
+                    self.logger.warning(f"パフォーマンスモニターシャットダウンエラー: {e}")
+            
+            # 並列シャットダウンタスクの実行
+            if shutdown_tasks:
+                self.logger.info(f"並列シャットダウンタスクを実行中: {len(shutdown_tasks)}個")
+                try:
+                    # 10秒のタイムアウトで並列実行（個別タイムアウト3秒 + バッファ）
+                    await asyncio.wait_for(asyncio.gather(*shutdown_tasks, return_exceptions=True), timeout=10.0)
+                except asyncio.TimeoutError:
+                    self.logger.warning("一部のシャットダウンタスクがタイムアウトしました")
+                except Exception as e:
+                    self.logger.error(f"並列シャットダウンエラー: {e}")
+            
+            # 3. モデルキャッシュのクリア
+            self.logger.info("モデルキャッシュをクリア中...")
+            try:
+                from MurmurNet.modules.model_factory import clear_model_cache
+                clear_model_cache()
+            except Exception as e:
+                self.logger.warning(f"モデルキャッシュクリアエラー: {e}")
+            
+            # 4. メモリの最終クリーンアップ
+            self.logger.info("メモリクリーンアップを実行中...")
+            try:
+                # オブジェクト参照をクリア
+                self.agent_pool = None
+                self.rag_retriever = None
+                self.summary_engine = None
+                self.output_agent = None
+                self.conversation_memory = None
+                self.blackboard = None
+                self.performance = None
+                self.input_reception = None
+                
+                # ガベージコレクション
+                import gc
+                collected = gc.collect()
+                self.logger.info(f"ガベージコレクション完了: {collected}個のオブジェクトを回収")
+            except Exception as e:
+                self.logger.warning(f"メモリクリーンアップエラー: {e}")
+            
+            # 5. シャットダウン完了
+            shutdown_time = time.time() - shutdown_start_time
+            self.logger.info(f"=== DistributedSLMシャットダウン完了 (時間: {shutdown_time:.2f}秒) ===")
+            
+        except Exception as e:
+            self.logger.error(f"シャットダウン中に予期しないエラーが発生: {e}")
+            # エラーが発生してもシャットダウンは継続
+            import traceback
+            self.logger.debug(traceback.format_exc())
+        finally:
+            # 最終的なログフラッシュ
+            try:
+                for handler in self.logger.handlers:
+                    if hasattr(handler, 'flush'):                        handler.flush()
+            except:
+                pass
+    
+    async def _safe_shutdown(self, component, name: str, timeout: float = 3.0):
+        """
+        コンポーネントの安全なシャットダウンを実行
+        
+        引数:
+            component: シャットダウン対象のコンポーネント
+            name: コンポーネント名（ログ用）
+            timeout: 個別コンポーネントのタイムアウト（秒）
+        """
+        try:
+            if hasattr(component, 'shutdown'):
+                if asyncio.iscoroutinefunction(component.shutdown):
+                    # 非同期シャットダウンにタイムアウトを適用
+                    await asyncio.wait_for(component.shutdown(), timeout=timeout)
+                else:
+                    # 同期シャットダウンをエクゼキューターで実行してタイムアウトを適用
+                    loop = asyncio.get_event_loop()
+                    await asyncio.wait_for(
+                        loop.run_in_executor(None, component.shutdown),
+                        timeout=timeout
+                    )
+                self.logger.debug(f"{name}のシャットダウン完了")
+            else:
+                self.logger.debug(f"{name}にshutdownメソッドがありません")
+        except asyncio.TimeoutError:
+            self.logger.warning(f"{name}のシャットダウンがタイムアウトしました（{timeout}秒）")
+            # タイムアウトエラーは上位に伝播させない
+        except Exception as e:
+            self.logger.error(f"{name}のシャットダウンエラー: {e}")
+            # エラーを上位に伝播させない（他のコンポーネントのシャットダウンを継続）
