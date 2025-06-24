@@ -222,8 +222,7 @@ class InputReception:
         """キャッシュから埋め込みを取得"""
         if not self.enable_caching or key not in self.embedding_cache:
             self.stats['cache_misses'] += 1
-            return None
-          # LRU順序を更新
+            return None        # LRU順序を更新
         self.cache_order.remove(key)
         self.cache_order.append(key)
         self.stats['cache_hits'] += 1
@@ -241,10 +240,19 @@ class InputReception:
                 from sentence_transformers import SentenceTransformer
                 model_name = self.config.get('embedding_model', 'all-MiniLM-L6-v2')
                 
+                # ローカルファイルのみ使用（HuggingFace へのHTTPアクセスを回避）
+                use_local_files_only = self.config.get('local_files_only', True)
+                
                 if self.debug:
-                    logger.debug(f"埋め込みモデルをロード: {model_name}")
-                self._transformer = SentenceTransformer(model_name)
-                logger.info(f"埋め込みモデルをロード: {model_name}")
+                    logger.debug(f"埋め込みモデルをロード: {model_name} (local_files_only={use_local_files_only})")
+                
+                # ローカルファイルのみを使用してモデルをロード
+                self._transformer = SentenceTransformer(
+                    model_name, 
+                    local_files_only=use_local_files_only,
+                    cache_folder=self.config.get('cache_folder', None)
+                )
+                logger.info(f"埋め込みモデルをロード: {model_name} (local_files_only={use_local_files_only})")
                 
             except ImportError:
                 logger.warning("SentenceTransformersがインストールされていません。ダミー埋め込みを使用します。")
@@ -252,7 +260,17 @@ class InputReception:
                 
             except Exception as e:
                 logger.error(f"埋め込みモデルロードエラー: {e}")
-                self._transformer = None
+                # ローカルファイル専用でエラーの場合は、通常モードで再試行
+                if use_local_files_only:
+                    logger.info("ローカルファイルモードでエラー。通常モードで再試行中...")
+                    try:
+                        self._transformer = SentenceTransformer(model_name)
+                        logger.info(f"埋め込みモデルをロード（通常モード）: {model_name}")
+                    except Exception as e2:
+                        logger.error(f"通常モードでもロードに失敗: {e2}")
+                        self._transformer = None
+                else:
+                    self._transformer = None
 
     def _parallel_tokenize(self, texts: List[str]) -> List[List[str]]:
         """並列トークン化処理"""
