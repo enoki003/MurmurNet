@@ -135,14 +135,18 @@ class DistributedSLM:
         for i in range(self.num_agents):
             agent_output = self.blackboard.read(f"agent_{i}_output")
             if agent_output:
-                agent_entries.append({"agent": i, "text": agent_output})
-          # 3. 出力の要約（使用する場合）
-        if self.use_summary and agent_entries:
+                agent_entries.append({"agent": i, "text": agent_output})        # 3. 出力の要約（使用する場合かつ有効な場合のみ）
+        should_summarize = self.use_summary and agent_entries and self._should_use_summary_iteration(agent_entries)
+        if should_summarize:
             summary_start = self.performance.start_timer(f"summary_iteration_{iteration+1}")
             summary = self.summary_engine.summarize_blackboard(agent_entries)
             self.blackboard.write(f'summary_{iteration}', summary)
             summary_time = self.performance.end_timer(f"summary_iteration_{iteration+1}", summary_start)
             self.logger.debug(f"反復 {iteration+1} の要約を作成しました (実行時間: {summary_time:.4f}秒)")
+        elif self.use_summary and agent_entries:
+            self.logger.info(f"反復 {iteration+1} の要約をスキップしました（短すぎる内容のため）")
+        elif self.use_summary:
+            self.logger.info(f"反復 {iteration+1} の要約をスキップしました（エージェント出力なし）")
         
         self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
     
@@ -392,52 +396,78 @@ class DistributedSLM:
             "parallel_enabled": self.use_parallel,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0        }
     
+    def _should_use_summary_iteration(self, agent_entries: List[Dict[str, Any]]) -> bool:
+        """
+        反復内での要約使用判定
+        
+        エージェント出力が短すぎる場合は要約を行わない
+        
+        引数:
+            agent_entries: エージェント出力のリスト
+            
+        戻り値:
+            要約を使用する場合True
+        """
+        if not agent_entries:
+            return False
+            
+        # 全エージェント出力の合計文字数をチェック
+        total_chars = sum(len(entry.get('text', '')) for entry in agent_entries)
+        if total_chars < 64:  # 64文字未満は要約をスキップ
+            self.logger.debug(f"エージェント出力が短すぎるため要約をスキップ: {total_chars}文字")
+            return False
+            
+        # 全体の平均文字数をチェック
+        avg_chars = total_chars / len(agent_entries)
+        if avg_chars < 20:  # 平均20文字未満は要約をスキップ
+            self.logger.debug(f"エージェント出力の平均が短すぎるため要約をスキップ: {avg_chars:.1f}文字")
+            return False
+            
+        return True
+
     def _should_use_summary(self, user_input: str, rag_result: Optional[str]) -> bool:
         """
-        要約処理を実行するかどうかを判定する最適化されたロジック
+        要約を使用するかどうかの判定（スマート判定・厳格版）
         
-        パフォーマンス最適化：
-        - 短い入力（64文字以下）では要約を完全にスキップ
-        - 入力が長い（200文字超）か RAG結果が長い（600文字超）の場合のみ要約実行
-        - トークン数ベースでも判定を追加
+        短い入力や単純な質問に対しては要約を無効化して高速化を図る
+        
+        引数:
+            user_input: ユーザー入力テキスト
+            rag_result: RAG検索結果
+            
+        戻り値:
+            要約を使用する場合True
         """
-        # 最小閾値: これ以下では要約を一切行わない
-        MIN_THRESHOLD_INPUT = 64
-        MIN_THRESHOLD_RAG = 100
-        
-        # 要約実行閾値: これを超えた場合に要約を実行
-        LENGTH_THRESHOLD_INPUT = 200  # 150 → 200 に引き上げ
-        LENGTH_THRESHOLD_RAG = 600    # 500 → 600 に引き上げ
-
-        try:
-            # 最小閾値チェック: 短すぎる場合は要約不要
-            if len(user_input) <= MIN_THRESHOLD_INPUT:
-                if not rag_result or len(rag_result) <= MIN_THRESHOLD_RAG:
-                    self.logger.debug(f"要約スキップ: 入力が短い（{len(user_input)}文字 ≤ {MIN_THRESHOLD_INPUT}）")
-                    return False
-            
-            # 長い場合は要約実行
-            if len(user_input) > LENGTH_THRESHOLD_INPUT:
-                self.logger.debug(f"要約実行: 長い入力（{len(user_input)}文字 > {LENGTH_THRESHOLD_INPUT}）")
-                return True
-                
-            if rag_result and len(rag_result) > LENGTH_THRESHOLD_RAG:
-                self.logger.debug(f"要約実行: 長いRAG結果（{len(rag_result)}文字 > {LENGTH_THRESHOLD_RAG}）")
-                return True
-            
-            # 中間的な長さの場合は要約をスキップ（パフォーマンス優先）
-            total_length = len(user_input) + (len(rag_result) if rag_result else 0)
-            if total_length < LENGTH_THRESHOLD_INPUT + LENGTH_THRESHOLD_RAG:
-                self.logger.debug(f"要約スキップ: 合計長が閾値以下（{total_length}文字）")
-                return False
-                
-            return True
-            
-        except Exception as e:
-            # 失敗したら安全側（要約しない）に倒す（パフォーマンス優先）
-            self.logger.warning(f"_should_use_summary 判定で例外: {e}")
+        # 基本的に要約を使用する設定でない場合はFalse
+        if not self.use_summary:
             return False
+            
+        # 入力が短すぎる場合はスキップ（閾値を64文字に厳格化）
+        if len(user_input) < 64:
+            self.logger.info(f"入力が短すぎるため要約をスキップ: {len(user_input)}文字 < 64文字")
+            return False
+            
+        # 単純な挨拶や感謝の場合はスキップ
+        simple_patterns = [
+            r'^(こんにちは|こんばんは|おはよう|ありがとう|感謝|すみません|失礼|お疲れ様).*$',
+            r'^(はい|いいえ|yes|no|ok|okay)$',
+            r'^(了解|わかりました|理解しました).*$'
+        ]
+        
+        for pattern in simple_patterns:
+            if re.match(pattern, user_input, re.IGNORECASE):
+                self.logger.info(f"単純な応答のため要約をスキップ: {user_input}")
+                return False
+        
+        # RAG結果が空の場合で、入力も短い場合はスキップ（閾値を128文字に厳格化）
+        if not rag_result and len(user_input) < 128:
+            self.logger.info(f"RAG結果なし且つ入力が短いため要約をスキップ: {len(user_input)}文字 < 128文字")
+            return False
+            
+        return True
 
+    # ...existing code...
+    
     async def shutdown(self):
         """
         DistributedSLMシステムの完全なシャットダウン処理
