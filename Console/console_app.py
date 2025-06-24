@@ -216,7 +216,8 @@ async def chat_loop():
     
     history = []
     while True:
-        try:            # ユーザー入力
+        try:            
+            # ユーザー入力
             user_input = input("\nあなた> ")
             if user_input.lower() in ["quit", "exit", "終了"]:
                 print("システムを終了しています...")
@@ -224,7 +225,7 @@ async def chat_loop():
                 try:
                     print("完全シャットダウンを開始...")
                     await safe_shutdown(slm)
-                    print("シャットダウン完了")
+                    print("全てのシャットダウン処理が完了しました")
                 except Exception as e:
                     print(f"シャットダウンエラー: {e}")
                     # フォールバック：強制終了
@@ -232,9 +233,11 @@ async def chat_loop():
                         cleanup_system()
                     except:
                         pass
+                finally:
+                    # 確実にプログラムを終了
+                    print("シャットダウン完了")
                     import os
                     os._exit(0)
-                break
             
             # 空入力はスキップ
             if not user_input.strip():
@@ -256,8 +259,7 @@ async def chat_loop():
             # デバッグ情報表示
             if args.debug:
                 print_debug(slm)
-                print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")
-              # 履歴に追加
+                print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")            # 履歴に追加
             history.append({"role": "assistant", "content": response})
             
         except KeyboardInterrupt:
@@ -266,7 +268,9 @@ async def chat_loop():
                 await safe_shutdown(slm)
             except:
                 cleanup_system()
-            break
+            finally:
+                import os
+                os._exit(0)
         except Exception as e:
             print(f"\nエラーが発生しました: {e}")
             if args.debug:
