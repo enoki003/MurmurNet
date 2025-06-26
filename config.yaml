@@ -12,9 +12,16 @@ log_level: INFO
 log_file: logs/murmurnet.log
 
 # モデル設定
-model_type: llama
+model_type: llama  # 'llama' または 'huggingface' を選択
 model_path: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma-3-1b-it-q4_0.gguf"
 chat_template: "C:\\Users\\admin\\Desktop\\課題研究\\models\\gemma3_template.txt"
+
+# HuggingFace モデル設定 (model_type: huggingface の場合に使用)
+huggingface_model_name: "llm-jp/llm-jp-3-150m"
+device: "cpu"  # 'cpu' または 'cuda'
+torch_dtype: "auto"  # 'auto', 'float16', 'float32'
+
+# 共通設定
 n_ctx: 4096  # CPU最適化のため8192から4096に調整
 n_threads: 8  # CPU最大活用のため8スレッドに増加
 temperature: 0.7

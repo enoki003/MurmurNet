@@ -44,6 +44,10 @@ parser.add_argument('--iter', type=int, default=1, help='反復回数（デフ�
 parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
 parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
 parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
+parser.add_argument('--model-type', choices=['llama', 'huggingface'], default=None, 
+                    help='使用するモデルタイプ（llama: Gemmaモデル、huggingface: llm-jp-3-150m）')
+parser.add_argument('--huggingface-model', type=str, default='llm-jp/llm-jp-3-150m',
+                    help='HuggingFaceモデル名（デフォルト: llm-jp/llm-jp-3-150m）')
 
 # パフォーマンス最適化オプション
 parser.add_argument('--no-local-files', action='store_true', 
@@ -159,7 +163,8 @@ async def safe_shutdown(slm):
         raise
 
 async def chat_loop():
-    """会話ループのメイン関数"""    # 設定
+    """会話ループのメイン関数"""
+    # 設定
     config = {
         # "model_path": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma-3-1b-it-q4_0.gguf",
         # "chat_template": r"C:\Users\園木優陽\OneDrive\デスクトップ\models\gemma3_template.txt",
@@ -171,7 +176,14 @@ async def chat_loop():
         "use_summary": not args.no_summary,
         "use_parallel": args.parallel,
         "debug": args.debug,
-          # パフォーマンス最適化設定
+        
+        # モデル設定のオーバーライド
+        "model_type": args.model_type if args.model_type else "llama",  # デフォルトはllama
+        "huggingface_model_name": args.huggingface_model,
+        "device": "cpu",  # CPUを使用
+        "torch_dtype": "auto",
+        
+        # パフォーマンス最適化設定
         "local_files_only": not args.no_local_files,  # デフォルトはTrue（HTTPアクセス回避）
         "cache_folder": args.cache_folder,
         

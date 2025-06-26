@@ -223,10 +223,200 @@ class LlamaModel(BaseModel):
         self._ensure_initialized()
         return self._llm is not None
 
+class HuggingFaceModel(BaseModel):
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self.model_name = config.get('huggingface_model_name', 'llm-jp/llm-jp-3-150m')
+        self.device = config.get('device', 'cpu')
+        self.torch_dtype = config.get('torch_dtype', 'auto')
+        self.temperature = config.get('temperature', 0.7)
+        self.max_tokens = config.get('max_tokens', 256)
+        self._model = None
+        self._tokenizer = None
+        self._initialization_attempted = False
+        self._initialization_error = None
+          # キャッシュディレクトリの設定
+        self.cache_dir = config.get('model_cache_dir', 'cache/models')
+        if self.cache_dir:
+            os.makedirs(self.cache_dir, exist_ok=True)
+
+    def _ensure_initialized(self):
+        if not self._initialization_attempted:
+            self._initialization_attempted = True
+            if not HAS_TRANSFORMERS:
+                self.logger.error("transformersライブラリがインストールされていません")
+                self._initialization_error = "transformersライブラリが必要です"
+                return
+                
+            self._init_model()
+    
+    def _init_model(self):
+        try:
+            self.logger.info(f"HuggingFaceモデル読み込み開始: {self.model_name}")
+            
+            # トークナイザーの読み込み
+            self.logger.info("トークナイザーを読み込み中...")
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                cache_dir=self.cache_dir,
+                trust_remote_code=True
+            )
+            
+            # パッドトークンの設定
+            if self._tokenizer.pad_token is None:
+                self._tokenizer.pad_token = self._tokenizer.eos_token
+            
+            # モデルの読み込み
+            self.logger.info("モデルを読み込み中...")
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                cache_dir=self.cache_dir,
+                torch_dtype=self.torch_dtype,
+                device_map=self.device if self.device != 'cpu' else None,
+                trust_remote_code=True
+            )
+            
+            # CPUの場合は明示的にCPUに移動
+            if self.device == 'cpu':
+                self._model = self._model.to('cpu')
+            
+            self.logger.info(f"✓ HuggingFaceモデルの初期化が完了しました: {self.model_name}")
+            
+        except Exception as e:
+            self.logger.error(f"✗ HuggingFaceモデル初期化エラー: {e}")
+            self._initialization_error = str(e)
+            self._model = None
+            self._tokenizer = None
+
+    def generate(self, prompt: str, **kwargs) -> str:
+        self._ensure_initialized()
+        if not self._model or not self._tokenizer:
+            error_msg = "HuggingFaceモデルが利用できません。"
+            if self._initialization_error:
+                error_msg += f" エラー: {self._initialization_error}"
+            return error_msg
+            
+        try:
+            # パラメータの設定
+            temperature = kwargs.get('temperature', self.temperature)
+            max_tokens = kwargs.get('max_tokens', self.max_tokens)
+            top_p = kwargs.get('top_p', 0.95)
+              # プロンプトのトークン化
+            inputs = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+            # token_type_idsを除去（一部のモデルで不要）
+            if 'token_type_ids' in inputs:
+                del inputs['token_type_ids']
+            
+            if self.device == 'cpu':
+                inputs = {k: v.to('cpu') for k, v in inputs.items()}
+            else:
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+            
+            # 生成設定
+            generation_config = {
+                'max_new_tokens': max_tokens,
+                'temperature': temperature,
+                'top_p': top_p,
+                'do_sample': True if temperature > 0 else False,
+                'pad_token_id': self._tokenizer.pad_token_id,
+                'eos_token_id': self._tokenizer.eos_token_id,
+                'repetition_penalty': kwargs.get('repeat_penalty', 1.1)
+            }
+            
+            # 推論実行
+            with torch.no_grad():
+                outputs = self._model.generate(
+                    **inputs,
+                    **generation_config
+                )
+              # 結果のデコード
+            generated_tokens = outputs[0][inputs['input_ids'].shape[1]:]
+            response = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
+            
+            return response.strip()
+            
+        except Exception as e:
+            self.logger.error(f"HuggingFace生成エラー: {e}")
+            return f"エラーが発生しました: {str(e)}"
+
+    def create_chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
+        return self.chat_completion(messages, **kwargs)    
+    def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
+        self._ensure_initialized()
+        if not self._model or not self._tokenizer:
+            error_msg = "HuggingFaceモデルが利用できません。"
+            if self._initialization_error:
+                error_msg += f" エラー: {self._initialization_error}"
+            return {
+                'choices': [{
+                    'message': {
+                        'content': error_msg,
+                        'role': 'assistant'
+                    },
+                    'finish_reason': 'error'
+                }],
+                'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0}
+            }
+        
+        try:
+            # メッセージをプロンプトに変換（シンプルな形式を使用）
+            prompt = ""
+            for msg in messages:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                if role == 'user':
+                    prompt += f"ユーザー: {content}\n"
+                elif role == 'assistant':
+                    prompt += f"アシスタント: {content}\n"
+                elif role == 'system':
+                    prompt += f"システム: {content}\n"
+            
+            # 最後にアシスタントの応答を促すプロンプトを追加
+            if not prompt.endswith("アシスタント: "):
+                prompt += "アシスタント: "
+            
+            # 生成実行
+            response_text = self.generate(prompt, **kwargs)
+            
+            return {
+                'choices': [{
+                    'message': {
+                        'content': response_text,
+                        'role': 'assistant'
+                    },
+                    'finish_reason': 'stop'
+                }],
+                'usage': {
+                    'prompt_tokens': len(prompt.split()),
+                    'completion_tokens': len(response_text.split()),
+                    'total_tokens': len(prompt.split()) + len(response_text.split())
+                }
+            }
+            
+        except Exception as e:
+            self.logger.error(f"HuggingFace chat completion エラー: {e}")
+            return {
+                'choices': [{
+                    'message': {
+                        'content': f"エラーが発生しました: {str(e)}",
+                        'role': 'assistant'
+                    },
+                    'finish_reason': 'error'
+                }],
+                'usage': {'prompt_tokens': 0, 'completion_tokens': 0, 'total_tokens': 0}
+            }
+
+    def is_available(self) -> bool:
+        if not HAS_TRANSFORMERS:
+            return False
+        self._ensure_initialized()
+        return self._model is not None and self._tokenizer is not None
+
 class ModelFactory:
     MODEL_TYPES = {
         'llama': LlamaModel,
         'local': LlamaModel,
+        'huggingface': HuggingFaceModel,
     }
 
     @classmethod
@@ -327,6 +517,15 @@ DEFAULT_MODEL_CONFIGS = [
         'temperature': 0.7,
         'max_tokens': 256,
         'chat_template': os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma3_template.txt'))
+    },
+    {
+        'model_type': 'huggingface',
+        'huggingface_model_name': 'llm-jp/llm-jp-3-150m',
+        'device': 'cpu',
+        'torch_dtype': 'auto',
+        'temperature': 0.7,
+        'max_tokens': 256,
+        'model_cache_dir': os.path.abspath(os.path.join(os.path.dirname(__file__), '../../cache/models'))
     }
 ]
 
