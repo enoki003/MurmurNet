@@ -37,23 +37,26 @@ from MurmurNet.distributed_slm import DistributedSLM
 _global_slm = None
 
 # ログ設定
-parser = argparse.ArgumentParser(description="MurmurNet Console App")
+parser = argparse.ArgumentParser(description="MurmurNet Console App - 分散SLMシステム")
 parser.add_argument('--debug', action='store_true', help='デバッグ情報を表示')
 parser.add_argument('--log', action='store_true', help='ログをファイルに保存')
-parser.add_argument('--iter', type=int, default=1, help='反復回数（デフォルト: 1）')
+parser.add_argument('--iterations', '--iter', '-iter', type=int, default=1, 
+                    help='反復回数（デフォルト: 1） ※--iter, -iter でも指定可能')
 parser.add_argument('--agents', type=int, default=2, help='エージェント数（デフォルト: 2）')
 parser.add_argument('--no-summary', action='store_true', help='要約機能を無効化')
 parser.add_argument('--parallel', action='store_true', help='並列処理を有効化')
-parser.add_argument('--model-type', choices=['llama', 'huggingface'], default=None, 
-                    help='使用するモデルタイプ（llama: Gemmaモデル、huggingface: llm-jp-3-150m）')
-parser.add_argument('--huggingface-model', type=str, default='llm-jp/llm-jp-3-150m',
-                    help='HuggingFaceモデル名（デフォルト: llm-jp/llm-jp-3-150m）')
+parser.add_argument('--model-type', choices=['llama', 'huggingface'], required=True,
+                    help='使用するモデルタイプ（必須）: llama=Gemmaモデル, huggingface=HuggingFaceモデル')
+parser.add_argument('--model-name', '--huggingface-model', type=str, default=None,
+                    help='モデル名（model-type=huggingface時は必須、150Mへの自動フォールバック禁止）')
+parser.add_argument('--model-path', type=str, default=None,
+                    help='モデルファイルパス（model-type=llama時は必須）')
 
 # パフォーマンス最適化オプション
 parser.add_argument('--no-local-files', action='store_true', 
                     help='ローカルファイルモードを無効化（HuggingFaceへのHTTPアクセスを許可）')
 parser.add_argument('--cache-folder', type=str, 
-                    default=r"C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\models\st_cache",
+                    default=r"C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\cache\models",
                     help='モデルキャッシュフォルダのパス')
 
 # RAGモードのオプションを追加
@@ -162,7 +165,7 @@ async def safe_shutdown(slm):
         print(f"safe_shutdown内でエラーが発生: {e}")
         raise
 
-async def chat_loop():
+async def chat_loop(args):
     """会話ループのメイン関数"""
     # 設定
     config = {
@@ -172,70 +175,88 @@ async def chat_loop():
         "chat_template": r"C:\Users\admin\Desktop\課題研究\models\gemma3_template.txt",
 
         "num_agents": args.agents,
-        "iterations": args.iter,
+        "iterations": args.iterations,
         "use_summary": not args.no_summary,
         "use_parallel": args.parallel,
         "debug": args.debug,
         
         # モデル設定のオーバーライド
         "model_type": args.model_type if args.model_type else "llama",  # デフォルトはllama
-        "huggingface_model_name": args.huggingface_model,
+        "huggingface_model_name": args.model_name,  # --model-name に変更
+        "model_path": args.model_path,  # モデルパス追加
         "device": "cpu",  # CPUを使用
         "torch_dtype": "auto",
         
-        # パフォーマンス最適化設定
-        "local_files_only": not args.no_local_files,  # デフォルトはTrue（HTTPアクセス回避）
-        "cache_folder": args.cache_folder,
+        # 基本設定
+        "local_files_only": not args.no_local_files,  # --no-local-filesフラグに基づく
+        "cache_folder": args.cache_folder,  # コマンドライン引数から取得
         
-        # RAG設定
-        "rag_mode": args.rag_mode,  # コマンドライン引数から設定
+        # RAG設定（基本設定）
+        "rag_mode": "local",  # デフォルトRAGモード
         "rag_score_threshold": 0.5,
         "rag_top_k": 3,
         "embedding_model": "all-MiniLM-L6-v2",
-        # 並列処理の安全性向上オプション
-        "safe_parallel": args.safe_parallel,
-        "max_workers": args.max_workers if args.max_workers > 0 else None,
+        "embedding_cache_folder": args.cache_folder,  # 埋め込みモデル用キャッシュフォルダ
+        
+        # 並列処理設定
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
     }
 
-    # ZIMモードの場合、パスを追加
-    if args.rag_mode == "zim":
-        config["zim_path"] = args.zim_path
-        # ZIMファイルの存在確認
-        if not os.path.exists(args.zim_path):
-            print(f"警告: 指定されたZIMファイルが見つかりません: {args.zim_path}")
-            print("ファイルパスが正しいか確認してください")
+    # 基本設定完了
+    print(f"設定完了: モデルタイプ={config['model_type']}")
+    if config['model_type'] == 'huggingface':
+        print(f"HuggingFaceモデル: {config['huggingface_model_name']}")
+    elif config['model_type'] == 'llama':
+        print(f"Llamaモデルパス: {config.get('model_path', 'デフォルト')}")
+    
+    # ローカルファイル設定の表示
+    print(f"ローカルファイルモード: {config['local_files_only']}")
+    print(f"キャッシュフォルダ: {config['cache_folder']}")
+    
+    # キャッシュフォルダの存在確認
+    import os
+    if not os.path.exists(config['cache_folder']):
+        print(f"警告: キャッシュフォルダが存在しません: {config['cache_folder']}")
+        try:
+            os.makedirs(config['cache_folder'], exist_ok=True)
+            print(f"キャッシュフォルダを作成しました: {config['cache_folder']}")
+        except Exception as e:
+            print(f"キャッシュフォルダの作成に失敗: {e}")
+            
+    # HuggingFaceモデルのローカルキャッシュ確認
+    if config['model_type'] == 'huggingface' and config['local_files_only']:
+        model_cache_path = os.path.join(config['cache_folder'], f"models--{config['huggingface_model_name'].replace('/', '--')}")
+        if os.path.exists(model_cache_path):
+            print(f"ローカルモデルキャッシュが見つかりました: {model_cache_path}")
         else:
-            print(f"ZIMファイルを確認: {args.zim_path} (ファイルサイズ: {os.path.getsize(args.zim_path) / (1024*1024):.1f} MB)")
-      # SLMインスタンス作成
+            print(f"警告: ローカルモデルキャッシュが見つかりません: {model_cache_path}")
+            print("モデルを事前にダウンロードするか、--no-local-files オプションを使用してください")
+        
+    # SLMインスタンス作成
     global _global_slm
     slm = DistributedSLM(config)
     _global_slm = slm  # グローバル参照を設定
     
-    # RAGモードのチェック
-    from MurmurNet.modules.rag_retriever import RAGRetriever
-    rag = RAGRetriever(config)
-    if args.rag_mode == "zim" and rag.mode == "dummy":
-        print("警告: ZIMモードを指定しましたが、dummyモードになっています")
-        print("以下の理由が考えられます:")
-        print("- libzimライブラリがインストールされていない")
-        print("- ZIMファイルのパスが間違っている")
-        print("- ZIMファイルが壊れている")
-    
-    print(f"MurmurNet Console ({args.agents}エージェント, {args.iter}反復)")
+    print(f"MurmurNet Console ({args.agents}エージェント, {args.iterations}反復)")
     print("終了するには 'quit' または 'exit' を入力してください")
     
     if args.parallel:
         print("[設定] 並列処理: 有効")
-        if args.safe_parallel:
-            print("[設定] 安全な並列処理モード: 有効（GGMLエラー回避用）")
-        if args.max_workers > 0:
-            print(f"[設定] 最大並列ワーカー数: {args.max_workers}")
     if not args.no_summary:
         print("[設定] 要約機能: 有効")
-    print(f"[設定] RAGモード: {rag.mode} (指定: {args.rag_mode})")
-    if args.rag_mode == "zim":
-        print(f"[設定] ZIMファイル: {args.zim_path}")
+    print(f"[設定] RAGモード: {config['rag_mode']}")
+    print(f"[設定] ローカルファイルモード: {config['local_files_only']}")
+    if args.debug:
+        print(f"[DEBUG] 使用キャッシュフォルダ: {config['cache_folder']}")
+        print(f"[DEBUG] 埋め込みモデルキャッシュフォルダ: {config['embedding_cache_folder']}")
+        if config['model_type'] == 'huggingface':
+            model_cache_path = os.path.join(config['cache_folder'], f"models--{config['huggingface_model_name'].replace('/', '--')}")
+            print(f"[DEBUG] 期待されるモデルキャッシュパス: {model_cache_path}")
+            print(f"[DEBUG] モデルキャッシュ存在: {os.path.exists(model_cache_path)}")
+            # 埋め込みモデルキャッシュ確認
+            embed_cache_path = os.path.join(config['embedding_cache_folder'], f"models--sentence-transformers--{config['embedding_model']}")
+            print(f"[DEBUG] 期待される埋め込みキャッシュパス: {embed_cache_path}")
+            print(f"[DEBUG] 埋め込みキャッシュ存在: {os.path.exists(embed_cache_path)}")
     
     history = []
     while True:
@@ -337,5 +358,71 @@ if hasattr(signal, 'SIGTERM'):
     signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_system)
 
+def validate_args(args):
+    """CLI引数の検証（150Mフォールバック禁止）"""
+    errors = []
+    
+    # model-type必須チェック
+    if not args.model_type:
+        errors.append("--model-type は必須です。'llama' または 'huggingface' を指定してください。")
+    
+    # model-type別の必須引数チェック
+    if args.model_type == 'llama':
+        if not args.model_path:
+            errors.append("--model-type=llama の場合、--model-path は必須です。")
+        elif not os.path.exists(args.model_path):
+            errors.append(f"指定されたモデルファイルが見つかりません: {args.model_path}")
+    
+    elif args.model_type == 'huggingface':
+        if not args.model_name:
+            errors.append("--model-type=huggingface の場合、--model-name は必須です。")
+            errors.append("150Mモデルへの自動フォールバックは禁止されています。")
+        
+        # ローカルファイルモード時のキャッシュ存在チェック
+        if not args.no_local_files:
+            model_cache_path = os.path.join(args.cache_folder, f"models--{args.model_name.replace('/', '--')}")
+            if not os.path.exists(model_cache_path):
+                errors.append(f"ローカルファイルモードですが、モデルキャッシュが見つかりません: {model_cache_path}")
+                errors.append("モデルを事前にダウンロードするか、--no-local-files オプションを使用してください。")
+    
+    # iterations範囲チェック
+    if args.iterations < 1 or args.iterations > 10:
+        errors.append("--iterations は1-10の範囲で指定してください。")
+    
+    # agents範囲チェック
+    if args.agents < 1 or args.agents > 20:
+        errors.append("--agents は1-20の範囲で指定してください。")
+    
+    # エラーがある場合は表示して終了
+    if errors:
+        print("=== 引数エラー ===")
+        for error in errors:
+            print(f"エラー: {error}")
+        print("\n使用例:")
+        print("  Llamaモデル使用:")
+        print("    python console_app.py --model-type llama --model-path ./models/model.gguf")
+        print("  HuggingFaceモデル使用:")
+        print("    python console_app.py --model-type huggingface --model-name rinna/japanese-gpt2-medium")
+        print("  反復回数指定:")
+        print("    python console_app.py --model-type llama --model-path ./model.gguf --iterations 3")
+        sys.exit(1)
+
 if __name__ == "__main__":
-    asyncio.run(chat_loop())
+    # 引数をパース
+    args = parser.parse_args()
+    
+    # 引数を検証
+    validate_args(args)
+    
+    print("=== MurmurNet Console App ===")
+    print(f"モデルタイプ: {args.model_type}")
+    if args.model_type == 'llama':
+        print(f"モデルパス: {args.model_path}")
+    elif args.model_type == 'huggingface':
+        print(f"モデル名: {args.model_name}")
+    print(f"反復回数: {args.iterations}")
+    print(f"エージェント数: {args.agents}")
+    print("=" * 30)
+    
+    # メインループ実行
+    asyncio.run(chat_loop(args))

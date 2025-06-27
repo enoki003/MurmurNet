@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from typing import Dict, Any, List, Optional, Tuple, Callable
 from MurmurNet.modules.model_factory import ModelFactory
 from MurmurNet.modules.performance import cpu_profile
+from MurmurNet.modules.prompt_manager import get_prompt_manager
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
@@ -259,9 +260,21 @@ class AgentPoolManager:
                     continue
                 elif isinstance(result, tuple) and len(result) == 2:
                     agent_id, output = result
-                    if output:
-                        blackboard.write(f'agent_{agent_id}_output', output)
+                    # 出力を必ず文字列に変換
+                    output_str = str(output) if output is not None else ""
+                    
+                    # 空応答や無効応答のフィルタリングを強化
+                    if output_str and output_str.strip() and len(output_str.strip()) > 2:
+                        # エラーメッセージや無効応答の検出
+                        if not any(pattern in output_str.lower() for pattern in [
+                            '応答できませんでした', 'エラー', '申し訳', '生成できませんでした'
+                        ]):
+                            blackboard.write(f'agent_{agent_id}_output', output_str.strip())
+                        else:
+                            logger.warning(f"エージェント{agent_id}からエラー応答: {output_str[:50]}")
+                            blackboard.write(f'agent_{agent_id}_output', f"エージェント{agent_id}は適切な応答を生成できませんでした")
                     else:
+                        logger.warning(f"エージェント{agent_id}から空応答: '{output_str}'")
                         blackboard.write(f'agent_{agent_id}_output', f"エージェント{agent_id}は空の応答を返しました")
                         
         except Exception as e:
@@ -303,9 +316,12 @@ class AgentPoolManager:
             
             # レスポンスの形式によって適切にアクセス
             if isinstance(resp, dict):
-                output = resp['choices'][0]['message']['content'].strip()
+                output = resp['choices'][0]['message']['content']
             else:
-                output = resp.choices[0].message.content.strip()
+                output = resp.choices[0].message.content
+            
+            # 必ず文字列に変換
+            output = str(output).strip() if output else ""
                   
             # 出力を制限（200文字以内、CPU負荷軽減）
             if len(output) > 200:
@@ -322,7 +338,7 @@ class AgentPoolManager:
 
     def _format_prompt(self, agent_id: int) -> str:
         """
-        エージェント用のプロンプトをフォーマット（内部メソッド）
+        エージェント用のプロンプトをフォーマット（プロンプトマネージャー使用）
         
         引数:
             agent_id: エージェントID
@@ -337,46 +353,116 @@ class AgentPoolManager:
         else:
             input_text = str(input_data)
             
+        # 空の入力チェック（「お問い合わせスパム」対策）
+        if not input_text or input_text.strip() == "":
+            logger.warning(f"エージェント{agent_id}: 空の入力が検出されました")
+            return "適切な質問を入力してください。"
+            
         # RAG情報の取得
         rag_info = self.blackboard.read('rag')
-        rag_text = str(rag_info) if rag_info else "関連情報はありません。"
+        rag_text = str(rag_info) if rag_info else ""
         
         # 会話コンテキストの取得
         conversation_context = self.blackboard.read('conversation_context')
-        context_text = str(conversation_context) if conversation_context else "過去の会話はありません。"
+        context_text = str(conversation_context) if conversation_context else ""
         
         # エージェントの役割情報
         role = self.roles[agent_id]
-        role_name = role.get('role', f"エージェント{agent_id}")
-        role_desc = role.get('system', "あなたは質問に答えるAIアシスタントです。")
+        role_name = role.get('role', f"agent_{agent_id}")
         
-        # 他のエージェントの出力を収集
+        # 他のエージェントの出力を収集（簡潔版）
         other_agents_output = []
         for i in range(self.num_agents):
             if i != agent_id:  # 自分以外のエージェント
                 output = self.blackboard.read(f'agent_{i}_output')
-                if output:
-                    other_role = self.roles[i].get('role', f"エージェント{i}")
-                    other_agents_output.append(f"{other_role}の回答: {output[:150]}...")
+                if output and len(output.strip()) > 0:
+                    other_role = self.roles[i].get('role', f"agent_{i}")
+                    # 出力を短縮
+                    short_output = output[:100] + "..." if len(output) > 100 else output
+                    other_agents_output.append(f"{other_role}: {short_output}")
                     
-        other_agents_text = "\n\n".join(other_agents_output) if other_agents_output else "他のエージェントの出力はまだありません。"
-                  
-        # CPU最適化されたプロンプト（短縮版）
-        prompt = f"""私は「{role_name}」です。
-
-{role_desc}
-
-質問: {input_text}
-
-参考情報: {rag_text[:300]}...
-
-会話履歴: {context_text[:200]}...
-
-仲間の意見:
-{other_agents_text}
-
-150文字以内で簡潔に回答してください:"""
-
+        # コンテキスト情報を構築
+        context_parts = []
+        
+        if rag_text and rag_text.strip() and rag_text != "RAG情報なし":
+            context_parts.append(f"参考情報: {rag_text[:200]}")
+        
+        if context_text and context_text != "過去の会話はありません。":
+            context_parts.append(f"会話履歴: {context_text[:150]}")
+            
+        if other_agents_output:
+            context_parts.append(f"他エージェント意見: {'; '.join(other_agents_output[:2])}")
+            
+        # プロンプトマネージャーを使用してプロンプト構築
+        try:
+            from MurmurNet.modules.prompt_manager import get_prompt_manager
+            
+            # モデルタイプとモデル名を取得
+            model_type = self.config.get('model_type', 'llama')
+            model_name = self.config.get('huggingface_model_name', '') if model_type == 'huggingface' else ''
+            
+            prompt_manager = get_prompt_manager(model_type, model_name)
+            
+            # 統合コンテキスト
+            full_context = "\n".join(context_parts) if context_parts else ""
+            
+            # プロンプト生成（役割別システムプロンプト付き）
+            prompt = prompt_manager.build_prompt(
+                user_text=input_text,
+                role=role_name,
+                context=full_context
+            )
+            
+            logger.debug(f"エージェント{agent_id}({role_name}): プロンプト生成完了 {len(prompt)}文字")
+            return prompt
+            
+        except Exception as e:
+            logger.error(f"プロンプトマネージャーエラー (エージェント{agent_id}): {str(e)}")
+            
+            # フォールバック: 最小限のプロンプト（空回答防止）
+            if not input_text.strip():
+                return "具体的な質問をしてください。"
+            
+            return f"質問: {input_text}\n\n{role_name}として回答してください:"
+            context_parts.append(f"会話履歴: {context_text[:150]}")
+            
+        if other_agents_output:
+            context_parts.append(f"他の観点: {' | '.join(other_agents_output[:2])}")  # 最大2つの他意見
+        
+        context_for_prompt = "\n\n".join(context_parts)
+        
+        # プロンプトマネージャーを使用してプロンプト生成
+        model_type = self.config.get('model_type', 'llama')
+        prompt_manager = get_prompt_manager(model_type)
+        
+        # ロール名をプロンプトマネージャーの標準ロールにマッピング
+        role_mapping = {
+            "researcher": "researcher",
+            "分析者": "researcher", 
+            "研究者": "researcher",
+            "critic": "critic",
+            "批判者": "critic",
+            "評論家": "critic",
+            "writer": "writer", 
+            "文書家": "writer",
+            "記者": "writer",
+            "judge": "judge",
+            "判断者": "judge",
+            "調整者": "judge",
+        }
+        
+        # デフォルトロールの決定
+        standard_role = role_mapping.get(role_name.lower(), "assistant")
+        
+        # プロンプト生成
+        prompt = prompt_manager.build_prompt(
+            user_text=input_text,
+            role=standard_role,
+            context=context_for_prompt
+        )
+        
+        logger.debug(f"エージェント{agent_id}({role_name} → {standard_role}): プロンプト生成完了 ({len(prompt)}文字)")
+        
         return prompt
 
     def _agent_task(self, agent_id: int) -> str:

@@ -179,7 +179,7 @@ class DistributedSLM:
 
     async def _run_agents_parallel_fallback(self) -> None:
         """
-        フォールバック用の並列実行（従来版）
+        フォールバック用の並列実行
         """
         # スレッドプール内でエージェントタスクを実行するラッパー
         def run_agent_task(agent_id: int) -> str:
@@ -216,33 +216,6 @@ class DistributedSLM:
             else:
                 self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
     
-    def _is_memory_related_question(self, text: str) -> bool:
-        """
-        入力テキストが会話記憶に関連する質問かどうかを判定
-        
-        引数:
-            text: 入力テキスト
-        
-        戻り値:
-            会話記憶に関連する質問ならTrue
-        """
-        # 記憶関連の質問パターン
-        memory_patterns = [
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(の|は|を)(なに|何|なん)と(言い|いい|呼び|よび|よん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の名前(は|を)(覚え|おぼえ)",
-            r"(私|僕|俺|わたし|ぼく|おれ)の(趣味|しゅみ)(は|を)(なに|何|なん)",
-            r"(私|僕|俺|わたし|ぼく|おれ)(は|が)(なに|何|なん)(が好き|を好きと言いました)",
-            r"(覚え|おぼえ)てる",
-            r"(覚え|おぼえ)てます",
-            r"(私|僕|俺|わたし|ぼく|おれ)について",
-        ]
-          # いずれかのパターンにマッチしたら記憶関連の質問と判定
-        for pattern in memory_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-                
-        return False
         
     async def generate(self, input_text: str) -> str:
         """
@@ -396,6 +369,42 @@ class DistributedSLM:
             "parallel_enabled": self.use_parallel,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0        }
     
+    def _is_memory_related_question(self, input_text: str) -> bool:
+        """
+        会話記憶に関連する質問かどうかを判定
+        
+        引数:
+            input_text: ユーザー入力テキスト
+            
+        戻り値:
+            会話記憶を使用すべき場合True
+        """
+        # 会話記憶関連のキーワード
+        memory_keywords = [
+            "前に", "さっき", "先ほど", "先程", "以前", "前回",
+            "前の話", "前の質問", "前の会話", "その話", "それについて",
+            "続き", "詳しく", "もう少し", "さらに", "追加",
+            "覚えている", "記憶", "話した", "言った", "聞いた"
+        ]
+        
+        input_lower = input_text.lower()
+        
+        # キーワードマッチング
+        for keyword in memory_keywords:
+            if keyword in input_lower:
+                self.logger.debug(f"会話記憶関連キーワード検出: {keyword}")
+                return True
+        
+        # 短い質問で代名詞が含まれる場合
+        if len(input_text) < 50:
+            pronouns = ["それ", "これ", "あれ", "その", "この", "あの"]
+            for pronoun in pronouns:
+                if pronoun in input_text:
+                    self.logger.debug(f"代名詞検出: {pronoun}")
+                    return True
+        
+        return False
+    
     def _should_use_summary_iteration(self, agent_entries: List[Dict[str, Any]]) -> bool:
         """
         反復内での要約使用判定
@@ -447,17 +456,7 @@ class DistributedSLM:
             self.logger.info(f"入力が短すぎるため要約をスキップ: {len(user_input)}文字 < 64文字")
             return False
             
-        # 単純な挨拶や感謝の場合はスキップ
-        simple_patterns = [
-            r'^(こんにちは|こんばんは|おはよう|ありがとう|感謝|すみません|失礼|お疲れ様).*$',
-            r'^(はい|いいえ|yes|no|ok|okay)$',
-            r'^(了解|わかりました|理解しました).*$'
-        ]
-        
-        for pattern in simple_patterns:
-            if re.match(pattern, user_input, re.IGNORECASE):
-                self.logger.info(f"単純な応答のため要約をスキップ: {user_input}")
-                return False
+
         
         # RAG結果が空の場合で、入力も短い場合はスキップ（閾値を128文字に厳格化）
         if not rag_result and len(user_input) < 128:

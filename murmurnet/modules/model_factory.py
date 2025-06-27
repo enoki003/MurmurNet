@@ -45,11 +45,24 @@ except ImportError:
         def __exit__(self, *args): pass
     _CACHE_LOCK = DummyLock()
 
+def sanitize_hf_name(hf_id: str) -> str:
+    """HuggingFace IDのスラッシュをアンダースコアに変換"""
+    if not hf_id:
+        return ""
+    return hf_id.replace("/", "_")
+
 def _get_model_cache_key(config: Dict[str, Any]) -> str:
-    model_path = config.get('model_path', '')
     model_type = config.get('model_type', '')
     n_ctx = config.get('n_ctx', 2048)
-    return f"{model_type}:{model_path}:{n_ctx}"
+    
+    if model_type == 'huggingface':
+        model_name = config.get('huggingface_model_name', '')
+        # HuggingFace IDを正規化
+        sanitized_name = sanitize_hf_name(model_name)
+        return f"{model_type}:{sanitized_name}:{n_ctx}"
+    else:
+        model_path = config.get('model_path', '')
+        return f"{model_type}:{model_path}:{n_ctx}"
 
 class BaseModel(ABC):
     def __init__(self, config: Dict[str, Any]):
@@ -254,11 +267,18 @@ class HuggingFaceModel(BaseModel):
         try:
             self.logger.info(f"HuggingFaceモデル読み込み開始: {self.model_name}")
             
+            # local_files_only設定を取得
+            local_files_only = self.config.get('local_files_only', True)
+            cache_folder = self.config.get('cache_folder', self.cache_dir)
+            
+            self.logger.info(f"ローカルファイルモード: {local_files_only}, キャッシュ: {cache_folder}")
+            
             # トークナイザーの読み込み
             self.logger.info("トークナイザーを読み込み中...")
             self._tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
-                cache_dir=self.cache_dir,
+                cache_dir=cache_folder,
+                local_files_only=local_files_only,
                 trust_remote_code=True
             )
             
@@ -270,7 +290,8 @@ class HuggingFaceModel(BaseModel):
             self.logger.info("モデルを読み込み中...")
             self._model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                cache_dir=self.cache_dir,
+                cache_dir=cache_folder,
+                local_files_only=local_files_only,
                 torch_dtype=self.torch_dtype,
                 device_map=self.device if self.device != 'cpu' else None,
                 trust_remote_code=True
@@ -301,43 +322,151 @@ class HuggingFaceModel(BaseModel):
             temperature = kwargs.get('temperature', self.temperature)
             max_tokens = kwargs.get('max_tokens', self.max_tokens)
             top_p = kwargs.get('top_p', 0.95)
-              # プロンプトのトークン化
-            inputs = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
-            # token_type_idsを除去（一部のモデルで不要）
-            if 'token_type_ids' in inputs:
-                del inputs['token_type_ids']
-            
-            if self.device == 'cpu':
-                inputs = {k: v.to('cpu') for k, v in inputs.items()}
+            # llm-jp-3-150m-instruct3公式テンプレート形式の検出と処理
+            if "<|system|>" in prompt and "<|user|>" in prompt:
+                # 公式テンプレート形式の場合、messages形式に変換
+                system_part = prompt.split("<|system|>")[1].split("<|user|>")[0].strip()
+                user_part = prompt.split("<|user|>")[1].split("<|assistant|>")[0].strip()
+                
+                messages = [
+                    {"role": "system", "content": system_part},
+                    {"role": "user", "content": user_part}
+                ]
+                
+                # apply_chat_templateを使用して正しいプロンプトを生成
+                try:
+                    inputs = self._tokenizer.apply_chat_template(
+                        messages, 
+                        add_generation_prompt=True, 
+                        return_tensors="pt"
+                    )
+                    if self.device == 'cpu':
+                        inputs = inputs.to('cpu')
+                    else:
+                        inputs = inputs.to(self.device)
+                    
+                    # inputsが既にtensor形式なのでそのまま使用
+                    inputs_dict = {'input_ids': inputs}
+                except Exception as e:
+                    self.logger.warning(f"apply_chat_template失敗、フォールバック: {e}")
+                    # フォールバックとして従来の方法
+                    inputs_dict = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+                    if 'token_type_ids' in inputs_dict:
+                        del inputs_dict['token_type_ids']
+                    if self.device == 'cpu':
+                        inputs_dict = {k: v.to('cpu') for k, v in inputs_dict.items()}
+                    else:
+                        inputs_dict = {k: v.to(self.device) for k, v in inputs_dict.items()}
             else:
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                # 従来形式の場合
+                inputs_dict = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+                if 'token_type_ids' in inputs_dict:
+                    del inputs_dict['token_type_ids']
+                if self.device == 'cpu':
+                    inputs_dict = {k: v.to('cpu') for k, v in inputs_dict.items()}
+                else:
+                    inputs_dict = {k: v.to(self.device) for k, v in inputs_dict.items()}
             
-            # 生成設定
+            # 生成設定（llm-jp-3-150m-instruct3向け最適化 - 改良版）
             generation_config = {
-                'max_new_tokens': max_tokens,
-                'temperature': temperature,
-                'top_p': top_p,
-                'do_sample': True if temperature > 0 else False,
+                'max_new_tokens': min(max_tokens, 128),  # 小型モデルなので短めに
+                'temperature': max(temperature, 0.7),   # 創造性を高める
+                'top_p': 0.9,                          # 多様性を確保
+                'top_k': 30,                           # 選択肢を適度に制限
+                'do_sample': True,                     # サンプリング有効
                 'pad_token_id': self._tokenizer.pad_token_id,
                 'eos_token_id': self._tokenizer.eos_token_id,
-                'repetition_penalty': kwargs.get('repeat_penalty', 1.1)
+                'repetition_penalty': 1.0,             # 繰り返しペナルティを軽減
+                'early_stopping': False,               # 早期停止を無効化
+                'use_cache': True,                     # キャッシュ有効
+                'no_repeat_ngram_size': 0,             # n-gram制限を無効化
+                'length_penalty': 1.0,                # 長さペナルティを中立
+                'forced_bos_token_id': None,           # BOSトークンを強制しない
+                'forced_eos_token_id': None,           # EOSトークンを強制しない
             }
             
             # 推論実行
             with torch.no_grad():
                 outputs = self._model.generate(
-                    **inputs,
+                    **inputs_dict,
                     **generation_config
                 )
-              # 結果のデコード
-            generated_tokens = outputs[0][inputs['input_ids'].shape[1]:]
-            response = self._tokenizer.decode(generated_tokens, skip_special_tokens=True)
+              # 結果のデコード（入力プロンプトを除外）
+            generated_tokens = outputs[0][inputs_dict['input_ids'].shape[1]:]
+            response = self._tokenizer.decode(generated_tokens, skip_special_tokens=False)
             
-            return response.strip()
+            # llm-jp-3-150m-instruct3向けの応答後処理
+            processed_response = self._post_process_response(response, prompt)
+            
+            # 必ず文字列を返す（辞書等を返さない）
+            return str(processed_response).strip() if processed_response else "申し訳ございませんが、適切な回答を生成できませんでした。"
             
         except Exception as e:
             self.logger.error(f"HuggingFace生成エラー: {e}")
             return f"エラーが発生しました: {str(e)}"
+    
+    def _post_process_response(self, response: str, original_prompt: str) -> str:
+        """
+        llm-jp-3-150m-instruct3向けの応答後処理（改良版）
+        
+        Args:
+            response: 生成された応答
+            original_prompt: 元のプロンプト
+            
+        Returns:
+            後処理された応答
+        """
+        # デバッグ用の生ログ出力
+        if self.config.get('debug', False):
+            self.logger.debug(f"[RAW] 生成された生応答: «{response}» (長さ: {len(response)})")
+        
+        if not response:
+            return ""  # 空の場合は空文字列を返す
+        
+        # 制御タグの削除
+        import re
+        response = re.sub(r'<\|(?:system|user|assistant)\|>', '', response)
+        response = re.sub(r'</?(?:human|bot|s)>', '', response)
+        response = re.sub(r'</s>', '', response)
+        
+        # 「申し訳ありませんが」で始まる場合の特別処理
+        if response.strip().startswith("申し訳ありませんが、そのリクエストにはお応えできません。"):
+            # 実際の回答部分を抽出
+            lines = response.split('\n')
+            filtered_lines = []
+            found_content = False
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # 最初の謝罪文をスキップして、実際の内容を探す
+                if not found_content:
+                    if (line.startswith("教育") or line.startswith("AI") or 
+                        line.startswith("1.") or line.startswith("・") or
+                        ":" in line or "：" in line or
+                        any(keyword in line for keyword in ["影響", "効果", "変化", "学習", "技術"])):
+                        found_content = True
+                        filtered_lines.append(line)
+                else:
+                    filtered_lines.append(line)
+            
+            if filtered_lines:
+                response = '\n'.join(filtered_lines)
+        
+        # 先頭の不要な文字を削除
+        response = response.lstrip('：:、。\n\r\t ')
+        
+        # デバッグ用の後処理ログ出力
+        if self.config.get('debug', False):
+            self.logger.debug(f"[PROCESSED] 後処理後応答: «{response}» (長さ: {len(response)})")
+        
+        # 2文字未満の場合のみ空を返す（5文字制限を撤廃）
+        if len(response.strip()) < 2:
+            return ""
+        
+        return response.strip()
 
     def create_chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> Dict[str, Any]:
         return self.chat_completion(messages, **kwargs)    
@@ -359,37 +488,31 @@ class HuggingFaceModel(BaseModel):
             }
         
         try:
-            # メッセージをプロンプトに変換（シンプルな形式を使用）
-            prompt = ""
-            for msg in messages:
-                role = msg.get('role', 'user')
-                content = msg.get('content', '')
-                if role == 'user':
-                    prompt += f"ユーザー: {content}\n"
-                elif role == 'assistant':
-                    prompt += f"アシスタント: {content}\n"
-                elif role == 'system':
-                    prompt += f"システム: {content}\n"
-            
-            # 最後にアシスタントの応答を促すプロンプトを追加
-            if not prompt.endswith("アシスタント: "):
-                prompt += "アシスタント: "
+            # プロンプトマネージャーで生成されたプロンプトをそのまま使用
+            # （messages[0]['content']には既に適切なInstruction形式が含まれている）
+            if messages and len(messages) > 0:
+                prompt = messages[0]['content']  # プロンプトマネージャーからの完全なプロンプト
+            else:
+                prompt = "質問に回答してください。"
             
             # 生成実行
             response_text = self.generate(prompt, **kwargs)
             
+            # 必ず文字列として返す
+            response_content = str(response_text) if response_text else "申し訳ございませんが、適切な回答を生成できませんでした。"
+            
             return {
                 'choices': [{
                     'message': {
-                        'content': response_text,
+                        'content': response_content,
                         'role': 'assistant'
                     },
                     'finish_reason': 'stop'
                 }],
                 'usage': {
                     'prompt_tokens': len(prompt.split()),
-                    'completion_tokens': len(response_text.split()),
-                    'total_tokens': len(prompt.split()) + len(response_text.split())
+                    'completion_tokens': len(response_content.split()),
+                    'total_tokens': len(prompt.split()) + len(response_content.split())
                 }
             }
             
@@ -518,16 +641,45 @@ DEFAULT_MODEL_CONFIGS = [
         'max_tokens': 256,
         'chat_template': os.path.abspath(os.path.join(os.path.dirname(__file__), '../../models/gemma3_template.txt'))
     },
-    {
-        'model_type': 'huggingface',
-        'huggingface_model_name': 'llm-jp/llm-jp-3-150m',
-        'device': 'cpu',
-        'torch_dtype': 'auto',
-        'temperature': 0.7,
-        'max_tokens': 256,
-        'model_cache_dir': os.path.abspath(os.path.join(os.path.dirname(__file__), '../../cache/models'))
-    }
+    # 注意: HuggingFaceモデルは明示的に指定された場合のみ使用
+    # 自動フォールバックでは150Mモデルを使用しない
 ]
 
 def get_default_model() -> BaseModel:
+    """デフォルトモデルを取得（明示的な設定必須）"""
+    if not DEFAULT_MODEL_CONFIGS:
+        raise ValueError("モデル設定が不正です。config.yamlでmodel_typeとmodel_pathを明示的に指定してください。")
     return ModelFactory.get_best_available_model(DEFAULT_MODEL_CONFIGS[0])
+
+def create_model_from_args(model_type: str = None, model_name: str = None, model_path: str = None) -> BaseModel:
+    """CLI引数からモデルを作成（150Mフォールバック禁止）"""
+    if not model_type:
+        raise ValueError("--model-type は必須です。'llama' または 'huggingface' を指定してください。")
+    
+    if model_type == 'llama':
+        if not model_path:
+            raise ValueError("model_type='llama' の場合、--model-path は必須です。")
+        config = {
+            'model_type': 'llama',
+            'model_path': model_path,
+            'n_ctx': 2048,
+            'n_threads': 4,
+            'temperature': 0.7,
+            'max_tokens': 256,
+        }
+    elif model_type == 'huggingface':
+        if not model_name:
+            raise ValueError("model_type='huggingface' の場合、--model-name は必須です。150Mモデルへの自動フォールバックは禁止されています。")
+        config = {
+            'model_type': 'huggingface',
+            'huggingface_model_name': model_name,
+            'device': 'cpu',
+            'torch_dtype': 'auto',
+            'temperature': 0.7,
+            'max_tokens': 256,
+            'model_cache_dir': os.path.abspath(os.path.join(os.path.dirname(__file__), '../../cache/models'))
+        }
+    else:
+        raise ValueError(f"未対応のmodel_type: {model_type}. 'llama' または 'huggingface' を指定してください。")
+    
+    return ModelFactory.create_model(config)

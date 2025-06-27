@@ -135,15 +135,31 @@ def worker_process_function(agent_config: Dict[str, Any],
         # プロンプトの構築
         role = agent_config.get('roles', [{}])[agent_id] if agent_id < len(agent_config.get('roles', [])) else {}
         role_name = role.get('role', f"エージェント{agent_id}")
-        role_desc = role.get('system', "あなたは質問に答えるAIアシスタントです。")
         
         input_text = str(input_data) if input_data else ""
-        rag_text = str(rag_data)[:300] if rag_data else "関連情報はありません。"
-        context_text = str(context_data)[:200] if context_data else "過去の会話はありません。"
+        rag_text = str(rag_data)[:300] if rag_data else ""
+        context_text = str(context_data)[:200] if context_data else ""
         
-        # システムプロンプトとユーザープロンプトを分離
-        system_prompt = f"""あなたは「{role_name}」として行動してください。
-{role_desc}
+        # コンテキストの構築
+        context = ""
+        if rag_text:
+            context += f"参考情報: {rag_text}\n"
+        if context_text:
+            context += f"会話履歴: {context_text}"
+        
+        # プロンプトマネージャーを使用してHuggingFace形式のプロンプトを構築
+        from MurmurNet.modules.prompt_manager import get_prompt_manager
+        
+        # モデルタイプとモデル名を取得
+        model_type = agent_config.get('model_type', 'llama')
+        model_name = agent_config.get('huggingface_model_name', '') if model_type == 'huggingface' else ''
+        
+        if model_type == 'huggingface':
+            prompt_manager = get_prompt_manager('huggingface', model_name)
+            prompt = prompt_manager.build_prompt(input_text, role_name, context.strip())
+        else:
+            # Llamaモデルの場合は従来の形式を維持
+            system_prompt = f"""あなたは「{role_name}」として行動してください。
 
 以下のルールに従って回答してください：
 - 150文字以内で簡潔に回答する
@@ -151,16 +167,13 @@ def worker_process_function(agent_config: Dict[str, Any],
 - 関連情報と会話履歴を参考にする
 - 自然で読みやすい日本語で答える"""
 
-        user_prompt = f"""質問: {input_text}
+            user_prompt = f"""質問: {input_text}
 
-参考情報: {rag_text}
-
-会話履歴: {context_text}
+{context}
 
 回答:"""
 
-        # chat completionフォーマットで構築
-        prompt = f"System: {system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"
+            prompt = f"System: {system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"
         
         # テキスト生成実行
         worker_logger.debug(f"🤖 テキスト生成開始: {len(prompt)}文字")

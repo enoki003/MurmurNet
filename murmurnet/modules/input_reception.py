@@ -240,37 +240,49 @@ class InputReception:
                 from sentence_transformers import SentenceTransformer
                 model_name = self.config.get('embedding_model', 'all-MiniLM-L6-v2')
                 
-                # ローカルファイルのみ使用（HuggingFace へのHTTPアクセスを回避）
-                use_local_files_only = self.config.get('local_files_only', True)
+                # まずローカルファイルのみで試行（オフライン対応）
+                cache_folder = self.config.get('embedding_cache_folder', self.config.get('cache_folder', './models/st_cache'))
+                local_files_only = self.config.get('local_files_only', True)
                 
-                if self.debug:
-                    logger.debug(f"埋め込みモデルをロード: {model_name} (local_files_only={use_local_files_only})")
-                
-                # ローカルファイルのみを使用してモデルをロード
-                self._transformer = SentenceTransformer(
-                    model_name, 
-                    local_files_only=use_local_files_only,
-                    cache_folder=self.config.get('cache_folder', None)
-                )
-                logger.info(f"埋め込みモデルをロード: {model_name} (local_files_only={use_local_files_only})")
-                
+                try:
+                    if self.debug:
+                        logger.debug(f"埋め込みモデルをローカルからロード: {model_name} (local_files_only={local_files_only})")
+                    
+                    # configの設定に従ってモデルをロード
+                    self._transformer = SentenceTransformer(
+                        model_name, 
+                        local_files_only=local_files_only,
+                        cache_folder=cache_folder
+                    )
+                    logger.info(f"✓ 埋め込みモデルをローカルからロード: {model_name}")
+                    
+                except Exception as local_error:
+                    logger.warning(f"ローカルモデルロード失敗: {local_error}")
+                    
+                    # オンライン接続を試行
+                    if not local_files_only:
+                        try:
+                            logger.info("オンラインからモデルをダウンロード中...")
+                            self._transformer = SentenceTransformer(
+                                model_name,
+                                cache_folder=cache_folder
+                            )
+                            logger.info(f"✓ 埋め込みモデルをオンラインからロード: {model_name}")
+                        except Exception as online_error:
+                            logger.error(f"オンラインモデルロード失敗: {online_error}")
+                            raise online_error
+                    else:
+                        logger.warning("force_offline=True のため、オンライン取得をスキップ")
+                        raise local_error
+                        
             except ImportError:
                 logger.warning("SentenceTransformersがインストールされていません。ダミー埋め込みを使用します。")
                 self._transformer = None
                 
             except Exception as e:
                 logger.error(f"埋め込みモデルロードエラー: {e}")
-                # ローカルファイル専用でエラーの場合は、通常モードで再試行
-                if use_local_files_only:
-                    logger.info("ローカルファイルモードでエラー。通常モードで再試行中...")
-                    try:
-                        self._transformer = SentenceTransformer(model_name)
-                        logger.info(f"埋め込みモデルをロード（通常モード）: {model_name}")
-                    except Exception as e2:
-                        logger.error(f"通常モードでもロードに失敗: {e2}")
-                        self._transformer = None
-                else:
-                    self._transformer = None
+                logger.info("ダミー埋め込みにフォールバック")
+                self._transformer = None
 
     def _parallel_tokenize(self, texts: List[str]) -> List[List[str]]:
         """並列トークン化処理"""
@@ -331,12 +343,19 @@ class InputReception:
                     for i, embedding in zip(uncached_indices, batch_embeddings):
                         embeddings.append((i, embedding))
                 else:
-                    # ダミー埋め込み
+                    # ダミー埋め込み（オフライン環境対応）
+                    logger.info("SentenceTransformerが利用できません。ダミー埋め込みを使用")
                     for i in uncached_indices:
-                        embeddings.append((i, np.zeros(384)))
+                        # テキストベースの擬似埋め込み（ハッシュベース）
+                        dummy_embedding = self._create_dummy_embedding(uncached_texts[uncached_indices.index(i)])
+                        embeddings.append((i, dummy_embedding))
             except Exception as e:
                 logger.error(f"バッチ埋め込み生成エラー: {e}")
+                logger.info("ダミー埋め込みにフォールバック")
                 for i in uncached_indices:
+                    # エラー時もダミー埋め込みを生成
+                    dummy_embedding = self._create_dummy_embedding(uncached_texts[uncached_indices.index(i)])
+                    embeddings.append((i, dummy_embedding))
                     embeddings.append((i, np.zeros(384)))
         
         # インデックス順に並び替え

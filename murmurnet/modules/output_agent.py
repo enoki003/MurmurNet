@@ -368,22 +368,42 @@ class CPUOptimizedOutputAgent:
     
     def _clean_output_optimized(self, text: str) -> str:
         """
-        最適化された出力クリーニング（並列処理対応）
+        最適化された出力クリーニング（並列処理対応・空応答フィルタリング強化）
         """
         if not text or len(text.strip()) < 5:
             return "申し訳ございませんが、適切な回答を生成できませんでした。"
         
+        # 空応答や無効応答の検出パターン
+        invalid_patterns = [
+            r'^\s*$',                                        # 空文字
+            r'^[\s\.\-_]*$',                                # 空白と句読点のみ
+            r'^(エージェント\d+は|応答できませんでした|エラー)',  # エラーメッセージ
+            r'^(申し訳|すみません|ごめん).{0,10}$',            # 短い謝罪のみ
+            r'^[\.]{3,}$',                                   # ...のみ
+            r'^[。、]{1,5}$',                                # 句読点のみ
+        ]
+        
+        # 無効応答の検出
+        for pattern in invalid_patterns:
+            if re.match(pattern, text.strip(), re.IGNORECASE):
+                logger.warning(f"無効応答を検出: {text[:50]}")
+                return "申し訳ございませんが、適切な回答を生成できませんでした。"
+        
+        # タグ除去パターン（#の羅列を削除）
+        TAG_RE = re.compile(r'(?:#\w+[ ,]*)+')
+        
         # 効率的な正規表現パターン（事前コンパイル済み）
         patterns = [
-            (re.compile(r'\*{2,}'), ''),  # **以上の連続する*
-            (re.compile(r'#{2,}'), ''),   # ##以上の連続する#
-            (re.compile(r'-{3,}'), ''),   # ---以上の連続する-
-            (re.compile(r'={3,}'), ''),   # ===以上の連続する=
-            (re.compile(r'_{3,}'), ''),   # ___以上の連続する_
-            (re.compile(r'(.)\1{4,}'), r'\1'),  # 繰り返し文字
-            (re.compile(r'\n{3,}'), '\n\n'),    # 連続改行
-            (re.compile(r' {3,}'), ' '),        # 連続空白
-            (re.compile(r'\b(\w+)\s+\1\s+\1\b'), r'\1'),  # 繰り返し単語
+            (TAG_RE, ''),                                    # タグ羅列の除去
+            (re.compile(r'\*{2,}'), ''),                     # **以上の連続する*
+            (re.compile(r'#{2,}'), ''),                      # ##以上の連続する#
+            (re.compile(r'-{3,}'), ''),                      # ---以上の連続する-
+            (re.compile(r'={3,}'), ''),                      # ===以上の連続する=
+            (re.compile(r'_{3,}'), ''),                      # ___以上の連続する_
+            (re.compile(r'(.)\1{4,}'), r'\1'),               # 繰り返し文字
+            (re.compile(r'\n{3,}'), '\n\n'),                 # 連続改行
+            (re.compile(r' {3,}'), ' '),                     # 連続空白
+            (re.compile(r'\b(\w+)\s+\1\s+\1\b'), r'\1'),     # 繰り返し単語
         ]
         
         # パターンマッチングを並列化（短いテキストの場合は逐次処理）
@@ -394,11 +414,11 @@ class CPUOptimizedOutputAgent:
             
             # 並列処理は重い処理のみに限定
             cleaned_text = text
-            for pattern, substitute in patterns[:3]:  # 最初の3パターンのみ並列
+            for pattern, substitute in patterns[:4]:  # 最初の4パターンのみ並列（タグ除去含む）
                 cleaned_text = pattern.sub(substitute, cleaned_text)
             
             # 残りは逐次処理
-            for pattern, substitute in patterns[3:]:
+            for pattern, substitute in patterns[4:]:
                 cleaned_text = pattern.sub(substitute, cleaned_text)
         else:
             # 逐次処理
@@ -420,7 +440,11 @@ class CPUOptimizedOutputAgent:
         # 制御文字の除去
         cleaned_text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', cleaned_text).strip()
         
-        return cleaned_text if len(cleaned_text.strip()) >= 10 else "申し訳ございませんが、適切な回答を生成できませんでした。"
+        # 情報不足チェック
+        if not cleaned_text or len(cleaned_text.strip()) < 10:
+            return "申し訳ございませんが、十分な情報が得られませんでした。より具体的な質問をお願いします。"
+        
+        return cleaned_text
     
     def _generate_cache_key(self, user_input: str, entries: List[Dict], rag: str = None) -> str:
         """キャッシュキーを生成"""
