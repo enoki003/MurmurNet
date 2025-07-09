@@ -87,7 +87,10 @@ class HuggingFaceTemplate(BasePromptTemplate):
     
     def _detect_template_type(self) -> str:
         """モデル名からテンプレートタイプを検出"""
-        if "llm-jp" in self.model_name:
+        # インストラクトモデルの判定（空レス対策）
+        if "instruct" in self.model_name.lower():
+            return "instruct"
+        elif "llm-jp" in self.model_name:
             return "llm_jp"
         elif "elyza" in self.model_name:
             return "elyza"
@@ -124,7 +127,9 @@ class HuggingFaceTemplate(BasePromptTemplate):
             user_message = f"{context.strip()[:200]}\n\n質問: {user_message}"
         
         # モデル別テンプレート切り替え
-        if self.template_type == "llm_jp":
+        if self.template_type == "instruct":
+            return self._build_instruct_prompt(system_prompt, user_message)
+        elif self.template_type == "llm_jp":
             return self._build_llm_jp_prompt(system_prompt, user_message)
         elif self.template_type == "elyza":
             return self._build_elyza_prompt(system_prompt, user_message)
@@ -138,6 +143,18 @@ class HuggingFaceTemplate(BasePromptTemplate):
             return self._build_rinna_prompt(system_prompt, user_message)
         else:
             return self._build_generic_prompt(system_prompt, user_message)
+    
+    def _build_instruct_prompt(self, system_prompt: str, user_message: str) -> str:
+        """Instruct系モデル向けプロンプト（空レス対策の汎用テンプレート）"""
+        # Instruct系モデル用の標準的な対話テンプレート
+        return f"""### システム:
+{system_prompt}
+
+### 指示:
+{user_message}
+
+### 回答:
+"""
     
     def _build_llm_jp_prompt(self, system_prompt: str, user_message: str) -> str:
         """llm-jp向けプロンプト（公式チャットテンプレート）"""
@@ -231,8 +248,86 @@ class PromptManager:
         """システムプロンプトを取得"""
         return self.template.get_system_prompt(role)
     
-    def format_multi_agent_prompt(self, user_text: str, agent_roles: List[str], context: str = "") -> Dict[str, str]:
-        """複数エージェント用プロンプトを構築"""
+    def build_prompt_with_previous_summary(self, user_text: str, role: str = "assistant", 
+                                          context: str = "", previous_summary: str = "") -> str:
+        """
+        前イテレーション要約をassistantロールで注入したプロンプトを構築
+        
+        Args:
+            user_text: ユーザー入力テキスト
+            role: エージェントの役割
+            context: 追加コンテキスト（RAG情報等）
+            previous_summary: 前イテレーション要約
+            
+        Returns:
+            前イテレーション要約を含むプロンプト文字列
+        """
+        # 基本プロンプトを構築
+        base_prompt = self.template.build_prompt(user_text, role, context)
+        
+        # 前イテレーション要約がある場合は注入
+        if previous_summary and previous_summary.strip():
+            # assistantロールでの前要約注入パターンを生成
+            summary_injection = self._build_summary_injection(previous_summary)
+            
+            # プロンプトテンプレートに応じて要約を注入
+            if hasattr(self.template, 'template_type') and self.template.template_type == "instruct":
+                # Instruct系モデルの場合
+                enhanced_prompt = self._inject_summary_instruct(base_prompt, summary_injection)
+            elif "llama" in self.model_type.lower() or "gemma" in self.model_type.lower():
+                # Llama/Gemma系の場合
+                enhanced_prompt = self._inject_summary_llama(base_prompt, summary_injection)
+            else:
+                # 汎用HuggingFaceモデルの場合
+                enhanced_prompt = self._inject_summary_generic(base_prompt, summary_injection)
+            
+            logger.info(f"前イテレーション要約を注入しました（{len(previous_summary)}文字）")
+            return enhanced_prompt
+        else:
+            return base_prompt
+    
+    def _build_summary_injection(self, previous_summary: str) -> str:
+        """前イテレーション要約のassistantロール用テキストを構築"""
+        # 要約を適切な長さに調整（長すぎる場合は要点を抽出）
+        summary_text = previous_summary.strip()
+        if len(summary_text) > 300:
+            # 長い場合は最初の2文と最後の1文を抽出
+            sentences = summary_text.split('。')
+            if len(sentences) >= 3:
+                summary_text = '。'.join(sentences[:2] + [sentences[-2]]) + '。'
+        
+        return f"前回の検討内容として、以下の要約があります：\n{summary_text}\n\nこれを踏まえて、新たな視点や補完的な分析を提供してください。"
+    
+    def _inject_summary_instruct(self, base_prompt: str, summary_injection: str) -> str:
+        """Instruct系モデル向けの要約注入"""
+        # <start_of_turn>model パターンの直前に前要約をassistantとして注入
+        if "<start_of_turn>model" in base_prompt:
+            parts = base_prompt.split("<start_of_turn>model")
+            enhanced = f"{parts[0]}<start_of_turn>model\n{summary_injection}\n<end_of_turn>\n<start_of_turn>user\n追加質問として上記に回答してください。\n<end_of_turn>\n<start_of_turn>model{parts[1]}"
+            return enhanced
+        else:
+            # フォールバック: 末尾に追加
+            return f"{base_prompt}\n\n参考情報：{summary_injection}"
+    
+    def _inject_summary_llama(self, base_prompt: str, summary_injection: str) -> str:
+        """Llama/Gemma系モデル向けの要約注入"""
+        # <start_of_turn>model パターンの前に要約をassistantロールで注入
+        if "<start_of_turn>model" in base_prompt:
+            return base_prompt.replace(
+                "<start_of_turn>model",
+                f"<start_of_turn>model\n{summary_injection}\n<end_of_turn>\n<start_of_turn>user\n上記を踏まえて追加で回答してください。\n<end_of_turn>\n<start_of_turn>model"
+            )
+        else:
+            return f"{base_prompt}\n\n=== 前回の検討結果 ===\n{summary_injection}\n\n=== 追加回答 ==="
+    
+    def _inject_summary_generic(self, base_prompt: str, summary_injection: str) -> str:
+        """汎用モデル向けの要約注入"""
+        # 汎用的な形式での注入
+        return f"{base_prompt}\n\n【前回の検討結果】\n{summary_injection}\n\n【追加回答】\n"
+
+    def format_multi_agent_prompt_with_summary(self, user_text: str, agent_roles: List[str], 
+                                             context: str = "", previous_summary: str = "") -> Dict[str, str]:
+        """複数エージェント用プロンプトを前イテレーション要約付きで構築"""
         prompts = {}
         
         for i, role in enumerate(agent_roles):
@@ -241,11 +336,13 @@ class PromptManager:
             if len(agent_roles) > 1:
                 agent_context += f"\n\n[エージェント{i+1}として{role}の視点で回答してください]"
             
-            prompts[f"agent_{i}"] = self.build_prompt(user_text, role, agent_context)
+            # 前イテレーション要約付きでプロンプト構築
+            prompts[f"agent_{i}"] = self.build_prompt_with_previous_summary(
+                user_text, role, agent_context, previous_summary
+            )
         
-        logger.info(f"マルチエージェント用プロンプト構築完了: {len(agent_roles)}エージェント")
+        logger.info(f"前イテレーション要約付きマルチエージェント用プロンプト構築完了: {len(agent_roles)}エージェント")
         return prompts
-
 # デフォルトのプロンプトマネージャーインスタンス
 _default_prompt_manager = None
 

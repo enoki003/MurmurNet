@@ -65,11 +65,63 @@ parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy',
 parser.add_argument('--zim-path', type=str, 
                     default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
                     help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
+# エージェント別モデル設定のオプションを追加
+parser.add_argument('--internal-model', type=str, default=None,
+                    help='内部エージェント用のモデル名（HuggingFace形式）')
+parser.add_argument('--output-model', type=str, default=None,
+                    help='出力エージェント用のモデル名（HuggingFace形式）')
+parser.add_argument('--summary-model', type=str, default=None,
+                    help='要約エンジン用のモデル名（HuggingFace形式）')
+
+# エージェント別モデルタイプとパス指定オプションを追加
+parser.add_argument('--internal-model-type', choices=['llama', 'huggingface'], default=None,
+                    help='内部エージェント用のモデルタイプ')
+parser.add_argument('--output-model-type', choices=['llama', 'huggingface'], default=None,
+                    help='出力エージェント用のモデルタイプ')
+parser.add_argument('--summary-model-type', choices=['llama', 'huggingface'], default=None,
+                    help='要約エンジン用のモデルタイプ')
+
+parser.add_argument('--internal-model-path', type=str, default=None,
+                    help='内部エージェント用のモデルファイルパス（GGUF形式）')
+parser.add_argument('--output-model-path', type=str, default=None,
+                    help='出力エージェント用のモデルファイルパス（GGUF形式）')
+parser.add_argument('--summary-model-path', type=str, default=None,
+                    help='要約エンジン用のモデルファイルパス（GGUF形式）')
+
+# エージェント別生成パラメータ
+parser.add_argument('--internal-temp', type=float, default=None,
+                    help='内部エージェントの温度パラメータ（デフォルト: 0.7）')
+parser.add_argument('--output-temp', type=float, default=None,
+                    help='出力エージェントの温度パラメータ（デフォルト: 0.7）')
+parser.add_argument('--summary-temp', type=float, default=None,
+                    help='要約エンジンの温度パラメータ（デフォルト: 0.6）')
+
+parser.add_argument('--internal-tokens', type=int, default=None,
+                    help='内部エージェントの最大トークン数（デフォルト: 200）')
+parser.add_argument('--output-tokens', type=int, default=None,
+                    help='出力エージェントの最大トークン数（デフォルト: 250）')
+parser.add_argument('--summary-tokens', type=int, default=None,
+                    help='要約エンジンの最大トークン数（デフォルト: 150）')
+
+# 全体的な生成パラメータ（空レス対策）
+parser.add_argument('--max-new-tokens', type=int, default=128,
+                    help='最大新規トークン数（デフォルト: 128、空レス対策）')
+
 # 並列処理の安全性に関するオプション
 parser.add_argument('--safe-parallel', action='store_true', 
                     help='安全な並列処理モード（GGMLエラー回避のためのグローバルロックを使用）')
 parser.add_argument('--max-workers', type=int, default=0, 
                     help='並列処理時の最大ワーカー数（0: 自動決定）')
+
+# Slotアーキテクチャオプション
+parser.add_argument('--slots', action='store_true', 
+                    help='Slotアーキテクチャモードを有効化（多角的な出力生成）')
+parser.add_argument('--slot-temperature', type=float, default=0.8,
+                    help='Slot生成時の温度パラメータ（デフォルト: 0.8）')
+parser.add_argument('--slot-max-length', type=int, default=150,
+                    help='Slot出力の最大長（デフォルト: 150）')
+parser.add_argument('--slot-similarity-threshold', type=float, default=0.7,
+                    help='Slot間類似度判定の閾値（デフォルト: 0.7）')
 args, _ = parser.parse_known_args()
 
 log_level = logging.DEBUG if args.debug else logging.INFO
@@ -109,22 +161,36 @@ def print_debug(slm):
     print("\n[DEBUG] RAG結果:")
     print(f"  {slm.blackboard.read('rag')}")
     
-    # 要約結果を表示
-    if slm.use_summary:
-        print("\n[DEBUG] 要約結果:")
-        for i in range(slm.iterations):
-            summary = slm.blackboard.read(f'summary_{i}')
-            if summary:
-                print(f"  反復{i+1}の要約: {summary[:100]}...")
-    
-    print("\n[DEBUG] エージェント出力:")
-    for i in range(slm.num_agents):
-        output = slm.blackboard.read(f'agent_{i}_output')
-        if output:
-            # 長い出力は省略表示
-            if len(output) > 100:
-                output = output[:100] + "..."
-            print(f"  エージェント{i+1}: {output}")
+    # Slotモードの場合はSlot情報を表示
+    if slm.use_slots and hasattr(slm.blackboard, 'get_slot_debug_view'):
+        print("\n[DEBUG] Slot情報:")
+        slot_debug = slm.blackboard.get_slot_debug_view()
+        slot_info = slot_debug.get('slot_info', {})
+        print(f"  登録Slot数: {len(slot_info.get('registered_slots', []))}")
+        print(f"  総エントリ数: {slot_info.get('total_entries', 0)}")
+        
+        for slot_name, summary in slot_info.get('slot_summaries', {}).items():
+            latest_text = summary.get('latest_text', '')
+            if latest_text:
+                preview = latest_text[:50] + "..." if len(latest_text) > 50 else latest_text
+                print(f"    {slot_name}: {preview}")
+    else:
+        # 要約結果を表示（従来モード）
+        if slm.use_summary:
+            print("\n[DEBUG] 要約結果:")
+            for i in range(slm.iterations):
+                summary = slm.blackboard.read(f'summary_{i}')
+                if summary:
+                    print(f"  反復{i+1}の要約: {summary[:100]}...")
+        
+        print("\n[DEBUG] エージェント出力:")
+        for i in range(slm.num_agents):
+            output = slm.blackboard.read(f'agent_{i}_output')
+            if output:
+                # 長い出力は省略表示
+                if len(output) > 100:
+                    output = output[:100] + "..."
+                print(f"  エージェント{i+1}: {output}")
     print()
 
 async def safe_shutdown(slm):
@@ -165,6 +231,93 @@ async def safe_shutdown(slm):
         print(f"safe_shutdown内でエラーが発生: {e}")
         raise
 
+def _build_agent_models_config(args):
+    """エージェント別モデル設定を構築（混在使用対応）"""
+    agent_models = {}
+    
+    # 内部エージェント設定
+    internal_config = {}
+    if args.internal_model or args.internal_model_path:
+        # モデルタイプを決定（明示的指定 or 推論）
+        if args.internal_model_type:
+            internal_config['model_type'] = args.internal_model_type
+        elif args.internal_model_path:
+            internal_config['model_type'] = 'llama'
+        elif args.internal_model:
+            internal_config['model_type'] = 'huggingface'
+        else:
+            internal_config['model_type'] = args.model_type
+        
+        # モデル指定
+        if internal_config['model_type'] == 'huggingface':
+            internal_config['model_name'] = args.internal_model
+        elif internal_config['model_type'] == 'llama':
+            internal_config['model_path'] = args.internal_model_path
+    
+    if args.internal_temp is not None:
+        internal_config['temperature'] = args.internal_temp
+    if args.internal_tokens is not None:
+        internal_config['max_tokens'] = args.internal_tokens
+    
+    if internal_config:
+        agent_models['internal_agents'] = internal_config
+    
+    # 出力エージェント設定
+    output_config = {}
+    if args.output_model or args.output_model_path:
+        # モデルタイプを決定
+        if args.output_model_type:
+            output_config['model_type'] = args.output_model_type
+        elif args.output_model_path:
+            output_config['model_type'] = 'llama'
+        elif args.output_model:
+            output_config['model_type'] = 'huggingface'
+        else:
+            output_config['model_type'] = args.model_type
+        
+        # モデル指定
+        if output_config['model_type'] == 'huggingface':
+            output_config['model_name'] = args.output_model
+        elif output_config['model_type'] == 'llama':
+            output_config['model_path'] = args.output_model_path
+    
+    if args.output_temp is not None:
+        output_config['temperature'] = args.output_temp
+    if args.output_tokens is not None:
+        output_config['max_tokens'] = args.output_tokens
+    
+    if output_config:
+        agent_models['output_agent'] = output_config
+    
+    # 要約エンジン設定
+    summary_config = {}
+    if args.summary_model or args.summary_model_path:
+        # モデルタイプを決定
+        if args.summary_model_type:
+            summary_config['model_type'] = args.summary_model_type
+        elif args.summary_model_path:
+            summary_config['model_type'] = 'llama'
+        elif args.summary_model:
+            summary_config['model_type'] = 'huggingface'
+        else:
+            summary_config['model_type'] = args.model_type
+        
+        # モデル指定
+        if summary_config['model_type'] == 'huggingface':
+            summary_config['model_name'] = args.summary_model
+        elif summary_config['model_type'] == 'llama':
+            summary_config['model_path'] = args.summary_model_path
+    
+    if args.summary_temp is not None:
+        summary_config['temperature'] = args.summary_temp
+    if args.summary_tokens is not None:
+        summary_config['max_tokens'] = args.summary_tokens
+    
+    if summary_config:
+        agent_models['summary_engine'] = summary_config
+    
+    return agent_models
+
 async def chat_loop(args):
     """会話ループのメイン関数"""
     # 設定
@@ -187,6 +340,9 @@ async def chat_loop(args):
         "device": "cpu",  # CPUを使用
         "torch_dtype": "auto",
         
+        # 生成パラメータ（空レス対策）
+        "max_new_tokens": args.max_new_tokens,  # CLI引数から取得
+        
         # 基本設定
         "local_files_only": not args.no_local_files,  # --no-local-filesフラグに基づく
         "cache_folder": args.cache_folder,  # コマンドライン引数から取得
@@ -200,7 +356,13 @@ async def chat_loop(args):
         
         # 並列処理設定
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
+        
+        # エージェント別モデル設定
+        "agent_models": _build_agent_models_config(args)
     }
+
+    # CLI引数を最後に上書き（CLI引数の優先順位を確保）
+    config.update(vars(args))
 
     # 基本設定完了
     print(f"設定完了: モデルタイプ={config['model_type']}")
@@ -232,18 +394,72 @@ async def chat_loop(args):
             print(f"警告: ローカルモデルキャッシュが見つかりません: {model_cache_path}")
             print("モデルを事前にダウンロードするか、--no-local-files オプションを使用してください")
         
+    # エージェント別モデル設定の表示
+    if config.get('agent_models'):
+        print("\n=== エージェント別モデル設定 ===")
+        agent_models = config['agent_models']
+        
+        if 'internal_agents' in agent_models:
+            internal = agent_models['internal_agents']
+            model_info = internal.get('model_name') or internal.get('model_path', '共通設定')
+            model_type = internal.get('model_type', 'unknown')
+            print(f"内部エージェント: {model_info} ({model_type}) "
+                  f"(温度: {internal.get('temperature', '共通設定')}, "
+                  f"トークン: {internal.get('max_tokens', '共通設定')})")
+        
+        if 'output_agent' in agent_models:
+            output = agent_models['output_agent']
+            model_info = output.get('model_name') or output.get('model_path', '共通設定')
+            model_type = output.get('model_type', 'unknown')
+            print(f"出力エージェント: {model_info} ({model_type}) "
+                  f"(温度: {output.get('temperature', '共通設定')}, "
+                  f"トークン: {output.get('max_tokens', '共通設定')})")
+        
+        if 'summary_engine' in agent_models:
+            summary = agent_models['summary_engine']
+            model_info = summary.get('model_name') or summary.get('model_path', '共通設定')
+            model_type = summary.get('model_type', 'unknown')
+            print(f"要約エンジン: {model_info} ({model_type}) "
+                  f"(温度: {summary.get('temperature', '共通設定')}, "
+                  f"トークン: {summary.get('max_tokens', '共通設定')})")
+        print("=" * 35)
+    else:
+        print("\n全エージェントで共通モデルを使用")
+    
+    # Slotアーキテクチャ設定
+    if args.slots:
+        print(f"\n=== Slotアーキテクチャ設定 ===")
+        config['use_slots'] = True
+        config['slot_temperature'] = args.slot_temperature
+        config['slot_max_output_length'] = args.slot_max_length
+        config['slot_similarity_threshold'] = args.slot_similarity_threshold
+        
+        # Slotモード時は従来のAgentは無効化
+        config['iterations'] = 1  # Slotは単一実行
+        config['use_summary'] = False  # 従来の要約は無効
+        
+        print(f"Slot温度: {config['slot_temperature']}")
+        print(f"Slot最大長: {config['slot_max_output_length']}")
+        print(f"類似度閾値: {config['slot_similarity_threshold']}")
+        print("=" * 30)
+    else:
+        config['use_slots'] = False
+        
     # SLMインスタンス作成
     global _global_slm
     slm = DistributedSLM(config)
     _global_slm = slm  # グローバル参照を設定
     
-    print(f"MurmurNet Console ({args.agents}エージェント, {args.iterations}反復)")
+    mode_info = "Slotアーキテクチャ" if args.slots else f"{args.agents}エージェント, {args.iterations}反復"
+    print(f"MurmurNet Console ({mode_info})")
     print("終了するには 'quit' または 'exit' を入力してください")
     
-    if args.parallel:
+    if args.parallel and not args.slots:
         print("[設定] 並列処理: 有効")
-    if not args.no_summary:
+    if not args.no_summary and not args.slots:
         print("[設定] 要約機能: 有効")
+    if args.slots:
+        print("[設定] Slotアーキテクチャ: 有効")
     print(f"[設定] RAGモード: {config['rag_mode']}")
     print(f"[設定] ローカルファイルモード: {config['local_files_only']}")
     if args.debug:

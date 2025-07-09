@@ -37,13 +37,11 @@ def _clean_response(response: str) -> str:
     # 改行を正規化
     response = response.strip()
     
-    # プロンプト指示の除去
+    # プロンプト指示の除去（緩和版：実際の回答内容を保持）
     prompt_patterns = [
-        r'.*?回答してください[：:]\s*',
-        r'.*?以下[でに].*?回答[：:]\s*',
-        r'System:\s*.*?\n\nUser:\s*.*?\n\nAssistant:\s*',
-        r'^\**\d+文字以内.*?[：:]\s*',
-        r'^回答[：:]\s*'
+        r'System:\s*.*?\n\nUser:\s*.*?\n\nAssistant:\s*',  # システムプロンプト全体
+        r'^回答[：:]\s*',  # 冒頭の「回答:」のみ
+        r'^\s*応答[：:]\s*',  # 冒頭の「応答:」のみ
     ]
     
     for pattern in prompt_patterns:
@@ -64,17 +62,21 @@ def _clean_response(response: str) -> str:
     if response and not response.endswith('。'):
         response += '。'
     
-    # 長さを制限（150文字）
-    if len(response) > 150:
+    # 長さを制限（1000文字：空レス対策で制限緩和）
+    if len(response) > 1000:
         # 文の境界で切断
         sentences = response.split('。')
         truncated = ""
         for sentence in sentences:
-            if len(truncated + sentence + '。') <= 150:
+            if len(truncated + sentence + '。') <= 1000:
                 truncated += sentence + '。'
             else:
                 break
-        response = truncated if truncated else response[:147] + "..."
+        response = truncated if truncated else response[:997] + "..."
+    
+    # 空レス対策：空の場合はデフォルトメッセージ
+    if not response or len(response.strip()) < 3:
+        return "(no content)"
     
     return response.strip()
 
@@ -250,13 +252,11 @@ def _clean_response(response: str) -> str:
     # 改行を正規化
     response = response.strip()
     
-    # プロンプト指示の除去
+    # プロンプト指示の除去（緩和版：実際の回答内容を保持）
     prompt_patterns = [
-        r'.*?回答してください[：:]\s*',
-        r'.*?以下[でに].*?回答[：:]\s*',
-        r'System:\s*.*?\n\nUser:\s*.*?\n\nAssistant:\s*',
-        r'^\**\d+文字以内.*?[：:]\s*',
-        r'^回答[：:]\s*'
+        r'System:\s*.*?\n\nUser:\s*.*?\n\nAssistant:\s*',  # システムプロンプト全体
+        r'^回答[：:]\s*',  # 冒頭の「回答:」のみ
+        r'^\s*応答[：:]\s*',  # 冒頭の「応答:」のみ
     ]
     
     for pattern in prompt_patterns:
@@ -277,17 +277,21 @@ def _clean_response(response: str) -> str:
     if response and not response.endswith('。'):
         response += '。'
     
-    # 長さを制限（150文字）
-    if len(response) > 150:
+    # 長さを制限（1000文字：空レス対策で制限緩和）
+    if len(response) > 1000:
         # 文の境界で切断
         sentences = response.split('。')
         truncated = ""
         for sentence in sentences:
-            if len(truncated + sentence + '。') <= 150:
+            if len(truncated + sentence + '。') <= 1000:
                 truncated += sentence + '。'
             else:
                 break
-        response = truncated if truncated else response[:147] + "..."
+        response = truncated if truncated else response[:997] + "..."
+
+    # 空レス対策：空の場合はデフォルトメッセージ
+    if not response or len(response.strip()) < 3:
+        return "(no content)"
 
     return response.strip()
 

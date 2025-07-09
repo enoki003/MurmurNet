@@ -26,12 +26,15 @@ from MurmurNet.modules.common import setup_logger, PerformanceError
 from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
 from MurmurNet.modules.input_reception import InputReception
 from MurmurNet.modules.blackboard import Blackboard
+from MurmurNet.modules.slot_blackboard import SlotBlackboard
 from MurmurNet.modules.agent_pool import AgentPoolManager
 from MurmurNet.modules.rag_retriever import RAGRetriever
 from MurmurNet.modules.output_agent import OutputAgent
 from MurmurNet.modules.summary_engine import SummaryEngine
 from MurmurNet.modules.conversation_memory import ConversationMemory
 from MurmurNet.modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
+from MurmurNet.modules.slots import SlotRunner
+from MurmurNet.modules.embedder import Embedder
 
 class DistributedSLM:
     """
@@ -77,11 +80,36 @@ class DistributedSLM:
         self.num_agents = self.config.get('num_agents', 2)
         self.iterations = self.config.get('iterations', 1)  # 反復回数
         self.use_summary = self.config.get('use_summary', True)  # 要約を使うか
-        self.use_parallel = self.config.get('use_parallel', False)  # 並列処理を使うか
+        
+        # Slotアーキテクチャ設定
+        self.use_slots = self.config.get('use_slots', False)  # Slotモード
+        
+        # 並列処理フラグの統合（CLI/configの両方対応）
+        cli_parallel = self.config.get('parallel', False)  # CLIの--parallelフラグ
+        config_parallel = self.config.get('use_parallel', False)  # config['use_parallel']
+        self.use_parallel = cli_parallel or config_parallel  # いずれかがTrueなら並列処理を有効
+        
         self.use_memory = self.config.get('use_memory', True)  # 会話履歴を使うか
+        
+        # 並列フラグの統合ログ
+        if cli_parallel and config_parallel:
+            self.logger.info("並列処理有効: CLI/Config両方で指定")
+        elif cli_parallel:
+            self.logger.info("並列処理有効: CLIフラグ(--parallel)で指定")
+        elif config_parallel:
+            self.logger.info("並列処理有効: 設定ファイルで指定")
+        else:
+            self.logger.info("並列処理無効: 逐次実行モード")
           # 各モジュールの初期化
         self.logger.info("黒板モジュールを初期化中...")
-        self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
+        
+        # Slotモードの場合はSlotBlackboardを使用
+        if self.use_slots:
+            self.blackboard = blackboard if isinstance(blackboard, SlotBlackboard) else SlotBlackboard(self.config)
+            self.logger.info("Slotアーキテクチャモード: SlotBlackboard使用")
+        else:
+            self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
+            self.logger.info("従来モード: 標準Blackboard使用")
         
         self.logger.info("入力受信モジュールを初期化中...")
         self.input_reception = InputReception(self.config)
@@ -96,10 +124,27 @@ class DistributedSLM:
         self.summary_engine = SummaryEngine(self.config)
         
         self.logger.info("出力エージェントを初期化中...")
-        self.output_agent = OutputAgent(self.config)
+        self.output_agent = OutputAgent(self.config, shared_llm=self.agent_pool.llm)
         
         self.logger.info("会話記憶モジュールを初期化中...")
         self.conversation_memory = ConversationMemory(self.config, self.blackboard)
+        
+        # Slotアーキテクチャ関連モジュール（Slotモード時のみ）
+        if self.use_slots:
+            self.logger.info("Slotアーキテクチャモジュールを初期化中...")
+            
+            # 埋め込み生成器の初期化
+            self.embedder = Embedder(self.config)
+            
+            # SlotRunnerの初期化（埋め込み対応）
+            from MurmurNet.modules.model_factory_singleton import ModelFactorySingleton
+            model_factory = ModelFactorySingleton.get_factory(self.config)
+            self.slot_runner = SlotRunner(self.config, model_factory, self.embedder)
+            
+            self.logger.info("Slotアーキテクチャ初期化完了")
+        else:
+            self.embedder = None
+            self.slot_runner = None
         
         # パフォーマンスステータスを黒板に記録
         self.blackboard.write('performance_enabled', self.performance.enabled)
@@ -109,7 +154,10 @@ class DistributedSLM:
         # ShutdownManagerに自身を登録（最高優先度で）
         register_for_shutdown(self, "DistributedSLM", priority=100)
         
-        self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
+        if self.use_slots:
+            self.logger.info(f"分散SLMシステム（Slotアーキテクチャ）を初期化しました: {len(self.slot_runner.slots)}Slot")
+        else:
+            self.logger.info(f"分散SLMシステムを初期化しました: {self.num_agents}エージェント, {self.iterations}反復")
         
     @time_async_function
     async def _run_iteration(self, iteration: int) -> None:
@@ -124,6 +172,31 @@ class DistributedSLM:
         self.logger.info(f"反復 {iteration+1}/{self.iterations} を開始")
         self.performance.take_memory_snapshot(f"iteration_{iteration+1}_start")
         
+        # 0. 前イテレーション要約をプロンプトに注入（2回目以降）
+        if iteration > 0 and self.use_summary:
+            previous_summary = self.blackboard.read(f'summary_{iteration-1}')
+            if previous_summary and len(previous_summary.strip()) > 0:
+                # 前イテレーション要約を黒板に書き込み（AgentPoolManagerが参照）
+                self.blackboard.write('previous_iteration_summary', previous_summary)
+                self.logger.info(f"前イテレーション要約をPromptManager経由で注入: {len(previous_summary)}文字")
+                
+                # PromptManager経由で明示的に要約注入を指示
+                self.blackboard.write('use_previous_summary_injection', True)
+            else:
+                # 前要約がない場合は削除（古いデータの混入防止）
+                self.blackboard.write('previous_iteration_summary', '')
+                self.blackboard.write('use_previous_summary_injection', False)
+                self.logger.debug("前イテレーション要約が空のため注入をスキップ")
+        elif iteration > 0:
+            # 要約無効時は前要約情報をクリア
+            self.blackboard.write('previous_iteration_summary', '')
+            self.blackboard.write('use_previous_summary_injection', False)
+            self.logger.debug("要約機能無効のため前イテレーション要約注入をスキップ")
+        else:
+            # 初回イテレーション（前要約なし）
+            self.blackboard.write('previous_iteration_summary', '')
+            self.blackboard.write('use_previous_summary_injection', False)
+        
         # 1. エージェント実行（並列または逐次）
         if self.use_parallel:
             await self._run_agents_parallel()
@@ -136,10 +209,20 @@ class DistributedSLM:
             agent_output = self.blackboard.read(f"agent_{i}_output")
             if agent_output:
                 agent_entries.append({"agent": i, "text": agent_output})        # 3. 出力の要約（使用する場合かつ有効な場合のみ）
-        should_summarize = self.use_summary and agent_entries and self._should_use_summary_iteration(agent_entries)
+        should_summarize = self.use_summary and agent_entries and self._should_use_summary_iteration(agent_entries) and len(str(agent_entries)) >= 512  # 厳格化
         if should_summarize:
             summary_start = self.performance.start_timer(f"summary_iteration_{iteration+1}")
-            summary = self.summary_engine.summarize_blackboard(agent_entries)
+            
+            # 前イテレーション要約を考慮した要約生成
+            previous_summary = self.blackboard.read('previous_iteration_summary') if iteration > 0 else ""
+            if previous_summary and len(previous_summary.strip()) > 0:
+                # 前要約を考慮した要約生成
+                summary = self.summary_engine.summarize_blackboard_with_previous(agent_entries, previous_summary)
+                self.logger.debug(f"前イテレーション要約を考慮して要約生成: {len(previous_summary)}文字参照")
+            else:
+                # 通常の要約生成
+                summary = self.summary_engine.summarize_blackboard(agent_entries)
+            
             self.blackboard.write(f'summary_{iteration}', summary)
             summary_time = self.performance.end_timer(f"summary_iteration_{iteration+1}", summary_start)
             self.logger.debug(f"反復 {iteration+1} の要約を作成しました (実行時間: {summary_time:.4f}秒)")
@@ -279,7 +362,7 @@ class DistributedSLM:
         step_time = time.time() - step_start
         self.logger.info(f"[ステップ3] RAG検索完了: {step_time:.2f}秒")        # 4. 初期要約の実行（smart判定対応）
         should_use_summary = self._should_use_summary(input_text, rag_result)
-        if self.use_summary and should_use_summary:
+        if self.use_summary and should_use_summary and len(input_text) >= 128:  # 256→128文字に緩和
             step_start = time.time()
             initial_summary = f"ユーザー入力: {processed['normalized'] if isinstance(processed, dict) else processed}\n\n検索情報: {rag_result}"
             if self.use_memory and 'conversation_context' in self.blackboard.memory:
@@ -291,41 +374,68 @@ class DistributedSLM:
             self.logger.info(f"[ステップ4] 要約スキップ（簡潔な入力のため）: {len(input_text)}文字")
         else:
             self.logger.info(f"[ステップ4] 要約機能無効")
-            
-        # 5. 反復サイクルの実行
-        step_start = time.time()
-        for i in range(self.iterations):
-            iteration_start = time.time()
-            await self._run_iteration(i)
-            iteration_time = time.time() - iteration_start
-            self.logger.info(f"[イテレーション{i+1}] 完了: {iteration_time:.2f}秒")
-        step_time = time.time() - step_start
-        self.logger.info(f"[ステップ5] 全反復サイクル完了: {step_time:.2f}秒")
-            
-        # 6. 最終要約とエージェント出力の収集
-        step_start = time.time()
-        entries = []
-        # 各イテレーションの要約を収集
-        if self.use_summary:
-            for i in range(self.iterations):
-                summary = self.blackboard.read(f'summary_{i}')
-                if summary:
-                    entries.append({"type": "summary", "iteration": i, "text": summary})
         
-        # 最終エージェント出力も収集
-        for i in range(self.num_agents):
-            agent_output = self.blackboard.read(f"agent_{i}_output")
-            if agent_output:
-                entries.append({"type": "agent", "agent": i, "text": agent_output})
-        step_time = time.time() - step_start
-        self.logger.info(f"[ステップ6] 出力収集完了: {step_time:.2f}秒")
+        # 5. メイン処理の実行（SlotモードまたはLegacyモード）
+        if self.use_slots:
+            # Slotアーキテクチャによる処理
+            step_start = time.time()
+            slot_result = self.slot_runner.run_all_slots(self.blackboard, input_text, self.embedder)
+            
+            if slot_result['success']:
+                final_response = slot_result['final_response']
+                self.logger.info(f"[Slotモード] Slot実行完了: {step_time:.2f}秒")
                 
-        # 7. 最終応答生成
-        step_start = time.time()
-        final_response = self.output_agent.generate(self.blackboard, entries)
-        self.blackboard.write('final_response', final_response)
-        step_time = time.time() - step_start
-        self.logger.info(f"[ステップ7] 最終応答生成完了: {step_time:.2f}秒")
+                # Slot統計をログ出力（型チェック付き）
+                if self.config.get('debug', False):
+                    slot_results = slot_result.get('slot_results', {})
+                    for slot_name, result in slot_results.items():
+                        if isinstance(result, dict):
+                            exec_time = result.get('execution_time', 0)
+                            self.logger.debug(f"  {slot_name}: {exec_time:.2f}秒")
+                        else:
+                            self.logger.debug(f"  {slot_name}: 結果形式が不正 (type: {type(result)})")
+            else:
+                final_response = slot_result.get('final_response', "Slotシステムでエラーが発生しました。")
+                self.logger.error(f"[Slotモード] 実行エラー: {slot_result.get('error', '不明')}")
+            
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ5] Slot実行完了: {step_time:.2f}秒")
+            
+        else:
+            # 従来の反復サイクルモード
+            step_start = time.time()
+            for i in range(self.iterations):
+                iteration_start = time.time()
+                await self._run_iteration(i)
+                iteration_time = time.time() - iteration_start
+                self.logger.info(f"[イテレーション{i+1}] 完了: {iteration_time:.2f}秒")
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ5] 全反復サイクル完了: {step_time:.2f}秒")
+                
+            # 6. 最終要約とエージェント出力の収集
+            step_start = time.time()
+            entries = []
+            # 各イテレーションの要約を収集
+            if self.use_summary:
+                for i in range(self.iterations):
+                    summary = self.blackboard.read(f'summary_{i}')
+                    if summary:
+                        entries.append({"type": "summary", "iteration": i, "text": summary})
+            
+            # 最終エージェント出力も収集
+            for i in range(self.num_agents):
+                agent_output = self.blackboard.read(f"agent_{i}_output")
+                if agent_output:
+                    entries.append({"type": "agent", "agent": i, "text": agent_output})
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ6] 出力収集完了: {step_time:.2f}秒")
+                    
+            # 7. 最終応答生成
+            step_start = time.time()
+            final_response = self.output_agent.generate(self.blackboard, entries)
+            self.blackboard.write('final_response', final_response)
+            step_time = time.time() - step_start
+            self.logger.info(f"[ステップ7] 最終応答生成完了: {step_time:.2f}秒")
         
         # 8. 会話履歴に追加（使用する場合）
         if self.use_memory:
@@ -339,7 +449,8 @@ class DistributedSLM:
             self.logger.debug("会話記憶を更新しました")
         
         total_time = time.time() - total_start_time
-        self.logger.info(f"=== 応答生成完了: {len(final_response)}文字 (合計時間: {total_time:.2f}秒) ===")
+        mode_info = "Slotアーキテクチャ" if self.use_slots else f"{self.num_agents}エージェント×{self.iterations}反復"
+        self.logger.info(f"=== 応答生成完了（{mode_info}）: {len(final_response)}文字 (合計時間: {total_time:.2f}秒) ===")
         return final_response
         
     def reset_memory(self) -> None:
@@ -361,13 +472,21 @@ class DistributedSLM:
         戻り値:
             システム統計情報を含む辞書
         """
-        return {
+        base_stats = {
             "agents": self.num_agents,
             "iterations": self.iterations,
             "memory_enabled": self.use_memory,
             "summary_enabled": self.use_summary,
             "parallel_enabled": self.use_parallel,
-            "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0        }
+            "slot_mode_enabled": self.use_slots,
+            "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
+        }
+        
+        # Slotモードの場合はSlot統計も追加
+        if self.use_slots and hasattr(self, 'slot_runner'):
+            base_stats["slot_statistics"] = self.slot_runner.get_statistics()
+        
+        return base_stats
     
     def _is_memory_related_question(self, input_text: str) -> bool:
         """
@@ -420,16 +539,16 @@ class DistributedSLM:
         if not agent_entries:
             return False
             
-        # 全エージェント出力の合計文字数をチェック
+        # 全エージェント出力の合計文字数をチェック（緩和）
         total_chars = sum(len(entry.get('text', '')) for entry in agent_entries)
-        if total_chars < 64:  # 64文字未満は要約をスキップ
-            self.logger.debug(f"エージェント出力が短すぎるため要約をスキップ: {total_chars}文字")
+        if total_chars < 128:  # 512→128文字に緩和
+            self.logger.info(f"エージェント出力が短すぎるため要約をスキップ: {total_chars}文字 < 128文字")
             return False
             
-        # 全体の平均文字数をチェック
+        # 全体の平均文字数をチェック（厳格化）
         avg_chars = total_chars / len(agent_entries)
-        if avg_chars < 20:  # 平均20文字未満は要約をスキップ
-            self.logger.debug(f"エージェント出力の平均が短すぎるため要約をスキップ: {avg_chars:.1f}文字")
+        if avg_chars < 50:  # 平均50文字未満は要約をスキップ（厳格化）
+            self.logger.info(f"エージェント出力の平均が短すぎるため要約をスキップ: {avg_chars:.1f}文字 < 50文字")
             return False
             
         return True
@@ -451,16 +570,14 @@ class DistributedSLM:
         if not self.use_summary:
             return False
             
-        # 入力が短すぎる場合はスキップ（閾値を64文字に厳格化）
-        if len(user_input) < 64:
-            self.logger.info(f"入力が短すぎるため要約をスキップ: {len(user_input)}文字 < 64文字")
+        # 入力が短すぎる場合はスキップ（閾値を128文字に緩和）
+        if len(user_input) < 128:
+            self.logger.info(f"入力が短すぎるため要約をスキップ: {len(user_input)}文字 < 128文字")
             return False
             
-
-        
-        # RAG結果が空の場合で、入力も短い場合はスキップ（閾値を128文字に厳格化）
-        if not rag_result and len(user_input) < 128:
-            self.logger.info(f"RAG結果なし且つ入力が短いため要約をスキップ: {len(user_input)}文字 < 128文字")
+        # RAG結果が空の場合で、入力も短い場合はスキップ（閾値を512文字に厳格化）
+        if not rag_result and len(user_input) < 512:
+            self.logger.info(f"RAG結果なし且つ入力が短いため要約をスキップ: {len(user_input)}文字 < 512文字")
             return False
             
         return True

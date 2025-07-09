@@ -244,6 +244,7 @@ class HuggingFaceModel(BaseModel):
         self.torch_dtype = config.get('torch_dtype', 'auto')
         self.temperature = config.get('temperature', 0.7)
         self.max_tokens = config.get('max_tokens', 256)
+        self.n_ctx = config.get('n_ctx', 2048)  # コンテキストサイズを設定
         self._model = None
         self._tokenizer = None
         self._initialization_attempted = False
@@ -286,6 +287,14 @@ class HuggingFaceModel(BaseModel):
             if self._tokenizer.pad_token is None:
                 self._tokenizer.pad_token = self._tokenizer.eos_token
             
+            # 最大長の設定（警告回避）
+            if not hasattr(self._tokenizer, 'model_max_length') or self._tokenizer.model_max_length > 100000:
+                self._tokenizer.model_max_length = self.n_ctx  # 設定されたコンテキストサイズを使用
+                self.logger.debug(f"tokenizer.model_max_length を {self.n_ctx} に設定")
+            
+            # トークナイザーのデフォルト設定
+            self._tokenizer.padding_side = 'left'  # 左パディング（生成に適している）
+            
             # モデルの読み込み
             self.logger.info("モデルを読み込み中...")
             self._model = AutoModelForCausalLM.from_pretrained(
@@ -300,6 +309,16 @@ class HuggingFaceModel(BaseModel):
             # CPUの場合は明示的にCPUに移動
             if self.device == 'cpu':
                 self._model = self._model.to('cpu')
+            
+            # HuggingFaceモデル用のn_ctx属性を設定（Gemmaとの統一インターフェース）
+            if not hasattr(self, "n_ctx"):
+                # モデルの設定から最大コンテキスト長を推測
+                self.n_ctx = getattr(
+                    self._model.config, 
+                    "max_position_embeddings",
+                    getattr(self._tokenizer, "model_max_length", 2048)
+                )
+                self.logger.debug(f"HuggingFaceモデル用n_ctx設定: {self.n_ctx}")
             
             self.logger.info(f"✓ HuggingFaceモデルの初期化が完了しました: {self.model_name}")
             
@@ -350,7 +369,13 @@ class HuggingFaceModel(BaseModel):
                 except Exception as e:
                     self.logger.warning(f"apply_chat_template失敗、フォールバック: {e}")
                     # フォールバックとして従来の方法
-                    inputs_dict = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+                    inputs_dict = self._tokenizer(
+                        prompt, 
+                        return_tensors="pt", 
+                        padding=True, 
+                        truncation=True,
+                        max_length=min(self.n_ctx, 2048)  # 最大長を明示的に指定
+                    )
                     if 'token_type_ids' in inputs_dict:
                         del inputs_dict['token_type_ids']
                     if self.device == 'cpu':
@@ -359,7 +384,13 @@ class HuggingFaceModel(BaseModel):
                         inputs_dict = {k: v.to(self.device) for k, v in inputs_dict.items()}
             else:
                 # 従来形式の場合
-                inputs_dict = self._tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+                inputs_dict = self._tokenizer(
+                    prompt, 
+                    return_tensors="pt", 
+                    padding=True, 
+                    truncation=True,
+                    max_length=min(self.n_ctx, 2048)  # 最大長を明示的に指定
+                )
                 if 'token_type_ids' in inputs_dict:
                     del inputs_dict['token_type_ids']
                 if self.device == 'cpu':
@@ -367,23 +398,48 @@ class HuggingFaceModel(BaseModel):
                 else:
                     inputs_dict = {k: v.to(self.device) for k, v in inputs_dict.items()}
             
-            # 生成設定（llm-jp-3-150m-instruct3向け最適化 - 改良版）
-            generation_config = {
-                'max_new_tokens': min(max_tokens, 128),  # 小型モデルなので短めに
-                'temperature': max(temperature, 0.7),   # 創造性を高める
-                'top_p': 0.9,                          # 多様性を確保
-                'top_k': 30,                           # 選択肢を適度に制限
-                'do_sample': True,                     # サンプリング有効
-                'pad_token_id': self._tokenizer.pad_token_id,
-                'eos_token_id': self._tokenizer.eos_token_id,
-                'repetition_penalty': 1.0,             # 繰り返しペナルティを軽減
-                'early_stopping': False,               # 早期停止を無効化
-                'use_cache': True,                     # キャッシュ有効
-                'no_repeat_ngram_size': 0,             # n-gram制限を無効化
-                'length_penalty': 1.0,                # 長さペナルティを中立
-                'forced_bos_token_id': None,           # BOSトークンを強制しない
-                'forced_eos_token_id': None,           # EOSトークンを強制しない
-            }
+            # 生成設定（小型モデル向け重複防止最適化・警告回避）
+            # CLI引数の max_new_tokens を優先使用（空レス対策）
+            config_max_new_tokens = self.config.get('max_new_tokens', 128)
+            effective_max_tokens = config_max_new_tokens  # CLI引数を強制優先
+            
+            # モデル固有の最適化（重複防止強化）
+            model_name = self.model_name.lower()
+            if 'gemma' in model_name or 'llm-jp' in model_name:
+                # 小型モデル用：重複抑制を強化（警告回避版）
+                generation_config = {
+                    'max_new_tokens': min(effective_max_tokens, 100),  # より短く
+                    'temperature': max(temperature, 0.4),   # 低温度で安定化
+                    'top_p': 0.8,                          # 選択肢を絞る
+                    'top_k': 20,                           # 選択肢をさらに制限
+                    'do_sample': True,                     # サンプリング有効
+                    'pad_token_id': self._tokenizer.pad_token_id,
+                    'eos_token_id': self._tokenizer.eos_token_id,
+                    'repetition_penalty': 1.3,             # 繰り返しペナルティ強化
+                    'use_cache': True,                     # キャッシュ有効
+                    'no_repeat_ngram_size': 3,             # 3-gram重複を禁止
+                    # ビーム探索パラメータを削除（num_beams=1の場合は無効）
+                    # 'early_stopping': True,              # ← 削除
+                    # 'length_penalty': 0.9,               # ← 削除
+                }
+                self.logger.debug(f"小型モデル用重複防止設定適用: {model_name}")
+            else:
+                # 一般的なモデル用
+                generation_config = {
+                    'max_new_tokens': effective_max_tokens,  # CLI引数を強制適用
+                    'temperature': max(temperature, 0.7),   # 創造性を高める
+                    'top_p': 0.9,                          # 多様性を確保
+                    'top_k': 30,                           # 選択肢を適度に制限
+                    'do_sample': True,                     # サンプリング有効
+                    'pad_token_id': self._tokenizer.pad_token_id,
+                    'eos_token_id': self._tokenizer.eos_token_id,
+                    'repetition_penalty': 1.0,             # 繰り返しペナルティを軽減
+                    'use_cache': True,                     # キャッシュ有効
+                    'no_repeat_ngram_size': 0,             # n-gram制限を無効化
+                    # ビーム探索パラメータを削除
+                    # 'early_stopping': False,             # ← 削除
+                    # 'length_penalty': 1.0,               # ← 削除
+                }
             
             # 推論実行
             with torch.no_grad():
@@ -488,10 +544,28 @@ class HuggingFaceModel(BaseModel):
             }
         
         try:
-            # プロンプトマネージャーで生成されたプロンプトをそのまま使用
-            # （messages[0]['content']には既に適切なInstruction形式が含まれている）
+            # 公式chat_templateを使用してプロンプト生成
             if messages and len(messages) > 0:
-                prompt = messages[0]['content']  # プロンプトマネージャーからの完全なプロンプト
+                # messages形式から公式テンプレート適用
+                try:
+                    # tokenizer.apply_chat_templateを使用
+                    prompt = self._tokenizer.apply_chat_template(
+                        messages, 
+                        tokenize=False,
+                        add_generation_prompt=True
+                    )
+                    self.logger.debug(f"apply_chat_template成功: {prompt[:100]}...")
+                except Exception as e:
+                    self.logger.warning(f"apply_chat_template失敗、フォールバック: {e}")
+                    # フォールバック: 従来の方法
+                    if len(messages) == 1:
+                        prompt = messages[0]['content']
+                    elif len(messages) >= 2:
+                        system_content = messages[0]['content'] if messages[0]['role'] == 'system' else ""
+                        user_content = messages[-1]['content'] if messages[-1]['role'] == 'user' else messages[0]['content']
+                        prompt = f"{system_content}\n\n{user_content}" if system_content else user_content
+                    else:
+                        prompt = "質問に回答してください。"
             else:
                 prompt = "質問に回答してください。"
             

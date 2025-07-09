@@ -56,7 +56,7 @@ class InputReception:
         self.enable_vectorization = config.get('enable_vectorization', True)
         self.enable_caching = config.get('cpu_optimization', {}).get('enable_caching', True)
         self.batch_size = config.get('batch_size', 32)
-        self.max_workers = config.get('max_workers', 4)
+        self.max_workers = max(1, config.get('max_workers', 4))  # 最小値1を保証
         self.embedding_cache_size = config.get('embedding_cache_size', 1000)
         
         # 並列処理用スレッドプール

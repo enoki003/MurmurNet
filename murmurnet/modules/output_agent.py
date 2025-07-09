@@ -27,8 +27,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
-from string import Template
-import yaml
 
 from MurmurNet.modules.model_factory import ModelFactory
 
@@ -101,79 +99,9 @@ class OptimizedResponseCache:
             return dict(self.stats)
 
 
-class TemplateManager:
-    """効率的なテンプレート管理システム"""
-    
-    def __init__(self):
-        self.templates = {}
-        self.compiled_templates = {}
-        self.lock = threading.RLock()
-        self._init_templates()
-    
-    def _init_templates(self):
-        """テンプレートを初期化"""
-        # 日本語システムテンプレート
-        self.templates['system_ja'] = Template("""あなたは親しみやすい日本語アシスタントです。
-
-【タスク】
-複数のエージェントの意見を統合して、ユーザーの質問に対する自然で有用な回答を作成してください。
-
-【重要な指針】
-1. エージェントの生の意見を最重視し、各エージェントの異なる視点を活かす
-2. 要約情報は補助的な参考として使用する
-3. 自然な話し言葉で親しみやすく回答する
-4. ${max_tokens}文字程度で簡潔かつ完全にまとめる
-5. マークダウンや特殊記号は使わず、読みやすい文章にする
-6. エージェント間の意見の違いがあれば、バランスよく統合する
-
-【出力形式】
-- 一つの段落で完結した回答
-- 句読点を適切に使用
-- 文章の途中で終わらせない""")
-        
-        # 英語システムテンプレート
-        self.templates['system_en'] = Template("""You are a friendly English assistant.
-
-【Task】
-Integrate multiple agents' opinions to create a natural and helpful response to the user's question.
-
-【Key Guidelines】
-1. Prioritize agents' raw opinions and leverage different perspectives
-2. Use summary information as supplementary reference
-3. Respond in natural, conversational language
-4. Keep response around ${max_tokens} characters, concise but complete
-5. Avoid markdown or special symbols, use readable text
-6. If agents have different opinions, integrate them in a balanced way
-
-【Output Format】
-- Single paragraph with complete response
-- Use proper punctuation
-- Do not end mid-sentence""")
-        
-        # ユーザープロンプトテンプレート
-        self.templates['user_prompt'] = Template("""【ユーザーの質問】
-${user_input}
-
-${rag_section}${agent_section}${summary_section}【回答作成の指示】
-上記のエージェントの意見を最重視して、ユーザーの質問に対する統合された回答を作成してください。
-・各エージェントの個性的な表現や異なる視点を活かしてください
-・要約情報は補助的な参考情報として扱ってください
-・自然で読みやすい一つの段落にまとめてください
-・文章は完結させ、途中で終わらせないでください""")
-    
-    def get_template(self, template_name: str, **kwargs) -> str:
-        """テンプレートを取得して変数を置換"""
-        with self.lock:
-            if template_name not in self.templates:
-                raise ValueError(f"テンプレート '{template_name}' が見つかりません")
-            
-            template = self.templates[template_name]
-            return template.safe_substitute(**kwargs)
-
-
 class CPUOptimizedOutputAgent:
     """
-    CPU/並列/メモリ最適化された出力エージェント
+    CPU/並列/メモリ最適化された出力エージェント（公式チャットテンプレート対応）
     
     機能:
     - LRUキャッシュによる高速応答
@@ -183,12 +111,13 @@ class CPUOptimizedOutputAgent:
     - スレッドセーフな操作
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, shared_llm=None):
         """
         最適化された出力エージェントの初期化
         
         引数:
             config: 設定辞書（省略時は空の辞書）
+            shared_llm: 既存のLLMインスタンス（再利用によるロード時間短縮）
         """        
         self.config = config or {}
         self.debug = self.config.get('debug', False)
@@ -204,7 +133,6 @@ class CPUOptimizedOutputAgent:
         
         # 最適化コンポーネントの初期化
         self.response_cache = OptimizedResponseCache(self.cache_size)
-        self.template_manager = TemplateManager()
         self.stats = PerformanceStats()
         self.lock = threading.RLock()
         
@@ -224,8 +152,25 @@ class CPUOptimizedOutputAgent:
         # デバッグモードを強制的に有効にする
         logger.setLevel(logging.DEBUG)
         
-        # ModelFactoryからモデルを取得
-        self.llm = ModelFactory.create_model(self.config)
+        # エージェント別モデル管理を初期化（二重ロード防止）
+        if shared_llm:
+            # 既存のLLMを再利用（二重ロード防止）
+            self.llm = shared_llm
+            self.model_manager = None
+            logger.info("OutputAgent: 既存のLLMを再利用します（ロード時間短縮）")
+        else:
+            try:
+                from MurmurNet.modules.agent_model_manager import create_agent_model_manager
+                self.model_manager = create_agent_model_manager(self.config)
+                # 出力エージェント用の設定でモデルを取得
+                agent_config = self.model_manager.get_model_factory_config("output_agent")
+                self.llm = ModelFactory.create_model(agent_config)
+                logger.info("OutputAgent: エージェント別モデル管理を有効化しました")
+            except ImportError:
+                # フォールバック: 従来の共有モデル
+                self.llm = ModelFactory.create_model(self.config)
+                self.model_manager = None
+                logger.warning("OutputAgent: エージェント別モデル管理が無効 - 共有モデルを使用します")
         
         logger.info(f"最適化出力エージェントを初期化: cache_size={self.cache_size}, workers={self.max_workers}")
         logger.debug(f"OutputAgent最適化設定: batch={self.enable_batch_processing}, parallel={self.enable_parallel_processing}")
@@ -278,102 +223,14 @@ class CPUOptimizedOutputAgent:
             self.language_cache[text_hash] = lang
             return lang
     
-    def _build_prompt_sections_parallel(self, entries: List[Dict[str, Any]], rag: str = None) -> Tuple[str, str, str]:
+    def _clean_output_optimized(self, text: str, agent_outputs: List[str] = None) -> str:
         """
-        プロンプトセクションを並列構築
-        """
-        def build_rag_section():
-            return f"【参考情報】\n{rag}\n\n" if rag else ""
-        
-        def build_agent_section():
-            agent_outputs = [
-                entry for entry in entries 
-                if entry.get('type', 'agent') == 'agent'
-            ]
-            if agent_outputs:
-                section = "【エージェントの意見】\n"
-                for i, entry in enumerate(agent_outputs, 1):
-                    text = entry.get('text', '')[:300]
-                    agent_id = entry.get('agent', i-1)
-                    section += f"{i}. エージェント {agent_id+1}: {text}\n"
-                return section + "\n"
-            return ""
-        
-        def build_summary_section():
-            summaries = [
-                entry for entry in entries 
-                if entry.get('type') == 'summary'
-            ]
-            if summaries:
-                section = "【要約情報（参考）】\n"
-                for i, entry in enumerate(summaries, 1):
-                    text = entry.get('text', '')[:300]
-                    iteration = entry.get('iteration', i-1)
-                    section += f"{i}. 要約 {iteration+1}: {text}\n"
-                return section + "\n"
-            return ""
-        
-        if self.enable_parallel_processing and self.thread_pool:
-            # 並列処理
-            futures = [
-                self.thread_pool.submit(build_rag_section),
-                self.thread_pool.submit(build_agent_section),
-                self.thread_pool.submit(build_summary_section)
-            ]
-            
-            results = []
-            for future in as_completed(futures):
-                try:
-                    results.append(future.result())
-                except Exception as e:
-                    logger.error(f"並列プロンプト構築エラー: {e}")
-                    results.append("")
-            
-            return results[0], results[1], results[2]
-        else:
-            # 逐次処理
-            return build_rag_section(), build_agent_section(), build_summary_section()
-    
-    def _build_optimized_prompt(self, user_input: str, entries: List[Dict[str, Any]], 
-                               rag: str = None, lang: str = 'ja') -> Tuple[str, str]:
-        """
-        最適化されたプロンプト構築
-        """
-        # システムプロンプトをテンプレートから生成
-        template_key = f'system_{lang}'
-        try:
-            system_prompt = self.template_manager.get_template(
-                template_key, 
-                max_tokens=f"{self.max_output_tokens}-{self.max_output_tokens+50}"
-            )
-            self.stats.template_cache_hits += 1
-        except Exception as e:
-            logger.error(f"テンプレート取得エラー: {e}")
-            # フォールバック
-            system_prompt = "You are a helpful assistant." if lang == 'en' else "あなたは親しみやすいアシスタントです。"
-        
-        # セクションを並列構築
-        rag_section, agent_section, summary_section = self._build_prompt_sections_parallel(entries, rag)
-        
-        # ユーザープロンプトを構築
-        user_prompt = self.template_manager.get_template(
-            'user_prompt',
-            user_input=user_input,
-            rag_section=rag_section,
-            agent_section=agent_section,
-            summary_section=summary_section
-        )
-        
-        return system_prompt, user_prompt
-    
-    def _clean_output_optimized(self, text: str) -> str:
-        """
-        最適化された出力クリーニング（並列処理対応・空応答フィルタリング強化）
+        最適化された出力クリーニング（並列処理対応・空応答フィルタリング強化・謝罪文フォールバック対応）
         """
         if not text or len(text.strip()) < 5:
             return "申し訳ございませんが、適切な回答を生成できませんでした。"
         
-        # 空応答や無効応答の検出パターン
+        # 空応答や無効応答の検出パターン（謝罪文フィルタ強化）
         invalid_patterns = [
             r'^\s*$',                                        # 空文字
             r'^[\s\.\-_]*$',                                # 空白と句読点のみ
@@ -381,12 +238,32 @@ class CPUOptimizedOutputAgent:
             r'^(申し訳|すみません|ごめん).{0,10}$',            # 短い謝罪のみ
             r'^[\.]{3,}$',                                   # ...のみ
             r'^[。、]{1,5}$',                                # 句読点のみ
+            # 謝罪文フィルタ強化（30〜50文字の謝罪テンプレも検出）
+            r'申し訳.*(リアルタイム|最新|情報).*できません',        # リアルタイム情報要求謝罪
+            r'私は.*(最新|リアルタイム).*アクセス.*できません',     # リアルタイムアクセス不可謝罪
+            r'リアルタイムで.{0,30}できません',                  # リアルタイム情報要求謝罪
+            r'最新の情報.{0,20}提供できません',                 # 最新情報要求謝罪
+            r'現在の.{0,10}情報.{0,20}持っていません',           # 現在情報なし謝罪
+            r'具体的な.{0,10}データ.{0,20}提供できません',        # データ提供不可謝罪
+            r'私の知識.*時点.*までです',                         # 知識カットオフ謝罪
+            r'申し訳.{10,50}ございません',                      # 中程度の謝罪文
+            r'すみません.{10,40}ことができません',                # できません系謝罪
         ]
         
-        # 無効応答の検出
+        # 無効応答の検出と謝罪文フォールバック
         for pattern in invalid_patterns:
-            if re.match(pattern, text.strip(), re.IGNORECASE):
-                logger.warning(f"無効応答を検出: {text[:50]}")
+            if re.search(pattern, text.strip(), re.IGNORECASE):
+                logger.warning(f"謝罪文/無効応答を検出: {text[:50]}")
+                
+                # エージェント出力からフォールバック応答を生成
+                if agent_outputs and any(agent_outputs):
+                    # 最も長い有効なエージェント出力を使用
+                    valid_outputs = [out for out in agent_outputs if out and len(out.strip()) > 20]
+                    if valid_outputs:
+                        best_output = max(valid_outputs, key=len)
+                        logger.info(f"エージェント出力でフォールバック: {len(best_output)}文字")
+                        return best_output[:300].strip() + ("。" if not best_output.strip().endswith(('。', '！', '？')) else "")
+                
                 return "申し訳ございませんが、適切な回答を生成できませんでした。"
         
         # タグ除去パターン（#の羅列を削除）
@@ -456,25 +333,21 @@ class CPUOptimizedOutputAgent:
 
     def generate(self, blackboard, entries: List[Dict[str, Any]]) -> str:
         """
-        最適化された最終応答生成（バッチ・並列・キャッシュ・統計・メモリ効率化対応）
+        最適化された最終応答生成（公式チャットテンプレート対応）
         """
         start_time = time.time()
         self.stats.total_requests += 1
-        logger.debug("=== OutputAgent.generate() 最適化版 開始 ===")
-
-        # バッチサイズ設定（config優先、なければデフォルト8）
-        batch_size = self.config.get('output_batch_size', 8)
-        self.batch_size = batch_size
+        logger.debug("=== OutputAgent.generate() 公式テンプレート対応版 開始 ===")
 
         try:
             # 1. 基本データ取得
             inp = blackboard.read('input')
             user_input = inp.get('normalized') if isinstance(inp, dict) else str(inp)
-            user_input = user_input[:400]
+            user_input = user_input[:200]  # 短縮化
 
             rag = blackboard.read('rag')
             if rag and isinstance(rag, str):
-                rag = rag[:600]
+                rag = rag[:300]  # 短縮化
 
             # 2. キャッシュチェック
             cache_key = self._generate_cache_key(user_input, entries, rag)
@@ -485,118 +358,226 @@ class CPUOptimizedOutputAgent:
                 return cached_response
             self.stats.cache_misses += 1
 
-            # 3. 言語検出
-            lang = self._detect_language_cached(user_input)
+            # 3. エージェント出力の抽出と重複除去（改良版）
+            agent_outputs = [
+                entry.get('text', '') for entry in entries 
+                if entry.get('type', 'agent') == 'agent' and entry.get('text', '').strip()
+            ]
+            
+            if not agent_outputs:
+                return "申し訳ございませんが、適切な応答を生成できませんでした。"
 
-            # 4. 最適化されたプロンプト構築
-            system_prompt, user_prompt = self._build_optimized_prompt(user_input, entries, rag, lang)
+            # 3.1. 重複文章の除去（文レベルでの重複削除）
+            def deduplicate_sentences(texts):
+                """文レベルでの重複除去"""
+                seen_sentences = set()
+                unique_sentences = []
+                
+                for text in texts:
+                    # 文に分割（句点で区切り）
+                    sentences = [s.strip() for s in text.replace('。', '。\n').split('\n') if s.strip()]
+                    for sentence in sentences:
+                        # 正規化してハッシュ化（空白や記号の差異を無視）
+                        normalized = re.sub(r'[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', '', sentence)
+                        if normalized and normalized not in seen_sentences and len(sentence) > 10:
+                            seen_sentences.add(normalized)
+                            unique_sentences.append(sentence)
+                            if len(unique_sentences) >= 8:  # 5→8文に増加
+                                break
+                    if len(unique_sentences) >= 8:  # 5→8文に増加
+                        break
+                
+                return unique_sentences[:5]  # 3→5文に増加
+            
+            unique_sentences = deduplicate_sentences(agent_outputs)
+            logger.debug(f"重複除去後: {len(unique_sentences)}文 (元: {len(agent_outputs)}エージェント)")
 
-            # 5. バッチ・並列処理
-            responses = []
-            if self.enable_parallel_processing and len(entries) > batch_size:
-                self.stats.parallel_processes += 1
-                batched_entries = [entries[i:i + batch_size] for i in range(0, len(entries), batch_size)]
-                futures = []
-                # バッチごとにLLM呼び出しを並列実行
-                for batch in batched_entries:
-                    batch_cache_key = self._generate_cache_key(user_input, batch, rag)
-                    batch_cached = self.response_cache.get(batch_cache_key)
-                    if batch_cached:
-                        self.stats.cache_hits += 1
-                        responses.append(batch_cached)
-                        continue
-                    def llm_call(batch=batch):
-                        self.stats.llm_calls += 1
-                        sys_prompt, usr_prompt = self._build_optimized_prompt(user_input, batch, rag, lang)
-                        resp = self.llm.create_chat_completion(
-                            messages=[
-                                {"role": "system", "content": sys_prompt},
-                                {"role": "user", "content": usr_prompt}
-                            ],
-                            max_tokens=self.max_output_tokens,
-                            temperature=0.7,
-                            top_p=0.95,
-                            repeat_penalty=1.2
-                        )
-                        if isinstance(resp, dict):
-                            out = resp['choices'][0]['message']['content'].strip()
-                        else:
-                            out = resp.choices[0].message.content.strip()
-                        out = self._clean_output_optimized(out)
-                        self.response_cache.put(batch_cache_key, out)
-                        return out
-                    if self.thread_pool:
-                        futures.append(self.thread_pool.submit(llm_call))
-                    else:
-                        responses.append(llm_call())
-                # 並列実行結果を集約
-                if futures:
-                    for f in as_completed(futures):
-                        try:
-                            responses.append(f.result())
-                        except Exception as e:
-                            logger.error(f"バッチ並列応答生成エラー: {e}")
-                            responses.append("")
-                # 応答を統合
-                final_output = '\n'.join([r for r in responses if r])
+            # 4. 公式チャットテンプレート用のmessages構築
+            # システムプロンプト（謝罪テンプレート抑制・概念的回答誘導・強化版）
+            system_content = (
+                "あなたは教育技術・教育工学の専門家です。"
+                "以下のルールに従って回答してください：\n"
+                "1. 【重要】謝罪文や「申し訳ございません」「すみません」「恐れ入りますが」等は絶対に使用禁止です\n"
+                "2. 【重要】「分からない」「情報不足」「お答えできません」等の否定的表現は完全禁止です\n"
+                "3. 断定的で自信を持った表現を使用してください（「～です」「～します」「効果的です」等）\n"
+                "4. 一般論・原理・概念的な観点から具体的かつ実用的に答えてください\n"
+                "5. 教育効果や学習理論に基づいた建設的な内容にしてください\n"
+                "6. 200-300文字程度で簡潔に回答してください\n"
+                "7. 必ず肯定的で前向きな表現で結論を述べてください\n"
+                "時事ニュースや最新データではなく、一般論・原理・概念的な観点から質問に答えてください。"
+                "リアルタイム情報は不要です。具体的な効果や手法について説明してください。"
+            )
+            
+            # ユーザープロンプト（重複除去済みの文を使用・大幅拡張版）
+            if unique_sentences:
+                # 5文×160文字に拡大（従来：3文×80文字）
+                agent_text = '\n'.join([f"{i+1}. {sentence[:160]}" for i, sentence in enumerate(unique_sentences[:5])])
             else:
-                # バッチ不要 or 並列無効時は通常処理
-                self.stats.llm_calls += 1
-                resp = self.llm.create_chat_completion(
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    max_tokens=self.max_output_tokens,
-                    temperature=0.7,
-                    top_p=0.95,
-                    repeat_penalty=1.2
-                )
-                if isinstance(resp, dict):
-                    final_output = resp['choices'][0]['message']['content'].strip()
-                else:
-                    final_output = resp.choices[0].message.content.strip()
+                # フォールバック文字数も拡大（従来：200文字）
+                agent_text = agent_outputs[0][:400] if agent_outputs else "参考情報がありません"
+            
+            # 要約情報も追加でコンテキストに含める（前イテレーション要約を優先）
+            summary_context = ""
+            
+            # 前イテレーション要約を最優先で取得
+            previous_summary = blackboard.read('previous_iteration_summary')
+            if previous_summary and isinstance(previous_summary, str) and len(previous_summary.strip()) > 50:
+                summary_context = f"\n\n前回の議論要約:\n{previous_summary[:500]}"
+            else:
+                # フォールバック：通常の要約データ
+                summary_data = blackboard.read('summary')
+                if summary_data and isinstance(summary_data, str) and len(summary_data.strip()) > 50:
+                    summary_context = f"\n\n議論要約:\n{summary_data[:500]}"
+            
+            # RAG情報も拡張してコンテキストに含める
+            rag_context = ""
+            if rag and len(rag.strip()) > 20:
+                rag_context = f"\n\n参考資料:\n{rag[:400]}"
+            
+            # 総合的なユーザープロンプト（コンテキスト大幅増強）
+            user_content = f"""質問: {user_input}
 
-            # 6. 最適化された出力クリーニング（バッチ時は全体に適用）
-            final_output = self._clean_output_optimized(final_output)
+エージェントの分析:
+{agent_text}{summary_context}{rag_context}
 
-            # 7. キャッシュに保存
+上記の情報を統合し、教育技術の専門家として具体的で実用的な回答を作成してください:"""
+
+            # 5. 公式チャットテンプレート対応のmessages形式
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content}
+            ]
+
+            # 6. モデル固有の最適化パラメータ設定
+            model_name = getattr(self.llm, 'model_name', '').lower()
+            if 'llm-jp' in model_name:
+                # 150M専用：謝罪テンプレート抑制パラメータ（提案通り）
+                generation_params = {
+                    'max_tokens': min(self.max_output_tokens, 120),  # より長く
+                    'temperature': 0.7,     # 0.4→0.7に上げて安全寄りトークンを回避
+                    'top_p': 0.95,          # 0.8→0.95に上げて多様性確保（冗長な一般論を促進）
+                    'repeat_penalty': 1.2,  # 1.3→1.2に緩和
+                    'frequency_penalty': 0.1,  # 0.2→0.1に緩和
+                    'presence_penalty': 0.05   # 0.1→0.05に緩和
+                }
+                logger.debug(f"150M専用謝罪抑制パラメータ適用: {model_name}")
+            elif 'gemma' in model_name:
+                # Gemma用の重複抑制パラメータ
+                generation_params = {
+                    'max_tokens': min(self.max_output_tokens, 100),
+                    'temperature': 0.4,     # Gemmaは低温度で安定
+                    'top_p': 0.8,
+                    'repeat_penalty': 1.3,
+                    'frequency_penalty': 0.2,
+                    'presence_penalty': 0.1
+                }
+                logger.debug(f"Gemma用パラメータ適用: {model_name}")
+            else:
+                # 一般的なパラメータ
+                generation_params = {
+                    'max_tokens': min(self.max_output_tokens, 128),
+                    'temperature': 0.7,
+                    'top_p': 0.9
+                }
+
+            # 7. LLM呼び出し（公式テンプレート使用）
+            self.stats.llm_calls += 1
+            resp = self.llm.create_chat_completion(
+                messages=messages,
+                **generation_params
+            )
+            
+            if isinstance(resp, dict):
+                final_output = resp['choices'][0]['message']['content'].strip()
+            else:
+                final_output = resp.choices[0].message.content.strip()
+
+            # 8. 重複除去強化クリーニング（謝罪文フォールバック対応）
+            final_output = self._clean_output_optimized(final_output, agent_outputs)
+            
+            # 8.1. 追加の重複文除去（最終出力でも実施）
+            final_output = self._remove_duplicate_sentences(final_output)
+
+            # 9. キャッシュに保存
             self.response_cache.put(cache_key, final_output)
 
-            # 8. 統計情報更新
             response_time = time.time() - start_time
             self.stats.total_response_time += response_time
 
-            # メモリ使用量監視
-            try:
-                import psutil
-                process = psutil.Process()
-                self.stats.memory_usage_mb = process.memory_info().rss / 1024 / 1024
-            except ImportError:
-                pass
-
-            # 定期的なガベージコレクション
-            if self.stats.total_requests % 100 == 0:
-                gc.collect()
-
-            logger.info(f"最適化版応答生成完了: {len(final_output)}文字, {response_time:.3f}秒")
-            logger.info(f"統計: ヒット率={self.stats.get_cache_hit_rate():.2%}, "
-                        f"平均応答時間={self.stats.get_avg_response_time():.3f}秒, "
-                        f"メモリ={self.stats.memory_usage_mb:.1f}MB")
-
+            logger.info(f"公式テンプレート対応応答生成完了: {len(final_output)}文字, {response_time:.3f}秒")
             return final_output
 
         except Exception as e:
-            error_msg = f"最適化版出力生成エラー: {str(e)}"
-            logger.error(error_msg)
-            if self.debug:
-                import traceback
-                logger.debug(traceback.format_exc())
-            lang = self._detect_language_cached(user_input) if 'user_input' in locals() else 'ja'
-            if lang == 'ja':
-                return "申し訳ございませんが、適切な回答を生成できませんでした。"
+            logger.error(f"OutputAgent公式テンプレート対応版エラー: {e}")
+            # フォールバック: 最初のエージェント応答を使用
+            if entries and entries[0].get('text'):
+                fallback_text = entries[0]['text'][:150].strip()
+                return fallback_text + ("。" if not fallback_text.endswith(('。', '！', '？')) else "")
+            return "申し訳ございませんが、適切な応答を生成できませんでした。"
+
+    def _generate_fallback_response(self, blackboard, entries: List[Dict[str, Any]]) -> str:
+        """フォールバック用の簡潔な応答生成（公式チャットテンプレート対応）"""
+        start_time = time.time()
+        self.stats.total_requests += 1
+        logger.debug("=== OutputAgent.フォールバック応答生成 開始 ===")
+
+        try:
+            # 1. 基本データ取得
+            inp = blackboard.read('input')
+            user_input = inp.get('normalized') if isinstance(inp, dict) else str(inp)
+            user_input = user_input[:300]  # 短縮化
+
+            # 2. エージェント出力の抽出
+            agent_outputs = [
+                entry.get('text', '') for entry in entries 
+                if entry.get('type', 'agent') == 'agent' and entry.get('text', '').strip()
+            ]
+            
+            if not agent_outputs:
+                return "申し訳ございませんが、適切な応答を生成できませんでした。"
+
+            # 3. 公式チャットテンプレート用のmessages構築（簡潔版）
+            system_content = "親しみやすい日本語アシスタントです。簡潔で自然な回答を作成してください。"
+            
+            # 最初のエージェント応答のみ使用（高速化）
+            first_agent_text = agent_outputs[0][:150]
+            user_content = f"質問: {user_input}\n\n参考情報: {first_agent_text}\n\n回答:"
+
+            # 4. LLM呼び出し
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content}
+            ]
+
+            self.stats.llm_calls += 1
+            resp = self.llm.create_chat_completion(
+                messages=messages,
+                max_tokens=100,  # 短い応答
+                temperature=0.7,
+                top_p=0.9
+            )
+            
+            if isinstance(resp, dict):
+                final_output = resp['choices'][0]['message']['content'].strip()
             else:
-                return "I apologize, but I couldn't generate an appropriate response."
+                final_output = resp.choices[0].message.content.strip()
+
+            # 5. 軽量クリーニング
+            final_output = self._clean_output_optimized(final_output)
+
+            response_time = time.time() - start_time
+            self.stats.total_response_time += response_time
+
+            logger.info(f"フォールバック応答生成完了: {len(final_output)}文字, {response_time:.3f}秒")
+            return final_output
+
+        except Exception as e:
+            logger.error(f"フォールバック応答生成エラー: {e}")
+            # 最終フォールバック
+            if entries and entries[0].get('text'):
+                fallback_text = entries[0]['text'][:100].strip()
+                return fallback_text + ("。" if not fallback_text.endswith(('。', '！', '？')) else "")
+            return "申し訳ございませんが、適切な応答を生成できませんでした。"
 
     def shutdown(self):
         """
@@ -639,18 +620,10 @@ class CPUOptimizedOutputAgent:
             # 3. キャッシュのクリア
             if hasattr(self, 'response_cache'):
                 try:
-                    cache_size = self.response_cache.size()
-                    self.response_cache.clear()
-                    logger.debug(f"応答キャッシュをクリア: {cache_size}エントリ")
+                    cache_stats = self.response_cache.get_stats()
+                    logger.debug(f"応答キャッシュをクリア: {cache_stats}")
                 except Exception as e:
                     logger.warning(f"応答キャッシュクリアエラー: {e}")
-            
-            if hasattr(self, 'template_cache'):
-                try:
-                    self.template_cache.clear()
-                    logger.debug("テンプレートキャッシュをクリア")
-                except Exception as e:
-                    logger.warning(f"テンプレートキャッシュクリアエラー: {e}")
             
             # 4. モデル参照のクリア
             if hasattr(self, 'llm'):
@@ -671,6 +644,42 @@ class CPUOptimizedOutputAgent:
             # エラーが発生してもシャットダウンを継続
             import traceback
             logger.debug(traceback.format_exc())
+
+    def _remove_duplicate_sentences(self, text: str) -> str:
+        """最終出力から重複文を除去"""
+        if not text or len(text.strip()) < 10:
+            return text
+        
+        # 文に分割
+        sentences = [s.strip() for s in text.split('。') if s.strip()]
+        if len(sentences) <= 1:
+            return text
+        
+        # 重複除去
+        seen_normalized = set()
+        unique_sentences = []
+        
+        for sentence in sentences:
+            # 正規化（空白、記号を除去して比較）
+            normalized = re.sub(r'[^\w\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]', '', sentence)
+            
+            # 短すぎる文や重複文をスキップ
+            if len(normalized) < 5 or normalized in seen_normalized:
+                continue
+                
+            seen_normalized.add(normalized)
+            unique_sentences.append(sentence)
+            
+            # 最大3文まで
+            if len(unique_sentences) >= 3:
+                break
+        
+        if unique_sentences:
+            result = '。'.join(unique_sentences) + '。'
+            logger.debug(f"重複文除去: {len(sentences)}文 → {len(unique_sentences)}文")
+            return result
+        else:
+            return text
 
 # 下位互換性のためのエイリアス
 OutputAgent = CPUOptimizedOutputAgent

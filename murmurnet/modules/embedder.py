@@ -189,6 +189,71 @@ def get_global_embedder(config: Dict[str, Any]) -> SharedEmbedder:
     """後方互換性のためのエイリアス"""
     return get_shared_embedder(config)
 
+# Embedderクラスのエイリアス（後方互換性）
+class Embedder(SharedEmbedder):
+    """
+    Embedderクラス（SharedEmbedderのエイリアス）
+    後方互換性のために提供
+    """
+    
+    def __init__(self, config: Dict[str, Any]):
+        super().__init__(config)
+        self._initialized = False
+    
+    def initialize(self) -> bool:
+        """
+        Embedderの初期化
+        SharedEmbedderは自動初期化のため、実際の処理は不要
+        
+        戻り値:
+            True: 初期化成功, False: 初期化失敗
+        """
+        try:
+            # SentenceTransformerの可用性をチェック
+            available = self.is_available()
+            self._initialized = available
+            
+            if available and self.debug:
+                logger.info("✅ Embedder初期化完了")
+            elif not available:
+                logger.warning("⚠️ Embedder初期化失敗 - SentenceTransformerが利用不可")
+            
+            return available
+            
+        except Exception as e:
+            logger.error(f"❌ Embedder初期化エラー: {e}")
+            self._initialized = False
+            return False
+    
+    def embed_text(self, text: str) -> Optional[np.ndarray]:
+        """
+        単一テキストの埋め込み生成
+        
+        引数:
+            text: 埋め込み対象のテキスト
+            
+        戻り値:
+            埋め込みベクトル or None
+        """
+        return self.encode(text)
+    
+    def embed_texts(self, texts: List[str]) -> Optional[np.ndarray]:
+        """
+        複数テキストの埋め込み生成
+        
+        引数:
+            texts: 埋め込み対象のテキストリスト
+            
+        戻り値:
+            埋め込みベクトル配列 or None
+        """
+        return self.encode(texts)
+    
+    @property
+    def is_initialized(self) -> bool:
+        """初期化状態を取得"""
+        return getattr(self, '_initialized', False)
+
 if __name__ == "__main__":
     # テスト用コード
     import time

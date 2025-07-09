@@ -70,8 +70,19 @@ class AgentPoolManager:
         self.parallel_mode = config.get('use_parallel', False)
         self.optimal_threads = self._calculate_optimal_threads()
         
-        # ModelFactoryからモデルを取得（共有インスタンス）
-        self.llm = ModelFactory.get_shared_model(self.config)
+        # エージェント別モデル管理を初期化
+        try:
+            from MurmurNet.modules.agent_model_manager import create_agent_model_manager
+            self.model_manager = create_agent_model_manager(self.config)
+            # 内部エージェント用の設定でモデルを取得
+            agent_config = self.model_manager.get_model_factory_config("internal_agents")
+            self.llm = ModelFactory.get_shared_model(agent_config)
+            logger.info("エージェント別モデル管理を有効化しました")
+        except ImportError:
+            # フォールバック: 従来の共有モデル
+            self.llm = ModelFactory.get_shared_model(self.config)
+            self.model_manager = None
+            logger.warning("エージェント別モデル管理が無効 - 共有モデルを使用します")
         
         self._load_role_templates()
         self._load_roles()
@@ -300,17 +311,31 @@ class AgentPoolManager:
         role = self.roles[agent_id]
         temperature = role.get('temperature', 0.7)
         
+        # エージェント別設定の使用
+        if self.model_manager:
+            gen_params = self.model_manager.get_generation_params("internal_agents")
+            max_tokens = gen_params.get('max_tokens', 200)
+            temperature = gen_params.get('temperature', temperature)  # 役割優先、フォールバックあり
+            top_p = gen_params.get('top_p', 0.9)
+            repeat_penalty = gen_params.get('repeat_penalty', 1.2)
+        else:
+            # フォールバック設定
+            max_tokens = 200
+            top_p = 0.9
+            repeat_penalty = 1.2
+        
         try:
             # CPU最適化されたモデル出力の生成
             with _global_llama_lock:
-                # 短いトークン数でCPU負荷を軽減
+                # エージェント別設定を使用
                 resp = self.llm.create_chat_completion(
                     messages=[{"role": "user", "content": prompt}],
-                    max_tokens=200,  # CPUパフォーマンスのため短めに
+                    max_tokens=max_tokens,
+                    max_new_tokens=max_tokens,  # 空レス防止：max_new_tokens必須設定
                     temperature=temperature,
-                    top_p=0.9,
+                    top_p=top_p,
                     top_k=40,  # CPU最適化
-                    repeat_penalty=1.1,  # 繰り返し防止
+                    repeat_penalty=repeat_penalty,
                     mirostat=0,  # CPU最適化のため無効化
                 )
             
@@ -384,6 +409,11 @@ class AgentPoolManager:
         # コンテキスト情報を構築
         context_parts = []
         
+        # 前イテレーション要約の追加（注入機能）
+        previous_summary = self.blackboard.read('previous_iteration_summary')
+        if previous_summary and previous_summary.strip():
+            context_parts.append(f"前回の議論要約: {previous_summary[:300]}")  # 最大300文字
+        
         if rag_text and rag_text.strip() and rag_text != "RAG情報なし":
             context_parts.append(f"参考情報: {rag_text[:200]}")
         
@@ -403,17 +433,33 @@ class AgentPoolManager:
             
             prompt_manager = get_prompt_manager(model_type, model_name)
             
-            # 統合コンテキスト
-            full_context = "\n".join(context_parts) if context_parts else ""
+            # 前イテレーション要約を除いたコンテキスト（重複回避）
+            context_without_summary = []
+            for part in context_parts:
+                if not part.startswith("前回の議論要約:"):
+                    context_without_summary.append(part)
             
-            # プロンプト生成（役割別システムプロンプト付き）
-            prompt = prompt_manager.build_prompt(
-                user_text=input_text,
-                role=role_name,
-                context=full_context
-            )
+            full_context = "\n".join(context_without_summary) if context_without_summary else ""
             
-            logger.debug(f"エージェント{agent_id}({role_name}): プロンプト生成完了 {len(prompt)}文字")
+            # 前イテレーション要約がある場合はPromptManager経由で注入
+            if previous_summary and previous_summary.strip():
+                # 前イテレーション要約をassistantロールで注入するプロンプト生成
+                prompt = prompt_manager.build_prompt_with_previous_summary(
+                    user_text=input_text,
+                    role=role_name,
+                    context=full_context,
+                    previous_summary=previous_summary
+                )
+                logger.debug(f"エージェント{agent_id}({role_name}): 前イテレーション要約付きプロンプト生成完了 {len(prompt)}文字")
+            else:
+                # 通常のプロンプト生成
+                prompt = prompt_manager.build_prompt(
+                    user_text=input_text,
+                    role=role_name,
+                    context=full_context
+                )
+                logger.debug(f"エージェント{agent_id}({role_name}): 標準プロンプト生成完了 {len(prompt)}文字")
+            
             return prompt
             
         except Exception as e:
@@ -492,6 +538,7 @@ class AgentPoolManager:
                 resp = self.llm.create_chat_completion(
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=300,  # 話し言葉に適したトークン数
+                    max_new_tokens=300,  # 空レス防止：max_new_tokens必須設定
                     temperature=temperature,
                     top_p=0.9
                 )
