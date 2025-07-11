@@ -263,7 +263,7 @@ class SummaryEngine:
                 logger.info(f"要約キャッシュヒット: {cache_key[:32]}...")
                 return cached_summary
             
-            # 1.1. 重複ハッシュチェック（同一内容の多重要約を抑止・強化版）
+            # 1.1. 重複ハッシュチェック（同一内容の多重要約を抑止）
             content_hashes = set()
             unique_entries = []
             duplicate_count = 0

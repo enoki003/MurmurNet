@@ -1,0 +1,175 @@
+# MurmurNet Slot アーキテクチャ設定ファイル
+# Slotアーキテクチャを使用した多角的な出力生成
+
+# === 基本設定 ===
+debug: true
+use_slots: true           # Slotアーキテクチャを有効化
+use_collaboration: true   # 協調システムを有効化（重要：議論を実現）
+use_memory: true          # 会話記憶を使用
+use_summary: false        # 従来の要約は無効（Slotが代替）
+use_parallel: false       # Slotは逐次実行
+
+# === 構造化Blackboard設定 ===
+use_structured_blackboard: true   # 構造化Blackboardを有効化
+blackboard_debug: true            # Blackboardデバッグ出力
+max_blackboard_history: 1000      # 最大履歴保持数
+blackboard_version_tolerance: 1   # バージョン競合許容範囲
+
+# === Slot固有設定 ===
+slot_max_output_length: 300      # Slot出力の最大文字数（議論に必要な長さ）
+slot_temperature: 0.5            # Slot生成時の温度パラメータ（議論の多様性確保）
+slot_top_p: 0.9                  # Slot生成時のtop_p
+slot_similarity_threshold: 0.7   # 類似度判定の閾値
+max_slot_entries: 100            # 最大Slotエントリ数
+
+# === 協調システム設定 ===
+collaboration_intensity: "high"   # 協調の強度（low/medium/high）
+enable_direct_confrontation: true # 直接対立を許可
+require_citation: true            # 他者の意見の引用を必須とする
+max_interaction_rounds: 4         # 最大相互作用回数
+
+# === モデル設定 ===
+# 使用するモデルを指定
+models:
+  # チャット用モデル（Slot生成に使用）
+  chat_model: "llm-jp/llm-jp-3-150m-instruct3"
+  # テキスト生成用モデル
+  text_model: "llm-jp/llm-jp-3-150m"
+  # モデルキャッシュディレクトリ
+  cache_dir: "./cache/models"
+
+# === 埋め込み設定 ===
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  cache_folder: "./models/st_cache"
+  local_files_only: true
+  device: "cpu"                  # GPU使用の場合は "cuda"
+
+# === テンプレート破損対策設定 ===
+# 根本原因（テンプレート断片の生成）を防ぐ安全機構
+enable_template_validation: true    # 応答のバリデーション機能を有効化
+use_template_builder: true          # 安全なテンプレートビルダーを使用
+enable_auto_recovery: true          # 自動修復機能を有効化
+max_retry_attempts: 1               # 最大再試行回数
+template_max_retry: 1               # テンプレート生成の最大再試行回数
+template_enable_recovery: true      # テンプレート修復機能を有効化
+
+# === RAG設定 ===
+rag_mode: "dummy"               # dummy または zim
+zim_path: ""                    # ZIMファイルパス（rag_mode=zimの場合）
+
+# === パフォーマンス設定 ===
+performance_monitoring: true
+memory_tracking: true
+blackboard_cache_size: 500
+blackboard_history_size: 1000
+
+# === ログ設定 ===
+log_level: "INFO"
+enable_detailed_logging: true
+
+# === 従来設定（Slotモードでは無効） ===
+num_agents: 2               # Slotモードでは無視
+iterations: 1               # Slotモードでは無視
+
+# ================================================================
+# 構造化Blackboard エージェント役割と API 規約
+# ================================================================
+#
+# 【エージェント役割】
+# - RESEARCHER    : external_knowledge セクションに書き込み (RAG、外部情報取得)
+# - CRITIC        : opinions セクションに批判的意見を書き込み 
+# - SUPPORTER     : opinions セクションに支持的意見を書き込み
+# - REFORMULATOR  : opinions セクションに改良提案を書き込み
+# - SYNTHESIZER   : summary セクションに統合結果を書き込み
+# - OUTPUT        : 全セクションを読み取り専用（最終出力生成）
+#
+# 【API使用規約】
+# 各エージェントは以下のAPIのみ使用可能:
+# - add_opinion(agent_id, agent_role, content, version_read, metadata)
+# - add_knowledge(agent_id, content, source, version_read, metadata) 
+# - update_summary(agent_id, content, version_read, metadata)
+# - get_snapshot() : 現在の状態を読み取り
+#
+# 【バージョン管理】
+# - 各書き込み時に自動でバージョンがインクリメント
+# - エージェントは読み取った版数を記録し、古い版への書き込みは拒否
+# - 1版の遅れまでは許容（競合回避）
+#
+# 【擬似非同期ステップ】
+# 1. start_round() でスナップショット配布と版数取得
+# 2. 各エージェントが並行して生成・準備
+# 3. commit_round() で一括コミット（ラウンド完了）
+# ================================================================
+
+# === Slot エージェント役割マッピング ===
+slot_agent_roles:
+  ReformulatorSlot: "REFORMULATOR"   # 改良提案
+  CriticSlot: "CRITIC"               # 批判的分析
+  SupporterSlot: "SUPPORTER"         # 支持・推進
+  SynthesizerSlot: "SYNTHESIZER"     # 統合・要約
+  OutputSlot: "OUTPUT"               # 最終出力
+
+# === エージェント役割マッピング設定 ===
+agent_roles:
+  ReformulatorSlot: "reformulator"  # 問題再定式化
+  CriticSlot: "critic"              # 批判的分析
+  SupporterSlot: "supporter"        # 支持的意見
+  SynthesizerSlot: "synthesizer"    # 統合・要約
+  OutputAgent: "output"             # 最終出力（読み取り専用）
+
+# === 構造化Blackboard詳細設定 ===
+structured_blackboard:
+  version_check_strict: false       # 厳密なバージョンチェック
+  auto_commit: true                 # 自動コミット
+  enable_history: true              # 操作履歴を有効化
+  compress_history: false           # 履歴圧縮（大量データ時）
+
+# === 改良版Slot設定 ===
+use_enhanced_slots: true          # 改良版Slotを使用
+enhanced_slot_features:
+  deep_analysis: true             # 深い分析モード
+  role_specialization: true       # 役割特化
+  responsibility_clear: true      # 責任明確化
+  rag_integration: true          # RAG統合
+
+# === RAG設定改良 ===
+rag_mode: "zim"                  # dummy → zim に変更（実際のRAG使用）
+zim_path: "./data/sample.zim"    # ZIMファイルパス（サンプル）
+rag_top_k: 3                     # RAG検索結果数
+rag_min_score: 0.5              # RAG最小スコア
+
+# === Slot専門化設定 ===
+slot_specialization:
+  ReformulatorSlot:
+    focus: "deep_analysis"        # 深い分析に特化
+    prompt_style: "analytical"    # 分析的プロンプト
+  CriticSlot:
+    focus: "constructive_criticism" # 建設的批判に特化
+    prompt_style: "critical"      # 批判的プロンプト
+  SupporterSlot:
+    focus: "creative_expansion"   # 創造的拡張に特化
+    prompt_style: "creative"      # 創造的プロンプト
+  SynthesizerSlot:
+    focus: "responsible_integration" # 責任明確な統合
+    prompt_style: "integrative"   # 統合的プロンプト
+    require_justification: true   # 判断根拠必須
+
+# === 知的統合設定（IntelligentSynthesizer用） ===
+use_intelligent_synthesizer: true      # IntelligentSynthesizerを使用
+use_template_builder: true             # テンプレートビルダーを使用（破損対策）
+enable_auto_recovery: true             # 自動復旧を有効化
+max_retry_attempts: 1                  # 最大再試行回数
+synthesis_confidence_threshold: 0.6    # 統合の信頼度閾値
+evidence_weight: 0.4                   # 証拠の重み
+logic_weight: 0.3                      # 論理の重み
+relevance_weight: 0.3                  # 関連性の重み
+
+# === テンプレート破損対策設定 ===
+template_corruption_prevention:
+  enable_validation: true              # 応答検証を有効化
+  enable_auto_fix: true               # 自動修復を有効化
+  max_pipe_chars: 2                   # 連続パイプ文字の最大数
+  max_equals_chars: 4                 # 連続等号文字の最大数
+  min_japanese_chars: 5               # 最小日本語文字数
+  fallback_response_enabled: true     # フォールバック応答を有効化

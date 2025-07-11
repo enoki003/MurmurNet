@@ -68,14 +68,86 @@ class BaseModel(ABC):
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.logger = logging.getLogger('MurmurNet.Model')
+        
+        # テンプレート破損対策設定
+        self.enable_validation = config.get('enable_template_validation', True)
+        self.max_retry_attempts = config.get('max_retry_attempts', 1)
 
     @abstractmethod
-    def generate(self, prompt: str, **kwargs) -> str:
+    def _generate_raw(self, prompt: str, **kwargs) -> str:
+        """生のモデル生成（サブクラスで実装）"""
         pass
 
     @abstractmethod
     def is_available(self) -> bool:
         pass
+    
+    def generate(self, prompt: str, **kwargs) -> str:
+        """
+        バリデーション付きの安全な生成
+        """
+        if not self.enable_validation:
+            return self._generate_raw(prompt, **kwargs)
+        
+        # テンプレート破損対策のためのstop設定
+        stop_tokens = kwargs.get('stop', [])
+        if not stop_tokens:
+            stop_tokens = ["<end_of_turn>", "</s>", "<|end_of_turn|>"]
+            kwargs['stop'] = stop_tokens
+        
+        # 初回生成
+        response = self._generate_raw(prompt, **kwargs)
+        
+        # バリデーション
+        if self._is_valid_response(response):
+            return response
+        
+        # 再試行（より保守的な設定）
+        self.logger.warning("応答が無効です。再試行します。")
+        retry_kwargs = kwargs.copy()
+        retry_kwargs.update({
+            'temperature': 0.0,
+            'max_new_tokens': min(kwargs.get('max_new_tokens', 256), 128),
+            'do_sample': False
+        })
+        
+        response = self._generate_raw(prompt, **retry_kwargs)
+        
+        if self._is_valid_response(response):
+            return response
+        
+        # 最終フォールバック
+        self.logger.error("応答生成に失敗しました。エラーメッセージを返します。")
+        return "[ERROR] テンプレート復旧に失敗しました。"
+    
+    def _is_valid_response(self, response: str) -> bool:
+        """応答の妥当性を検証"""
+        import re
+        
+        if not response or len(response.strip()) == 0:
+            return False
+        
+        # 異常な文字パターンの検出
+        if re.search(r"[|]{3,}", response):
+            self.logger.warning("縦棒洪水を検出")
+            return False
+        
+        if re.search(r"[=]{5,}", response):
+            self.logger.warning("等号洪水を検出")
+            return False
+        
+        # 破損したテンプレートの検出
+        if re.search(r"of_of_of|end_of_turn\|", response):
+            self.logger.warning("テンプレート破損パターンを検出")
+            return False
+        
+        # 意味のあるコンテンツの検証
+        japanese_chars = len(re.findall(r"[ひらがなカタカナ一-龯]", response))
+        if japanese_chars < 3:
+            self.logger.warning("日本語コンテンツが不足")
+            return False
+        
+        return True
 
 class LlamaModel(BaseModel):
     def __init__(self, config: Dict[str, Any]):
@@ -153,7 +225,7 @@ class LlamaModel(BaseModel):
             self._initialization_error = str(e)
             self._llm = None
 
-    def generate(self, prompt: str, **kwargs) -> str:
+    def _generate_raw(self, prompt: str, **kwargs) -> str:
         self._ensure_initialized()
         if not self._llm:
             error_msg = "Llamaモデルが利用できません。"
@@ -328,7 +400,7 @@ class HuggingFaceModel(BaseModel):
             self._model = None
             self._tokenizer = None
 
-    def generate(self, prompt: str, **kwargs) -> str:
+    def _generate_raw(self, prompt: str, **kwargs) -> str:
         self._ensure_initialized()
         if not self._model or not self._tokenizer:
             error_msg = "HuggingFaceモデルが利用できません。"
@@ -418,9 +490,6 @@ class HuggingFaceModel(BaseModel):
                     'repetition_penalty': 1.3,             # 繰り返しペナルティ強化
                     'use_cache': True,                     # キャッシュ有効
                     'no_repeat_ngram_size': 3,             # 3-gram重複を禁止
-                    # ビーム探索パラメータを削除（num_beams=1の場合は無効）
-                    # 'early_stopping': True,              # ← 削除
-                    # 'length_penalty': 0.9,               # ← 削除
                 }
                 self.logger.debug(f"小型モデル用重複防止設定適用: {model_name}")
             else:
@@ -436,9 +505,6 @@ class HuggingFaceModel(BaseModel):
                     'repetition_penalty': 1.0,             # 繰り返しペナルティを軽減
                     'use_cache': True,                     # キャッシュ有効
                     'no_repeat_ngram_size': 0,             # n-gram制限を無効化
-                    # ビーム探索パラメータを削除
-                    # 'early_stopping': False,             # ← 削除
-                    # 'length_penalty': 1.0,               # ← 削除
                 }
             
             # 推論実行
@@ -463,7 +529,7 @@ class HuggingFaceModel(BaseModel):
     
     def _post_process_response(self, response: str, original_prompt: str) -> str:
         """
-        llm-jp-3-150m-instruct3向けの応答後処理（改良版）
+        llm-jp-3-150m-instruct3向けの応答後処理
         
         Args:
             response: 生成された応答
@@ -757,3 +823,18 @@ def create_model_from_args(model_type: str = None, model_name: str = None, model
         raise ValueError(f"未対応のmodel_type: {model_type}. 'llama' または 'huggingface' を指定してください。")
     
     return ModelFactory.create_model(config)
+
+def clear_model_cache():
+    """モデルキャッシュをクリアする"""
+    global _MODEL_CACHE
+    logger = logging.getLogger('MurmurNet.ModelFactory')
+    with _CACHE_LOCK:
+        logger.debug(f"モデルキャッシュをクリア中... 現在のサイズ: {len(_MODEL_CACHE)}")
+        _MODEL_CACHE.clear()
+        logger.info("モデルキャッシュをクリアしました")
+
+def get_model_cache_size() -> int:
+    """現在のモデルキャッシュサイズを取得"""
+    global _MODEL_CACHE
+    with _CACHE_LOCK:
+        return len(_MODEL_CACHE)

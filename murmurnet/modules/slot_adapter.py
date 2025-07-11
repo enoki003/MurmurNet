@@ -106,7 +106,7 @@ class SlotBlackboardAdapter:
             timestamp=time.time()
         )
         
-        # レガシーBlackboardにも追加（段階的移行中のみ）
+        # 従来Blackboardにも追加（段階的移行中のみ）
         if self.legacy_bb:
             self.legacy_bb.add_slot_entry(slot_name, text, embedding, metadata)
         
@@ -261,16 +261,17 @@ class SlotBlackboardAdapter:
                 'knowledge': structured_stats['knowledge_count'],
                 'summary_updates': structured_stats['summary_updates']
             },
-            'legacy_compatibility': self.legacy_bb is not None,
+            'compatibility': self.legacy_bb is not None,
             'slot_mappings': len(self.slot_role_mapping)
         }
     
     def clear_turn(self) -> None:
         """ターンクリア（既存APIとの互換性）"""
+        # Blackboard version維持
         if self.debug:
-            logger.info("Turn cleared - StructuredBlackboard版数維持")
+            logger.info("Turn cleared - StructuredBlackboard version維持")
         
-        # レガシーシステムのクリアは行うが、StructuredBlackboardは維持
+        # 従来システムのクリアは行うが、StructuredBlackboardは維持
         if self.legacy_bb:
             self.legacy_bb.clear_turn()
     
@@ -282,7 +283,7 @@ class SlotBlackboardAdapter:
         """従来のSlotBlackboardを接続（移行期間中の互換性）"""
         self.legacy_bb = legacy_bb
         if self.debug:
-            logger.info("レガシーBlackboard接続完了")
+            logger.info("SlotBlackboard接続完了")
     
     def _get_agent_role(self, slot_name: str) -> AgentRole:
         """Slot名からAgentRoleを取得"""

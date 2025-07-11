@@ -283,12 +283,12 @@ class SlotBlackboard(Blackboard):
         return debug_view
     
     def get_structured_context(self) -> Dict[str, Any]:
-        """構造化されたコンテキストを取得（enhanced slots用）"""
+        """構造化されたコンテキストを取得"""
         # SlotBlackboardAdapterが利用可能な場合は構造化Blackboardから取得
         if hasattr(self, '_structured_adapter') and self._structured_adapter:
             return self._structured_adapter.structured_bb.get_synthesis_context()
         
-        # フォールバック: 従来の形式でコンテキストを構築
+        # フォールバック: 基本形式でコンテキストを構築
         with self.slot_lock:
             recent_entries = sorted(self.slot_entries, key=lambda x: x.timestamp, reverse=True)[:5]
         

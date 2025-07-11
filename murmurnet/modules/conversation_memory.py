@@ -99,6 +99,17 @@ class VectorizedMemoryCache:
                 if len(self.embedding_cache) >= self.max_size // 2:
                     self.embedding_cache.popitem(last=False)
             self.embedding_cache[key] = embedding
+    
+    def size(self) -> int:
+        """キャッシュのサイズを返す"""
+        with self.lock:
+            return len(self.cache) + len(self.embedding_cache)
+    
+    def clear(self):
+        """キャッシュをクリア"""
+        with self.lock:
+            self.cache.clear()
+            self.embedding_cache.clear()
 
 class OptimizedConversationMemory:
     """
@@ -649,8 +660,8 @@ class OptimizedConversationMemory:
             if hasattr(self, 'executor') and self.executor:
                 logger.debug("ThreadPoolExecutorをシャットダウン中...")
                 try:
-                    # 進行中のタスクの完了を待つ（最大3秒）
-                    self.executor.shutdown(wait=True, timeout=3.0)
+                    # 進行中のタスクの完了を待つ
+                    self.executor.shutdown(wait=True)
                     logger.debug("ThreadPoolExecutorシャットダウン完了")
                 except Exception as e:
                     logger.warning(f"ThreadPoolExecutor強制終了: {e}")

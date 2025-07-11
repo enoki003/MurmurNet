@@ -248,6 +248,26 @@ class PromptManager:
         """システムプロンプトを取得"""
         return self.template.get_system_prompt(role)
     
+    def get_slot_system_prompt(self, slot_type: str) -> str:
+        """Slot用のシステムプロンプトを取得"""
+        slot_prompts = {
+            'reformulator': "あなたは入力再構成の専門家です。情報を別表現で言い換え、具体例や関連側面を提示してください。",
+            'critic': "あなたは建設的批評家です。潜在課題、改善余地、別角度、注意点を分析してください。",
+            'supporter': "あなたは支援的アドバイザーです。良点の指摘、可能性の提示、励まし、次の一手を提示してください。",
+            'synthesizer': "あなたは統合専門家です。複数の視点を総合し、有用な最終回答を作成してください。"
+        }
+        return slot_prompts.get(slot_type, "あなたは専門家です。与えられた課題について分析してください。")
+    
+    def get_slot_user_prompt_template(self, slot_type: str) -> str:
+        """Slot用のユーザープロンプトテンプレートを取得"""
+        templates = {
+            'reformulator': "以下の質問を分析して、核心的な問題を明確にしてください。\n\n質問: {user_input}\n\n分析（60文字以内）:",
+            'critic': "以下の質問に対して、リスクや課題を指摘してください。\n\n質問: {user_input}\n\n課題・リスク（60文字以内）:",
+            'supporter': "以下の質問に対して、ポジティブな可能性を提示してください。\n\n質問: {user_input}\n\n可能性・利点（60文字以内）:",
+            'synthesizer': "質問: {user_input}\n\n専門家の意見:\n{opinions}\n\n統合結論（80文字以内）:"
+        }
+        return templates.get(slot_type, "質問: {user_input}\n\n回答:")
+    
     def build_prompt_with_previous_summary(self, user_text: str, role: str = "assistant", 
                                           context: str = "", previous_summary: str = "") -> str:
         """

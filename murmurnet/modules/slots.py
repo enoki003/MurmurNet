@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Slot Based Architecture (enhanced for structured blackboard)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Slot Based Architecture
+~~~~~~~~~~~~~~~~~~~~~~~
 分散SLMシステムのSlotベースアーキテクチャの実装
 
 主要機能:
@@ -12,7 +12,6 @@ Slot Based Architecture (enhanced for structured blackboard)
 - SlotBlackboard: Slotデータストレージ（新しいBlackboardへの移行）
 
 作者: Yuhi Sonoki
-改良: 構造化Blackboard対応、model-template alignment修正
 """
 
 import re
@@ -36,7 +35,6 @@ except ImportError:
 from .blackboard import Blackboard
 from .slot_blackboard import SlotBlackboard, SlotEntry
 from .model_factory import ModelFactory
-from .model_factory_singleton import ModelFactorySingleton
 from .prompt_manager import PromptManager
 from .embedder import Embedder
 
@@ -63,10 +61,10 @@ def _import_boids():
             pass
     return None, None
 
-def _import_enhanced_synthesizer():
+def _import_synthesizer():
     try:
-        from .enhanced_synthesizer import BoidsBasedSynthesizer  # type: ignore
-        return BoidsBasedSynthesizer
+        from .enhanced_synthesizer import IntelligentSynthesizer  # type: ignore
+        return IntelligentSynthesizer
     except ImportError:
         return None
 
@@ -81,15 +79,24 @@ class BaseSlot(ABC):
     # Initialisation / configuration
     # ---------------------------------------------------------------------
 
-    def __init__(self, name: str, cfg: Dict[str, Any], model_factory: ModelFactory):
+    def __init__(self, name: str, cfg: Dict[str, Any], model_factory):
         self.name = name
+        self.config = cfg  # configという名前で保存
         self.cfg = cfg
         self.model_factory = model_factory
         self.debug: bool = cfg.get("debug", False)
 
+        # PromptManagerの初期化
+        try:
+            self.prompt_manager = PromptManager(cfg)
+        except Exception as e:
+            if self.debug:
+                logger.warning(f"PromptManager初期化失敗: {e}")
+            self.prompt_manager = None
+
         # Generation parameters (slot‑local override可)
-        self.max_output_len: int = cfg.get("slot_max_output_length", 200)
-        self.temperature: float = cfg.get("slot_temperature", 0.8)
+        self.max_output_len: int = cfg.get("slot_max_output_length", 100)  # Gemma向けに短縮
+        self.temperature: float = cfg.get("slot_temperature", 0.3)  # Gemma向けに低い温度
         self.top_p: float = cfg.get("slot_top_p", 0.9)
 
         # Statistics
@@ -178,6 +185,127 @@ class BaseSlot(ABC):
         return min(quality_score, 1.0)
 
     # ------------------------------------------------------------------
+    # Collaborative execution methods（協調実行メソッド）
+    # ------------------------------------------------------------------
+    
+    def execute_cross_reference(self, bb: SlotBlackboard, user_input: str, other_opinions: List[Dict[str, Any]], embedder=None) -> Optional[SlotEntry]:
+        """他Slotの意見を参照して相互議論を実行"""
+        t0 = time.time()
+        
+        try:
+            sys_prompt = self.build_system_prompt()
+            
+            # 相互参照プロンプトがあれば使用、なければ通常プロンプト
+            cross_ref_prompt = self.build_cross_reference_prompt(bb, user_input, other_opinions)
+            if cross_ref_prompt:
+                usr_prompt = cross_ref_prompt
+            else:
+                usr_prompt = self.build_user_prompt(bb, user_input)
+            
+            if self.debug:
+                print(f"\n{self.name} (相互参照モード) ---")
+                print(f"参照意見数: {len(other_opinions)}")
+                print("─" * 60)
+            
+            response = self._generate_response(sys_prompt, usr_prompt)
+            
+            if not response or response.strip() == "":
+                return None
+            
+            # 埋め込み生成
+            embedding = None
+            if embedder and response:
+                try:
+                    embedding = embedder.embed_text(response)
+                except Exception as e:
+                    if self.debug:
+                        print(f"埋め込み生成エラー: {e}")
+            
+            # メタデータに相互参照情報を追加
+            metadata = {
+                "role": self.get_role_description(),
+                "execution_time": time.time() - t0,
+                "user_input": user_input[:100],
+                "cross_reference_mode": True,
+                "referenced_opinions": len(other_opinions),
+                "phase": 2  # 相互参照フェーズ
+            }
+            
+            entry = bb.add_slot_entry(self.name, response, embedding, metadata)
+            
+            self.exec_count += 1
+            self.last_exec_time = time.time() - t0
+            self.total_exec_time += self.last_exec_time
+            
+            return entry
+            
+        except Exception as e:
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            logger.error(f"Slot '{self.name}' 相互参照実行エラー: {e}")
+            return None
+
+    def execute_consensus_building(self, bb: SlotBlackboard, user_input: str, all_opinions: List[Dict[str, Any]], conflicts: List[Dict[str, Any]], embedder=None) -> Optional[SlotEntry]:
+        """合意形成・対立解消を実行"""
+        t0 = time.time()
+        
+        try:
+            sys_prompt = self.build_system_prompt()
+            
+            # 合意形成プロンプトがあれば使用、なければ通常プロンプト
+            consensus_prompt = self.build_consensus_prompt(bb, user_input, all_opinions, conflicts)
+            if consensus_prompt:
+                usr_prompt = consensus_prompt
+            else:
+                usr_prompt = self.build_user_prompt(bb, user_input)
+            
+            if self.debug:
+                print(f"\n{self.name} (合意形成モード) ---")
+                print(f"対象意見数: {len(all_opinions)}, 対立点: {len(conflicts)}")
+                print("─" * 60)
+            
+            response = self._generate_response(sys_prompt, usr_prompt)
+            
+            if not response or response.strip() == "":
+                return None
+            
+            # 埋め込み生成
+            embedding = None
+            if embedder and response:
+                try:
+                    embedding = embedder.embed_text(response)
+                except Exception as e:
+                    if self.debug:
+                        print(f"埋め込み生成エラー: {e}")
+            
+            # メタデータに合意形成情報を追加
+            metadata = {
+                "role": self.get_role_description(),
+                "execution_time": time.time() - t0,
+                "user_input": user_input[:100],
+                "consensus_building_mode": True,
+                "total_opinions": len(all_opinions),
+                "conflicts_addressed": len(conflicts),
+                "phase": 3  # 合意形成フェーズ
+            }
+            
+            entry = bb.add_slot_entry(self.name, response, embedding, metadata)
+            
+            self.exec_count += 1
+            self.last_exec_time = time.time() - t0
+            self.total_exec_time += self.last_exec_time
+            
+            return entry
+            
+        except Exception as e:
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            logger.error(f"Slot '{self.name}' 合意形成実行エラー: {e}")
+            return None
+
+    # ------------------------------------------------------------------
     # Public execution entry‑point
     # ------------------------------------------------------------------
 
@@ -253,21 +381,23 @@ class BaseSlot(ABC):
     def _generate_response(self, system_prompt: str, user_prompt: str) -> str:
         """モデル種別を判別し、最適な方法でテキストを生成。"""
 
-        # 利用可能なモデルを取得（150mが無い場合は任意のモデル）
+        # ModelFactoryを使ってモデルを作成
         try:
-            model = self.model_factory.get_model("150m")
+            # ModelFactoryがクラスかインスタンスかを判別
+            if isinstance(self.model_factory, type):
+                # クラスとして渡された場合
+                model = self.model_factory.create_model(self.config)
+            else:
+                # インスタンスとして渡された場合
+                if hasattr(self.model_factory, 'create_model'):
+                    model = self.model_factory.create_model(self.config)
+                else:
+                    # 他の可能性もチェック
+                    model = self.model_factory
         except Exception as e:
             if self.debug:
-                print(f"150Mモデル取得エラー: {e}")
-            model = None
-        
-        if model is None:
-            try:
-                model = self.model_factory.get_any_available_model()
-            except Exception as e:
-                if self.debug:
-                    print(f"利用可能モデル取得エラー: {e}")
-                return f"モデル取得エラー: {str(e)[:50]}"
+                print(f"モデル作成エラー: {e}")
+            return f"モデル作成エラー: {str(e)[:50]}..."
         
         if model is None:
             return "モデルが利用できません。"
@@ -363,21 +493,99 @@ class BaseSlot(ABC):
     def _clean_response(self, text: str) -> str:
         if not isinstance(text, str):
             text = str(text)
+        
+        # デバッグ：生の出力をログ
+        if self.debug and len(text) > 50:
+            print(f"[{self.name}] 生出力 (最初50文字): {text[:50]}...")
+        
         text = text.strip()
 
-        # Gemma / Llama special‑token removal
-        text = re.sub(r"<\|[^>]+?\|>", "", text)  # Gemma tokens
+        # Gemma / Llama special-token removal (頑健化版)
+        # 1. 完全な特殊トークンを除去（改行・空白込み）
+        text = re.sub(r"<\|\s*[\w_]+?\s*\|>", "", text, flags=re.DOTALL)  # 改行・空白込み
+        
+        # 2. 途中で切れた残骸も除去
+        text = re.sub(r"<\|\w*$", "", text)  # 末尾の不完全トークン
+        text = re.sub(r"<\|[^>]*$", "", text)  # より広範な不完全トークン
+        text = re.sub(r"\|\s*[\w_]+?\s*\|>?", "", text)  # 先頭 < が欠落した残骸
+        
+        # 単独縦棒が行に残ったら削除
+        text = re.sub(r"^[| ]+$", "", text, flags=re.MULTILINE)
+        
+        # 2. 先頭 '<' が欠落して残った '|>' 断片を除去  ←★追加
+        text = re.sub(r"\|>+", "", text)          # "|>" も "||>" もまとめて消す
+        text = re.sub(r"\|\s*$", "", text)        # 行末の '|' だけ取り残った場合
+        text = re.sub(r">\s*$", "", text)         # 行末に '>' が残った場合
+        
+        # 3. 従来の除去パターン（強化版）
+        text = re.sub(r"<\|[^>]+?\|>", "", text)  # 従来パターン
         text = re.sub(r"<\/?(system|user|assistant)>", "", text)
         text = re.sub(r"\[\/?INST]", "", text)
         text = re.sub(r"<<\/?SYS>>", "", text)
         text = re.sub(r"<s>", "", text)
-
+        text = re.sub(r"</s>", "", text)
+        
+        # 4. 新しい頑健化パターン
+        text = re.sub(r"<\|end_of_turn\|>", "", text)  # 明示的除去
+        text = re.sub(r"<\|start_of_turn\|>", "", text)  # 明示的除去
+        text = re.sub(r"<\|assistant\|>", "", text)
+        text = re.sub(r"<\|user\|>", "", text)
+        text = re.sub(r"<\|system\|>", "", text)
+        
+        # 5. 不完全なトークンの断片を除去
+        text = re.sub(r"of_turn>", "", text)  # 不完全な end_of_turn
+        text = re.sub(r"start_of_", "", text)  # 不完全な start_of_turn
+        text = re.sub(r"end_of_", "", text)   # 不完全な end_of_turn
+        
+        # 6. 危険な文字の全角化（保険）
+        text = text.replace("<", "＜").replace(">", "＞")
+        
+        # Gemmaの問題パターンをより積極的にクリーンアップ
+        # 1. "of_of_of|" や "and|endend|end" のような繰り返し（強化版）
+        text = re.sub(r"(\b\w+\b)(?:[_\|]\1){2,}[_\|]?", r"\1", text)  # 同じ単語が3回以上連続したら1回に圧縮
+        text = re.sub(r"(\w+)(_\1)+(_|\|)?", r"\1", text)  # "word_word_word" -> "word"
+        text = re.sub(r"(\w+)\|\1+\|?", r"\1", text)  # "word|wordword|" -> "word"
+        text = re.sub(r"(\w+)(\|\w+)?\2{2,}", r"\1\2", text)  # 3回以上の繰り返し
+        
+        # 2. 連続する縦線やアンダースコアの削除（強化版）
+        text = re.sub(r"\|{2,}", "|", text)  # "|||" -> "|"
+        text = re.sub(r"_{2,}", "_", text)  # "___" -> "_"
+        text = re.sub(r"\|+$", "", text)  # 末尾の縦線削除
+        text = re.sub(r"_+$", "", text)  # 末尾のアンダースコア削除
+        
+        # 単独縦棒を行から完全除去
+        text = re.sub(r"^\|+$", "", text, flags=re.MULTILINE)  # 行全体が縦棒のみ
+        text = re.sub(r"^\|\s*$", "", text, flags=re.MULTILINE)  # 縦棒と空白のみの行
+        text = re.sub(r"\|+\s*\n", "\n", text)  # 行末の縦棒
+        text = re.sub(r"\n\s*\|+", "\n", text)  # 行頭の縦棒
+        
+        # 3. 意味のない短い断片を削除
+        if len(text) < 5 and re.match(r"^[\w\|_＜＞]+$", text):
+            text = ""  # 短すぎて意味不明な場合は空にする
+        
+        # 4. 改行が多すぎる場合の正規化
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        
         text = re.sub(r"</?\w+[^>]*?>", "", text)  # stray HTML
         text = text.strip()
 
-        if len(text) > self.max_output_len:
-            text = text[: self.max_output_len].rsplit(" ", 1)[0] + "…"
-        return text or "応答を生成しました。"
+        # 空または無意味な出力の場合のフォールバック
+        if not text or len(text.strip()) < 5:
+            result = f"{self.name.replace('Slot', '')}は適切な応答を生成できませんでした。"
+        else:
+            result = text
+
+        # 文字数制限は最後に適用（完全クリーン後）
+        if len(result) > self.max_output_len:
+            result = result[: self.max_output_len].rsplit(" ", 1)[0] + "…"
+        
+        # デバッグ：クリーニング後の出力をログ + 危険文字チェック
+        if self.debug:
+            print(f"[{self.name}] クリーニング後: {result[:100]}...")
+            if '＜' in result or '＞' in result or '|' in result:
+                print(f"[{self.name}] 注意: 特殊文字が残存しています: {result}")
+        
+        return result
 
     # --------------------------------------------------------------
     # Statistics helper
@@ -403,96 +611,219 @@ class ReformulatorSlot(BaseSlot):
         return "入力の再構成・拡張"
 
     def build_system_prompt(self) -> str:
-        return (
-            "あなたは入力再構成の専門家です。以下の観点で情報を再構成してください:\n"
-            "1. 別表現への言い換え\n2. 具体例\n3. 関連側面\n4. 詳細化\n"
-            "謝罪・否定的表現は禁止。簡潔で実用的に。"
-        )
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            return self.prompt_manager.get_slot_system_prompt('reformulator')
+        return """あなたは厳密な分析専門家です。以下の責任を果たしてください：
+
+1. 曖昧な概念を明確に定義する
+2. 問題の範囲と制約を明示する
+3. 隠れた前提条件を暴露する
+4. 議論すべき具体的な論点を提示する
+
+必ず具体的で明確な分析をし、他の専門家が反論できる明確な論点を提供してください。"""
 
     def build_user_prompt(self, bb: SlotBlackboard, user_input: str) -> str:
-        ctx = [f"入力: {user_input}"]
-        try:
-            entries = bb.get_slot_entries()
-            recent_entries = entries[-3:] if entries else []
-            for entry in recent_entries:
-                if entry.slot_name != self.name:
-                    ctx.append(f"{entry.slot_name}: {entry.text[:80]}")
-        except Exception as e:
-            if self.debug:
-                print(f"SlotBlackboard取得エラー: {e}")
-        context = "\n".join(ctx)
-        return f"以下の入力を再構成してください:\n\n{context}\n\nより多角的に再構成せよ。"
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            template = self.prompt_manager.get_slot_user_prompt_template('reformulator')
+            return template.format(user_input=user_input)
+        return f"""以下の質問について、厳密な分析を行ってください：
+
+質問: {user_input}
+
+分析要求:
+1. 「{user_input}」の曖昧な部分を明確に定義する
+2. 変化の対象は誰か（学習者・教員・学校・社会）
+3. 時間軸は何か（短期・中期・長期）
+4. 成功の指標は何か
+
+150文字以内で、他の専門家が具体的に反論できる明確な分析を述べてください："""
+
+    def build_cross_reference_prompt(self, bb: SlotBlackboard, user_input: str, other_opinions: List[Dict[str, Any]]) -> Optional[str]:
+        """他の意見を参照した再構成プロンプト"""
+        if not other_opinions:
+            return None
+        
+        opinions_text = ""
+        for op in other_opinions[:2]:  # 最大2つの意見
+            role = op.get('role', 'Unknown')
+            content = op.get('content', '')[:40]  # 40文字に制限
+            opinions_text += f"- {role}: {content}\n"
+        
+        return f"質問: {user_input}\n\n他の意見:\n{opinions_text}\n上記を踏まえた新しい分析（60文字以内）:"
 
 class CriticSlot(BaseSlot):
     def get_role_description(self) -> str:
         return "批判的分析・課題指摘"
 
     def build_system_prompt(self) -> str:
-        return (
-            "あなたは建設的批評家です。次の観点で分析せよ:\n"
-            "1. 潜在課題 2. 改善余地 3. 別角度 4. 注意点\n"
-            "否定に偏らず実用的に。謝罪不要。"
-        )
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            return self.prompt_manager.get_slot_system_prompt('critic')
+        return """あなたは厳密な批判専門家です。以下の責任を果たしてください：
+
+1. 楽観的な仮定を徹底的に疑う
+2. 実現可能性の具体的な障害を指摘する
+3. 見落とされているリスクを明確に示す
+4. 既存の失敗事例や制約を引用する
+
+必ず具体的な根拠を示し、他の専門家が反論したくなる鋭い批判を提供してください。"""
 
     def build_user_prompt(self, bb: SlotBlackboard, user_input: str) -> str:
-        parts = [f"元の入力: {user_input}"]
-        try:
-            others = [e for e in bb.get_slot_entries() if e.slot_name != self.name]
-            if others:
-                parts.append("他の視点:")
-                for e in others[-2:]:
-                    parts.append(f"・{e.slot_name}: {e.text[:100]}")
-        except Exception as e:
-            if self.debug:
-                print(f"SlotBlackboard取得エラー: {e}")
-        return "\n".join(parts)
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            template = self.prompt_manager.get_slot_user_prompt_template('critic')
+            return template.format(user_input=user_input)
+        return f"""以下の質問について、厳しい批判的分析を行ってください：
+
+質問: {user_input}
+
+批判要求:
+1. この変化が失敗する可能性が高い理由は何か
+2. 既存の制度や利害関係者の抵抗はどうか
+3. 技術的・経済的・社会的な制約は何か
+4. 過去の類似事例で失敗したものはあるか
+
+150文字以内で、具体的な根拠を示して反論を誘う批判を述べてください："""
+
+    def build_cross_reference_prompt(self, bb: SlotBlackboard, user_input: str, other_opinions: List[Dict[str, Any]]) -> Optional[str]:
+        """他の意見を参照した批判プロンプト"""
+        if not other_opinions:
+            return None
+        
+        opinions_text = ""
+        for op in other_opinions[:2]:  # 最大2つの意見
+            role = op.get('role', 'Unknown')
+            content = op.get('content', '')[:40]  # 40文字に制限
+            opinions_text += f"- {role}: {content}\n"
+        
+        return f"質問: {user_input}\n\n他の意見:\n{opinions_text}\n上記の課題・問題点（60文字以内）:"
 
 class SupporterSlot(BaseSlot):
     def get_role_description(self) -> str:
         return "肯定的支援・価値発見"
 
     def build_system_prompt(self) -> str:
-        return (
-            "あなたは支援的アドバイザーです。以下を行ってください:\n"
-            "1. 良点の指摘 2. 可能性 3. 励まし 4. 次の一手\n"
-            "常に前向きに。謝罪不要。"
-        )
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            return self.prompt_manager.get_slot_system_prompt('supporter')
+        return """あなたは創造的な革新推進者です。以下の責任を果たしてください：
+
+1. 批判論の欠点を具体的に指摘する
+2. 実現可能な具体的な方法論を提示する
+3. 成功事例や新しい技術的解決策を示す
+4. 長期的な社会的価値を明確に論証する
+
+必ず具体的な解決策と根拠を示し、批判論に対して説得力のある反論を提供してください。"""
 
     def build_user_prompt(self, bb: SlotBlackboard, user_input: str) -> str:
-        parts = [f"元の入力: {user_input}"]
-        try:
-            critics = bb.get_slot_entries("CriticSlot")
-            if critics:
-                parts.append(f"批評: {critics[-1].text[:100]}")
-        except Exception as e:
-            if self.debug:
-                print(f"SlotBlackboard取得エラー: {e}")
-        return "\n".join(parts)
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            template = self.prompt_manager.get_slot_user_prompt_template('supporter')
+            return template.format(user_input=user_input)
+        return f"""以下の質問について、創造的で実現可能な解決策を提示してください：
+
+質問: {user_input}
+
+支援要求:
+1. この変化がもたらす具体的な社会的価値は何か
+2. 技術的制約を克服する具体的な方法は何か
+3. 成功している類似事例はあるか
+4. 段階的に実現する具体的なロードマップは何か
+
+150文字以内で、批判論に対する具体的な反論と解決策を述べてください："""
+
+    def build_cross_reference_prompt(self, bb: SlotBlackboard, user_input: str, other_opinions: List[Dict[str, Any]]) -> Optional[str]:
+        """他の意見を参照した支援プロンプト"""
+        if not other_opinions:
+            return None
+        
+        opinions_text = ""
+        for op in other_opinions[:2]:  # 最大2つの意見
+            role = op.get('role', 'Unknown')
+            content = op.get('content', '')[:40]  # 40文字に制限
+            opinions_text += f"- {role}: {content}\n"
+        
+        return f"質問: {user_input}\n\n他の意見:\n{opinions_text}\n新しい可能性・解決策（60文字以内）:"
 
 class SynthesizerSlot(BaseSlot):
     def get_role_description(self) -> str:
         return "多視点統合・最終応答"
 
     def build_system_prompt(self) -> str:
-        return (
-            "あなたは統合専門家です。複数の視点を総合し、有用な最終回答を作成せよ。"
-        )
+        # PromptManagerから取得、なければデフォルト
+        if hasattr(self, 'prompt_manager') and self.prompt_manager:
+            return self.prompt_manager.get_slot_system_prompt('synthesizer')
+        return """あなたは責任ある統合判断者です。以下の責任を果たしてください：
+
+1. 各専門家の意見の妥当性を厳密に評価する
+2. 対立する意見の根拠を比較検討する
+3. 現実的で実行可能な統合案を提示する
+4. 判断の責任と根拠を明確に示す
+
+必ず「○○は正しいが、△△の懸念もあり、□□すべき」の形で明確な判断を示してください。"""
 
     def build_user_prompt(self, bb: SlotBlackboard, user_input: str) -> str:
-        ctx = [f"ユーザー入力: {user_input}", "", "各 Slot の視点:"]
-        try:
-            for e in bb.get_slot_entries():
-                if e.slot_name != self.name:
-                    prefix = {
-                        "ReformulatorSlot": "【再構成】",
-                        "CriticSlot": "【批評】",
-                        "SupporterSlot": "【支援】",
-                    }.get(e.slot_name, "【その他】")
-                    ctx.append(f"{prefix} {e.text}")
-        except Exception as e:
-            if self.debug:
-                print(f"SlotBlackboard取得エラー: {e}")
-        return "\n".join(ctx)
+        # 新しいTemplateBuilderを使用した安全なテンプレート生成
+        from .template_builder import TemplateBuilder
+        
+        # 他のSlotの出力をメッセージ形式に変換
+        messages = []
+        
+        # システムプロンプトを追加
+        messages.append({
+            "role": "system",
+            "content": self.build_system_prompt()
+        })
+        
+        # 各Slotの出力をクリーンアップしてメッセージ化
+        slot_entries = bb.get_slot_entries()
+        other_entries = [e for e in slot_entries if e.slot_name != self.name]
+        
+        if other_entries:
+            opinions_parts = [f"質問: {user_input}", "", "専門家の意見:"]
+            
+            for e in other_entries:
+                role = e.slot_name.replace('Slot', '')
+                # 重要：他Slotの出力を使用前に必ずクリーン
+                content = self._clean_response(e.text).strip()
+                if content:
+                    opinions_parts.append(f"{role}: {content}")
+            
+            opinions_parts.extend([
+                "",
+                "上記の専門家の議論を統合し、責任ある判断を下してください。",
+                "必ず「○○は正しいが、△△の懸念もあり、□□すべき」の形で明確な判断を示してください。"
+            ])
+            
+            messages.append({
+                "role": "user",
+                "content": "\n".join(opinions_parts)
+            })
+        else:
+            # 他の意見がない場合のフォールバック
+            messages.append({
+                "role": "user",
+                "content": f"質問: {user_input}\n\n利用可能な専門家の意見がありません。一般的な知識に基づいて回答してください。"
+            })
+        
+        # TemplateBuilderで安全なテンプレートを生成
+        return TemplateBuilder.build(messages)
+
+    def build_consensus_prompt(self, bb: SlotBlackboard, user_input: str, all_opinions: List[Dict[str, Any]], conflicts: List[Dict[str, Any]]) -> Optional[str]:
+        """統合・合意形成プロンプト"""
+        if not all_opinions:
+            return None
+        
+        # 簡潔な意見要約
+        opinions_text = ""
+        for op in all_opinions[:3]:  # 最大3つの意見
+            role = op.get('role', 'Unknown')
+            content = op.get('content', '').strip()[:40]  # 40文字に制限
+            opinions_text += f"- {role}: {content}\n"
+        
+        return f"質問: {user_input}\n\n各専門家の意見:\n{opinions_text}\n最終的な統合結論（80文字以内）:"
 
 ###############################################################################
 # SlotRunner
@@ -532,11 +863,11 @@ class SlotRunner:
                 self.blackboard_adapter = None
                 self.use_structured_blackboard = False
                 if self.debug:
-                    logger.warning("レガシーBlackboardモードにフォールバック")
+                    logger.warning("従来Blackboardモードにフォールバック")
         else:
             self.blackboard_adapter = None
             if self.debug:
-                logger.info("レガシーBlackboardモード")
+                logger.info("従来Blackboardモード")
         
         # Slotの初期化
         self.slots = self._initialize_slots()
@@ -552,37 +883,94 @@ class SlotRunner:
         if self.debug:
             print(f"SlotRunner初期化完了: {len(self.slots)}個のSlot (構造化BB: {self.use_structured_blackboard})")
     
+    def _clean_response_for_synthesis(self, text: str) -> str:
+        """統合用のテキストクリーニング（より厳格）"""
+        if not isinstance(text, str):
+            text = str(text)
+        
+        # 基本クリーニング
+        text = text.strip()
+        
+        # 特殊トークン完全除去
+        special_tokens = [
+            r"<\|\s*[\w_]+?\s*\|>",  # 完全な特殊トークン
+            r"<\|[^>]*$",            # 不完全な特殊トークン
+            r"<\|[^>]*\|>",          # 従来パターン
+            r"<\|end_of_turn\|>",    # 明示的除去
+            r"<\|start_of_turn\|>",  # 明示的除去
+            r"<\|assistant\|>",
+            r"<\|user\|>",
+            r"<\|system\|>",
+            r"of_turn>",             # 不完全な断片
+            r"start_of_",            # 不完全な断片
+            r"end_of_",              # 不完全な断片
+        ]
+        
+        for pattern in special_tokens:
+            text = re.sub(pattern, "", text, flags=re.DOTALL)
+        
+        # 危険文字を全角化
+        text = text.replace("<", "＜").replace(">", "＞")
+        
+        # 改行整理
+        text = re.sub(r"\n{2,}", "\n", text)
+        
+        # 空の場合のフォールバック
+        if not text.strip():
+            return "(応答を生成できませんでした)"
+        
+        return text.strip()
+
     def _initialize_slots(self) -> Dict[str, BaseSlot]:
-        """Slotの初期化（改良版Slot対応）"""
-        
-        # 改良版Slotが有効な場合
-        if self.config.get('use_enhanced_slots', True):
-            try:
-                from .enhanced_slots import create_enhanced_slots
-                slots = create_enhanced_slots(self.config, self.model_factory)
-                if self.debug:
-                    logger.info("改良版Slotを初期化しました")
-                return slots
-            except ImportError as e:
-                logger.warning(f"改良版Slotのインポートに失敗、従来版を使用: {e}")
-        
-        # 従来版Slotの初期化
-        slots = {}
+        """Slotの初期化"""
         
         # 基本Slotを作成
-        base_slots = {
-            'ReformulatorSlot': ReformulatorSlot,
-            'CriticSlot': CriticSlot,
-            'SupporterSlot': SupporterSlot,
-            'SynthesizerSlot': SynthesizerSlot
-        }
+        slots = {}
+        
+        # IntelligentSynthesizerを使用するかどうかを決定
+        use_intelligent_synthesizer = self.config.get('use_intelligent_synthesizer', True)
+        
+        if use_intelligent_synthesizer:
+            # IntelligentSynthesizerを使用
+            IntelligentSynthesizer = _import_synthesizer()
+            if IntelligentSynthesizer:
+                base_slots = {
+                    'ReformulatorSlot': ReformulatorSlot,
+                    'CriticSlot': CriticSlot,
+                    'SupporterSlot': SupporterSlot,
+                    'SynthesizerSlot': IntelligentSynthesizer  # 知的統合システム
+                }
+                if self.debug:
+                    logger.info("🧠 IntelligentSynthesizer採用: 知的統合システムを使用")
+            else:
+                # フォールバック
+                base_slots = {
+                    'ReformulatorSlot': ReformulatorSlot,
+                    'CriticSlot': CriticSlot,
+                    'SupporterSlot': SupporterSlot,
+                    'SynthesizerSlot': SynthesizerSlot
+                }
+                if self.debug:
+                    logger.warning("⚠️ IntelligentSynthesizer利用不可: 従来のSynthesizerSlotを使用")
+        else:
+            # 従来のSynthesizerSlotを使用
+            base_slots = {
+                'ReformulatorSlot': ReformulatorSlot,
+                'CriticSlot': CriticSlot,
+                'SupporterSlot': SupporterSlot,
+                'SynthesizerSlot': SynthesizerSlot
+            }
         
         for slot_name, slot_class in base_slots.items():
             # 個別Slot設定があればそれを使用
             slot_specific_config = self.slot_config.get(slot_name, {})
             merged_config = {**self.config, **slot_specific_config}
             
-            slots[slot_name] = slot_class(slot_name, merged_config, self.model_factory)
+            # IntelligentSynthesizerの場合、embedderを渡す
+            if slot_name == 'SynthesizerSlot' and slot_class.__name__ == 'IntelligentSynthesizer':
+                slots[slot_name] = slot_class(slot_name, merged_config, self.model_factory, self.embedder)
+            else:
+                slots[slot_name] = slot_class(slot_name, merged_config, self.model_factory)
         
         return slots
     
@@ -598,7 +986,7 @@ class SlotRunner:
 
     def run_all_slots(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
         """
-        全Slotを順序立てて実行し、詳細な結果を返す（構造化Blackboard対応）
+        全Slotを実行（デフォルトで協調モード）
         
         Args:
             bb: Slot Blackboard
@@ -606,39 +994,21 @@ class SlotRunner:
             embedder: 埋め込み生成器
         
         Returns:
-            実行結果の辞書（distributed_slm.pyが期待する形式）
+            実行結果の辞書
         """
-        start_time = time.time()
-        self.total_runs += 1
+        # 協調モードの設定を確認（デフォルトはTrue）
+        use_collaboration = self.config.get('use_collaboration', True)
         
-        try:
-            results = {}
-            execution_times = {}
-            quality_scores = []
-            
+        if use_collaboration:
+            # 協調モードで実行（真の議論を実現）
             if self.debug:
-                print(f"SlotRunner実行開始: {len(self.execution_order)}個のSlot (構造化BB: {self.use_structured_blackboard})")
-            
-            # 構造化Blackboardの場合、ラウンドベース実行
-            if self.use_structured_blackboard and self.blackboard_adapter:
-                try:
-                    results = self._run_all_slots_structured(bb, user_input, embedder)
-                except Exception as e:
-                    logger.error(f"構造化Blackboard実行エラー: {e}")
-                    if self.debug:
-                        import traceback
-                        logger.debug(traceback.format_exc())
-                    # フォールバックとしてレガシー実行
-                    logger.info("レガシーBlackboardにフォールバック")
-                    results = self._run_all_slots_legacy(bb, user_input, embedder)
-            else:
-                results = self._run_all_slots_legacy(bb, user_input, embedder)
-            
-            # 共通の結果処理
-            return self._process_slot_results(results, start_time, user_input)
-            
-        except Exception as e:
-            return self._handle_slot_error(e, start_time)
+                print("🔥 協調モード: 激しい議論を開始します")
+            return self.run_collaborative_slots(bb, user_input, embedder)
+        else:
+            # 従来の並列実行
+            if self.debug:
+                print("📝 並列モード: 独立実行を開始します")
+            return self._run_legacy_slots(bb, user_input, embedder)
 
     def _run_all_slots_structured(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
         """構造化Blackboard版の全Slot実行"""
@@ -740,8 +1110,44 @@ class SlotRunner:
         results['quality_scores'] = quality_scores
         return results
     
-    def _run_all_slots_legacy(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
-        """従来版の全Slot実行（後方互換性）"""
+    def _run_legacy_slots(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
+        """
+        並列モード：従来の順次実行（協調なし）
+        """
+        start_time = time.time()
+        self.total_runs += 1
+        
+        try:
+            results = {}
+            execution_times = {}
+            quality_scores = []
+            
+            if self.debug:
+                print(f"SlotRunner（並列）実行開始: {len(self.execution_order)}個のSlot")
+            
+            # 構造化Blackboardの場合、ラウンドベース実行
+            if self.use_structured_blackboard and self.blackboard_adapter:
+                try:
+                    results = self._run_all_slots_structured(bb, user_input, embedder)
+                except Exception as e:
+                    logger.error(f"構造化Blackboard実行エラー: {e}")
+                    if self.debug:
+                        import traceback
+                        logger.debug(traceback.format_exc())
+                    # フォールバックとして従来実行
+                    logger.info("従来Blackboardにフォールバック")
+                    results = self._run_all_slots_legacy_internal(bb, user_input, embedder)
+            else:
+                results = self._run_all_slots_legacy_internal(bb, user_input, embedder)
+            
+            # 共通の結果処理
+            return self._process_slot_results(results, start_time, user_input)
+            
+        except Exception as e:
+            return self._handle_slot_error(e, start_time)
+
+    def _run_all_slots_legacy_internal(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
+        """順次実行（後方互換性）"""
         results = {}
         execution_times = {}
         quality_scores = []
@@ -868,11 +1274,325 @@ class SlotRunner:
         
         return error_summary
 
-    # ===== 協調的議論システム =====
-    
-    def run_collaborative_discussion(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
+    def run_collaborative_slots(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
         """
-        真の協調を実現する多段階議論システム
+        協調システム - 各Slotが議論・相互参照する実行モード
+        
+        各Slotが他の意見を読み、明示的に反応・議論する
+        """
+        start_time = time.time()
+        self.total_runs += 1
+        
+        if self.debug:
+            print(f"\n=== 協調システム開始 ===")
+            print("各Slotが議論・相互参照を行います")
+            print("=" * 60)
+        
+        try:
+            # ===== フェーズ1: 初期分析（独立思考） =====
+            if self.debug:
+                print("📝 フェーズ1: 初期分析（独立思考）")
+            
+            # Reformulatorが問題を分析
+            reformulator = self.slots.get('ReformulatorSlot')
+            if not reformulator:
+                return {'error': 'ReformulatorSlot not found'}
+            
+            reformulator_entry = reformulator.execute(bb, user_input, embedder)
+            if not reformulator_entry:
+                return {'error': 'Reformulator execution failed'}
+            
+            reformulator_entry.metadata['phase'] = 1
+            reformulator_entry.metadata['phase_name'] = '初期分析'
+            
+            if self.debug:
+                print(f"  💭 Reformulator: {reformulator_entry.text[:80]}...")
+            
+            # ===== フェーズ2: 他意見への直接的反応 =====
+            if self.debug:
+                print("\nフェーズ2: 他意見への直接的反応（議論開始）")
+            
+            # Criticが Reformulatorの意見を読んで批判
+            critic = self.slots.get('CriticSlot')
+            if critic:
+                critic_prompt = f"""以下のReformulatorの分析について、厳しく批判的に検討してください:
+
+【Reformulatorの分析】
+{reformulator_entry.text}
+
+【必須批判要求】
+1. Reformulatorの分析の具体的な問題点を3つ以上指摘する
+2. 「この分析は○○という点で間違っている」と明確に述べる
+3. 実現不可能な理由を具体的に説明する
+4. 「Reformulatorが見落としている重要な制約は△△である」と指摘する
+
+必ず「Reformulatorの分析は間違っている。なぜなら」で始まり、具体的な反論を150文字以内で述べてください："""
+                
+                critic_entry = self._execute_targeted_response(critic, bb, critic_prompt, embedder)
+                if critic_entry:
+                    critic_entry.metadata.update({
+                        'phase': 2, 'phase_name': '直接批判',
+                        'targets': [reformulator_entry.entry_id],
+                        'response_type': 'disagreement'
+                    })
+                    if self.debug:
+                        print(f"  ⚔️ Critic → Reformulator: {critic_entry.text[:80]}...")
+            
+            # Supporterが Reformulatorの意見を読んで支持・拡張
+            supporter = self.slots.get('SupporterSlot')
+            if supporter:
+                supporter_prompt = f"""以下のReformulatorの分析について、積極的に支持し発展させてください:
+
+【Reformulatorの分析】
+{reformulator_entry.text}
+
+【必須支持要求】
+1. 「Reformulatorの分析は正しい」と明確に述べる
+2. なぜそれが実現可能なのか具体的な方法を3つ以上提示する
+3. 成功事例や技術的解決策を示す
+4. 「Reformulatorが指摘した○○は実際に△△によって実現できる」と説明する
+
+必ず「Reformulatorの分析は正しい。実際に」で始め、具体的な支持理由を150文字以内で述べてください："""
+                
+                supporter_entry = self._execute_targeted_response(supporter, bb, supporter_prompt, embedder)
+                if supporter_entry:
+                    supporter_entry.metadata.update({
+                        'phase': 2, 'phase_name': '積極的支持',
+                        'targets': [reformulator_entry.entry_id],
+                        'response_type': 'agreement'
+                    })
+                    if self.debug:
+                        print(f"  🌟 Supporter → Reformulator: {supporter_entry.text[:80]}...")
+            
+            # ===== フェーズ3: 相互反応（議論の深化） =====
+            if self.debug:
+                print("\n⚡ フェーズ3: 相互反応（議論の深化）")
+            
+            # Reformulatorが Criticの批判に応答
+            if critic_entry:
+                reformulator_counter_prompt = f"""Criticから以下の厳しい批判を受けました:
+
+【Criticの批判】
+{critic_entry.text}
+
+【必須反論要求】
+1. 「Criticの批判は的外れである」と明確に述べる
+2. Criticの批判のどの部分が間違っているか具体的に指摘する
+3. あなたの分析がなぜ正しいのか、新しい根拠を3つ以上提示する
+4. 「Criticが見落としている重要な点は○○である」と反論する
+
+必ず「Criticの批判は間違っている。なぜなら」で始め、具体的な反論を150文字以内で述べてください："""
+                
+                reformulator_counter = self._execute_targeted_response(reformulator, bb, reformulator_counter_prompt, embedder)
+                if reformulator_counter:
+                    reformulator_counter.metadata.update({
+                        'phase': 3, 'phase_name': '強烈な反駁',
+                        'targets': [critic_entry.entry_id],
+                        'response_type': 'strong_disagreement'
+                    })
+                    if self.debug:
+                        print(f"  ⚡ Reformulator → Critic: {reformulator_counter.text[:80]}...")
+            
+            # Criticが Supporterの楽観論を批判
+            if supporter_entry:
+                critic_counter_prompt = f"""Supporterは以下のように楽観的に述べていますが、これを厳しく批判してください:
+
+【Supporterの楽観論】
+{supporter_entry.text}
+
+【必須批判要求】
+1. 「Supporterの楽観論は現実を無視している」と明確に述べる
+2. この提案が失敗する具体的な理由を3つ以上示す
+3. 過去の類似事例で失敗したものを引用する
+4. 「Supporterが無視している現実的な制約は○○である」と指摘する
+
+必ず「Supporterの楽観論は危険である。なぜなら」で始め、具体的な批判を150文字以内で述べてください："""
+                
+                critic_counter = self._execute_targeted_response(critic, bb, critic_counter_prompt, embedder)
+                if critic_counter:
+                    critic_counter.metadata.update({
+                        'phase': 3, 'phase_name': '楽観論粉砕',
+                        'targets': [supporter_entry.entry_id],
+                        'response_type': 'strong_disagreement'
+                    })
+                    if self.debug:
+                        print(f"  ⚔️ Critic → Supporter: {critic_counter.text[:80]}...")
+            
+            # ===== フェーズ4: 対立解決統合 =====
+            if self.debug:
+                print("\nフェーズ4: 対立解決統合（責任ある判断）")
+            
+            synthesizer = self.slots.get('SynthesizerSlot')
+            if not synthesizer:
+                return {'error': 'SynthesizerSlot not found'}
+            
+            # 全ての意見を収集
+            all_entries = bb.get_slot_entries()
+            recent_entries = [e for e in all_entries if e.metadata.get('phase', 0) >= 1]
+            
+            # 対立点の特定
+            conflicts = self._identify_conflicts(recent_entries)
+            
+            synthesis_prompt = f"""以下の激しい議論を統合し、責任を持って最終判断を下してください:
+
+【激しい議論の流れ】"""
+            
+            for entry in recent_entries:
+                phase_name = entry.metadata.get('phase_name', '不明')
+                response_type = entry.metadata.get('response_type', '')
+                targets = entry.metadata.get('targets', [])
+                
+                # 議論の強度を表現
+                intensity = ""
+                if response_type == 'strong_disagreement':
+                    intensity = "🔥"
+                elif response_type == 'disagreement':
+                    intensity = "⚔️"
+                elif response_type == 'agreement':
+                    intensity = "🌟"
+                
+                # エントリのテキストを安全にクリーン
+                clean_text = self._clean_response_for_synthesis(entry.text)
+                synthesis_prompt += f"\n{intensity} {entry.slot_name} ({phase_name}): {clean_text}"
+            
+            synthesis_prompt += f"""
+
+【対立の状況】
+{conflicts}
+
+【あなたの統合責任】
+この激しい議論を受けて、以下の責任を果たしてください：
+
+1. 誰の意見が最も説得力があるか明確に判断する
+2. 対立する意見について、どちらが正しいか決断する
+3. 現実的で実行可能な解決策を提示する
+4. なぜその判断を下すのか、責任を持って根拠を明示する
+
+【必須形式】
+必ず以下の形式で述べてください：
+「この議論において、○○の指摘が最も妥当である。△△の懸念もあるが、□□の方法で解決可能である。最終的に◇◇すべきである。」
+
+責任を持って200文字以内で最終判断を述べてください："""
+            
+            synthesis_entry = self._execute_targeted_response(synthesizer, bb, synthesis_prompt, embedder)
+            if synthesis_entry:
+                synthesis_entry.metadata.update({
+                    'phase': 4, 'phase_name': '対立解決統合',
+                    'targets': [e.entry_id for e in recent_entries],
+                    'response_type': 'synthesis',
+                    'conflicts_resolved': len(conflicts)
+                })
+                if self.debug:
+                    print(f"  Synthesizer (対立解決): {synthesis_entry.text[:100]}...")
+            
+            # ===== 結果分析 =====
+            final_time = time.time() - start_time
+            
+            # 真の協調メトリクス計算
+            collaboration_quality = self._analyze_true_collaboration_quality(bb)
+            
+            result = {
+                'success': True,
+                'collaboration_mode': 'collaborative_discussion',
+                'final_response': synthesis_entry.text if synthesis_entry else "統合に失敗",
+                'collaboration_quality': collaboration_quality,
+                'phases_executed': 4,
+                'total_interactions': len([e for e in bb.get_slot_entries() if e.metadata.get('targets')]),
+                'conflicts_detected': len(conflicts),
+                'execution_time': final_time,
+                'user_input': user_input
+            }
+            
+            if self.debug:
+                print(f"\n🎉 === 協調完了 ===")
+                print(f"実行時間: {final_time:.2f}秒")
+                print(f"相互作用: {result['total_interactions']}回")
+                print(f"対立解決: {result['conflicts_detected']}件")
+                print(f"協調品質: {collaboration_quality.get('overall_score', 0):.2f}")
+                print(f"最終統合: {result['final_response'][:100]}...")
+                print("=" * 60)
+            
+            return result
+            
+        except Exception as e:
+            return self._handle_slot_error(e, start_time)
+    
+    def _execute_targeted_response(self, slot, bb: SlotBlackboard, prompt: str, embedder) -> Optional[SlotEntry]:
+        """特定のプロンプトでSlotを実行"""
+        try:
+            sys_prompt = slot.build_system_prompt()
+            # プロンプトの危険文字を事前に全角化（保険）
+            safe_prompt = prompt.replace("<", "＜").replace(">", "＞")
+            response = slot._generate_response(sys_prompt, safe_prompt)
+            
+            if not response or response.strip() == "":
+                return None
+            
+            # 応答を再度クリーン（二重保険）
+            clean_response = slot._clean_response(response)
+            
+            metadata = {
+                "role": slot.get_role_description(),
+                "execution_time": 0,
+                "targeted_response": True
+            }
+            
+            return bb.add_slot_entry(slot.name, clean_response, None, metadata)
+            
+        except Exception as e:
+            if self.debug:
+                print(f"標的応答実行エラー ({slot.name}): {e}")
+            return None
+    
+    def _identify_conflicts(self, entries: List[SlotEntry]) -> str:
+        """議論から対立を特定"""
+        conflicts = []
+        
+        disagreement_entries = [e for e in entries if e.metadata.get('response_type') == 'disagreement']
+        
+        for entry in disagreement_entries:
+            targets = entry.metadata.get('targets', [])
+            if targets:
+                target_slots = [e.slot_name for e in entries if e.entry_id in targets]
+                conflict_desc = f"{entry.slot_name} vs {', '.join(target_slots)}: {entry.text[:50]}..."
+                conflicts.append(conflict_desc)
+        
+        return '\n'.join(conflicts) if conflicts else "明確な対立は検出されませんでした"
+    
+    def _analyze_true_collaboration_quality(self, bb: SlotBlackboard) -> Dict[str, float]:
+        """協調品質を分析"""
+        entries = bb.get_slot_entries()
+        
+        # 相互作用スコア
+        interaction_count = len([e for e in entries if e.metadata.get('targets')])
+        interaction_score = min(interaction_count / 6.0, 1.0)  # 6回の相互作用が理想
+        
+        # 引用スコア
+        citation_keywords = ['について', 'が指摘した', 'の意見', 'の分析', 'の批判', 'の提案']
+        citation_count = sum(1 for e in entries for keyword in citation_keywords if keyword in e.text)
+        citation_score = min(citation_count / 12.0, 1.0)  # 各エントリ2回の引用が理想
+        
+        # 対立解決スコア
+        disagreements = len([e for e in entries if e.metadata.get('response_type') == 'disagreement'])
+        synthesis_entries = [e for e in entries if e.metadata.get('response_type') == 'synthesis']
+        resolution_score = 1.0 if synthesis_entries and disagreements > 0 else 0.5
+        
+        # 総合スコア
+        overall_score = (interaction_score * 0.4 + citation_score * 0.3 + resolution_score * 0.3)
+        
+        return {
+            'interaction_score': interaction_score,
+            'citation_score': citation_score,
+            'resolution_score': resolution_score,
+            'overall_score': overall_score,
+            'total_interactions': interaction_count,
+            'total_citations': citation_count,
+            'disagreements_count': disagreements
+        }
+        
+    def run_collaborative_slots_detailed(self, bb: SlotBlackboard, user_input: str, embedder=None) -> Dict[str, Any]:
+        """
+        協調システム - 多段階議論による協調実行
         
         フェーズ1: 初期意見提示
         フェーズ2: 相互参照・反論  
@@ -882,7 +1602,7 @@ class SlotRunner:
         self.total_runs += 1
         
         if self.debug:
-            print(f"\n🤝 === 協調的議論システム開始 ===")
+            print(f"\n=== 協調的議論システム開始 ===")
             print(f"参加Slot: {len(self.execution_order)}個")
             print("=" * 50)
         
@@ -961,7 +1681,7 @@ class SlotRunner:
     def _run_phase2_cross_reference(self, bb: SlotBlackboard, user_input: str, embedder, phase1_results: Dict[str, Any]) -> Dict[str, Any]:
         """フェーズ2: 他Slotの意見を参照して相互議論"""
         if self.debug:
-            print("🔄 フェーズ2: 相互参照・議論")
+            print("フェーズ2: 相互参照・議論")
         
         results = {}
         execution_times = {}
@@ -1008,7 +1728,7 @@ class SlotRunner:
                     'phase': 2
                 }
                 if self.debug:
-                    print(f"  🔄 {slot_name}: {entry.text[:60]}... (参照{len(other_opinions)}件)")
+                    print(f"  {slot_name}: {entry.text[:60]}... (参照{len(other_opinions)}件)")
             else:
                 results[slot_name] = {'entry': None, 'text': None, 'error': True, 'phase': 2}
                 if self.debug:
@@ -1020,7 +1740,7 @@ class SlotRunner:
     def _run_phase3_synthesis(self, bb: SlotBlackboard, user_input: str, embedder, phase2_results: Dict[str, Any]) -> Dict[str, Any]:
         """フェーズ3: 引用付き最終統合"""
         if self.debug:
-            print("📋 フェーズ3: 引用付き最終統合")
+            print("フェーズ3: 引用付き最終統合")
         
         synthesizer = self.slots.get('SynthesizerSlot')
         if not synthesizer:
@@ -1056,7 +1776,7 @@ class SlotRunner:
                 'phase': 3
             }
             if self.debug:
-                print(f"  📋 最終統合完了: {entry.text[:80]}...")
+                print(f"  最終統合完了: {entry.text[:80]}...")
             return result
         else:
             return {'error': 'Synthesis failed', 'phase': 3}
@@ -1114,9 +1834,9 @@ class SlotRunner:
 引用付きで200文字以内で統合結論を述べてください。"""
     
     def _execute_cross_reference_mode(self, slot, bb: SlotBlackboard, prompt: str, embedder) -> Optional[SlotEntry]:
-        """相互参照モードでSlotを実行（Enhanced Slots対応）"""
+        """相互参照モードでSlotを実行"""
         try:
-            # Enhanced Slotsの相互参照機能を使用
+            # Slotsの相互参照機能を使用
             if hasattr(slot, 'execute_cross_reference'):
                 # 他の意見を取得
                 cross_ref_context = bb.get_cross_reference_context(slot.name)
@@ -1134,7 +1854,7 @@ class SlotRunner:
             
             metadata = {
                 "role": slot.get_role_description(),
-                "execution_time": 0,  # 後で設定
+                "execution_time": 0,
                 "cross_reference_mode": True
             }
             
@@ -1148,7 +1868,7 @@ class SlotRunner:
     def _execute_synthesis_mode(self, synthesizer, bb: SlotBlackboard, prompt: str, embedder) -> Optional[SlotEntry]:
         """統合モードでSynthesizerを実行（Enhanced Slots対応）"""
         try:
-            # Enhanced SynthesizerSlotの引用機能を使用
+            # SynthesizerSlotの引用機能を使用
             if hasattr(synthesizer, 'execute_synthesis_with_citations'):
                 discussion_history = bb.get_discussion_history()
                 return synthesizer.execute_synthesis_with_citations(bb, prompt, discussion_history, embedder)

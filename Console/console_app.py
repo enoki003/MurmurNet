@@ -115,13 +115,16 @@ parser.add_argument('--max-workers', type=int, default=0,
 
 # Slotアーキテクチャオプション
 parser.add_argument('--slots', action='store_true', 
-                    help='Slotアーキテクチャモードを有効化（多角的な出力生成）')
-parser.add_argument('--slot-temperature', type=float, default=0.8,
-                    help='Slot生成時の温度パラメータ（デフォルト: 0.8）')
-parser.add_argument('--slot-max-length', type=int, default=150,
-                    help='Slot出力の最大長（デフォルト: 150）')
+                    help='Slotアーキテクチャモードを有効化（多角的議論システム）')
+parser.add_argument('--parallel-only', action='store_true',
+                    help='並列実行のみ（議論・相互参照を無効化）')
+# Slot関連の詳細設定
+parser.add_argument('--slot-temperature', type=float, default=0.7,
+                    help='Slotの温度パラメータ（デフォルト: 0.7）')
+parser.add_argument('--slot-max-length', type=int, default=300,
+                    help='Slotの最大出力長（デフォルト: 300）')
 parser.add_argument('--slot-similarity-threshold', type=float, default=0.7,
-                    help='Slot間類似度判定の閾値（デフォルト: 0.7）')
+                    help='Slot間の類似度閾値（デフォルト: 0.7）')
 args, _ = parser.parse_known_args()
 
 log_level = logging.DEBUG if args.debug else logging.INFO
@@ -434,6 +437,14 @@ async def chat_loop(args):
         config['slot_max_output_length'] = args.slot_max_length
         config['slot_similarity_threshold'] = args.slot_similarity_threshold
         
+        # 実行モード設定（デフォルトは協調）
+        if args.parallel_only:
+            config['use_collaboration'] = False
+            print("📋 並列実行モード: Slotが独立実行")
+        else:
+            config['use_collaboration'] = True
+            print("🤝 協調モード: Slotが議論・相互参照")
+        
         # Slotモード時は従来のAgentは無効化
         config['iterations'] = 1  # Slotは単一実行
         config['use_summary'] = False  # 従来の要約は無効
@@ -444,6 +455,7 @@ async def chat_loop(args):
         print("=" * 30)
     else:
         config['use_slots'] = False
+        config['use_collaboration'] = False
         
     # SLMインスタンス作成
     global _global_slm
@@ -451,6 +463,10 @@ async def chat_loop(args):
     _global_slm = slm  # グローバル参照を設定
     
     mode_info = "Slotアーキテクチャ" if args.slots else f"{args.agents}エージェント, {args.iterations}反復"
+    if args.slots and args.parallel_only:
+        mode_info += " (並列実行)"
+    elif args.slots:
+        mode_info += " (協調モード)"
     print(f"MurmurNet Console ({mode_info})")
     print("終了するには 'quit' または 'exit' を入力してください")
     
@@ -459,7 +475,8 @@ async def chat_loop(args):
     if not args.no_summary and not args.slots:
         print("[設定] 要約機能: 有効")
     if args.slots:
-        print("[設定] Slotアーキテクチャ: 有効")
+        collaboration_mode = "並列実行" if args.parallel_only else "協調モード"
+        print(f"[設定] Slotアーキテクチャ: 有効 ({collaboration_mode})")
     print(f"[設定] RAGモード: {config['rag_mode']}")
     print(f"[設定] ローカルファイルモード: {config['local_files_only']}")
     if args.debug:

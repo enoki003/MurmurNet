@@ -83,6 +83,7 @@ class DistributedSLM:
         
         # Slotアーキテクチャ設定
         self.use_slots = self.config.get('use_slots', False)  # Slotモード
+        self.use_collaboration = self.config.get('use_collaboration', True)  # 協調モード（デフォルト有効）
         
         # 並列処理フラグの統合（CLI/configの両方対応）
         cli_parallel = self.config.get('parallel', False)  # CLIの--parallelフラグ
@@ -103,13 +104,13 @@ class DistributedSLM:
           # 各モジュールの初期化
         self.logger.info("黒板モジュールを初期化中...")
         
-        # Slotモードの場合はSlotBlackboardを使用
+        # Blackboard初期化
         if self.use_slots:
             self.blackboard = blackboard if isinstance(blackboard, SlotBlackboard) else SlotBlackboard(self.config)
-            self.logger.info("Slotアーキテクチャモード: SlotBlackboard使用")
+            self.logger.info("SlotBlackboard使用")
         else:
             self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
-            self.logger.info("従来モード: 標準Blackboard使用")
+            self.logger.info("標準Blackboard使用")
         
         self.logger.info("入力受信モジュールを初期化中...")
         self.input_reception = InputReception(self.config)
@@ -137,9 +138,8 @@ class DistributedSLM:
             self.embedder = Embedder(self.config)
             
             # SlotRunnerの初期化（埋め込み対応）
-            from MurmurNet.modules.model_factory_singleton import ModelFactorySingleton
-            model_factory = ModelFactorySingleton.get_factory(self.config)
-            self.slot_runner = SlotRunner(self.config, model_factory, self.embedder)
+            from MurmurNet.modules.model_factory import ModelFactory
+            self.slot_runner = SlotRunner(self.config, ModelFactory, self.embedder)
             
             self.logger.info("Slotアーキテクチャ初期化完了")
         else:
@@ -379,11 +379,28 @@ class DistributedSLM:
         if self.use_slots:
             # Slotアーキテクチャによる処理
             step_start = time.time()
-            slot_result = self.slot_runner.run_all_slots(self.blackboard, input_text, self.embedder)
+            
+            # 協調モードか並列モードかを選択
+            if self.use_collaboration:
+                self.logger.info("協調モード: 議論型Slot実行開始")
+                slot_result = self.slot_runner.run_all_slots(self.blackboard, input_text, self.embedder)
+            else:
+                self.logger.info("並列モード: 並列Slot実行開始")
+                slot_result = self.slot_runner._run_legacy_slots(self.blackboard, input_text, self.embedder)
+            
+            step_time = time.time() - step_start
             
             if slot_result['success']:
                 final_response = slot_result['final_response']
-                self.logger.info(f"[Slotモード] Slot実行完了: {step_time:.2f}秒")
+                mode_name = "協調" if self.use_collaboration else "並列"
+                self.logger.info(f"[{mode_name}モード] Slot実行完了: {step_time:.2f}秒")
+                
+                # 協調モードの詳細統計
+                if self.use_collaboration and self.config.get('debug', False):
+                    interactions = slot_result.get('total_interactions', 0)
+                    conflicts = slot_result.get('conflicts_detected', 0)
+                    phases = slot_result.get('phases_executed', 0)
+                    self.logger.debug(f"  相互作用: {interactions}回, 対立解決: {conflicts}件, フェーズ: {phases}段階")
                 
                 # Slot統計をログ出力（型チェック付き）
                 if self.config.get('debug', False):
@@ -396,7 +413,8 @@ class DistributedSLM:
                             self.logger.debug(f"  {slot_name}: 結果形式が不正 (type: {type(result)})")
             else:
                 final_response = slot_result.get('final_response', "Slotシステムでエラーが発生しました。")
-                self.logger.error(f"[Slotモード] 実行エラー: {slot_result.get('error', '不明')}")
+                mode_name = "協調" if self.use_collaboration else "並列"
+                self.logger.error(f"[{mode_name}モード] 実行エラー: {slot_result.get('error', '不明')}")
             
             step_time = time.time() - step_start
             self.logger.info(f"[ステップ5] Slot実行完了: {step_time:.2f}秒")
@@ -449,7 +467,16 @@ class DistributedSLM:
             self.logger.debug("会話記憶を更新しました")
         
         total_time = time.time() - total_start_time
-        mode_info = "Slotアーキテクチャ" if self.use_slots else f"{self.num_agents}エージェント×{self.iterations}反復"
+        
+        # モード情報の生成
+        if self.use_slots:
+            if self.use_collaboration:
+                mode_info = "Slotアーキテクチャ（協調）"
+            else:
+                mode_info = "Slotアーキテクチャ（並列）"
+        else:
+            mode_info = f"{self.num_agents}エージェント×{self.iterations}反復"
+            
         self.logger.info(f"=== 応答生成完了（{mode_info}）: {len(final_response)}文字 (合計時間: {total_time:.2f}秒) ===")
         return final_response
         
@@ -479,6 +506,7 @@ class DistributedSLM:
             "summary_enabled": self.use_summary,
             "parallel_enabled": self.use_parallel,
             "slot_mode_enabled": self.use_slots,
+            "collaboration_enabled": self.use_collaboration,
             "conversation_history": len(self.conversation_memory.conversation_history) if hasattr(self, 'conversation_memory') else 0
         }
         

@@ -1,0 +1,102 @@
+# MurmurNet Boids Slot アーキテクチャ設定ファイル
+# Boids則（群知能）を活用した高度なSlot協調システム
+
+# === 基本設定 ===
+debug: true
+use_slots: true                    # Slotアーキテクチャを有効化
+use_memory: true                   # 会話記憶を使用
+use_summary: false                 # 従来の要約は無効（Slotが代替）
+use_parallel: false                # Slotは逐次実行
+
+# === Boids Slot設定 ===
+use_boids_synthesizer: true        # Boids対応Synthesizerを使用
+synthesis_strategy: "adaptive"     # 統合戦略（adaptive, consensus, diversity, quality, boids_coherence）
+synthesis_quality_threshold: 0.6   # 統合品質の最低閾値
+
+# === Boids アルゴリズム設定 ===
+# Separation（分離）パラメータ
+separation_radius: 0.8             # 分離判定の距離閾値
+separation_weight: 1.5              # 分離力の重み
+
+# Alignment（整列）パラメータ  
+alignment_radius: 0.6               # 整列判定の距離閾値
+alignment_weight: 1.0               # 整列力の重み
+
+# Cohesion（凝集）パラメータ
+cohesion_radius: 0.7                # 凝集判定の距離閾値
+cohesion_weight: 1.2                # 凝集力の重み
+
+# 制御パラメータ
+max_velocity: 0.3                   # 最大速度（ベクトル空間での変化量制限）
+min_distance: 0.1                   # 最小距離（衝突防止）
+boids_max_iterations: 3             # Boids則適用の最大反復回数
+
+# === 品質評価設定 ===
+quality_coherence_weight: 0.4       # 結束性の重み
+quality_diversity_weight: 0.3       # 多様性の重み  
+quality_relevance_weight: 0.3       # 関連性の重み
+conflict_threshold: 0.3              # 矛盾検出の閾値
+
+# === Slot固有設定 ===
+slot_max_output_length: 250         # Slot出力の最大文字数（Boids用に拡張）
+slot_temperature: 0.8               # Slot生成時の温度パラメータ
+slot_top_p: 0.9                     # Slot生成時のtop_p
+slot_similarity_threshold: 0.7      # 類似度判定の閾値
+max_slot_entries: 100               # 最大Slotエントリ数
+
+# === Slot実行設定 ===
+slot_execution_order:               # Slot実行順序（カスタマイズ可能）
+  - "ReformulatorSlot"
+  - "CriticSlot" 
+  - "SupporterSlot"
+  - "SynthesizerSlot"
+
+# 個別Slot設定
+slot_configuration:
+  ReformulatorSlot:
+    temperature: 0.9                # 再構成Slot専用温度
+    max_output_length: 200
+    
+  CriticSlot:
+    temperature: 0.7                # 批評Slot専用温度（保守的）
+    max_output_length: 220
+    
+  SupporterSlot:
+    temperature: 0.8                # 支援Slot専用温度
+    max_output_length: 200
+    
+  SynthesizerSlot:
+    temperature: 0.6                # 統合Slot専用温度（一貫性重視）
+    max_output_length: 300
+
+# === モデル設定 ===
+models:
+  chat_model: "llm-jp/llm-jp-3-150m-instruct3"
+  text_model: "llm-jp/llm-jp-3-150m"
+  cache_dir: "./cache/models"
+
+# === 埋め込み設定 ===
+embedding:
+  model_name: "all-MiniLM-L6-v2"
+  cache_folder: "./models/st_cache"
+  local_files_only: true
+  device: "cpu"
+  dimension: 384                     # ベクトル次元数
+
+# === RAG設定 ===
+rag_mode: "dummy"
+zim_path: ""
+
+# === パフォーマンス設定 ===
+performance_monitoring: true
+memory_tracking: true
+blackboard_cache_size: 500
+blackboard_history_size: 1000
+
+# === ログ設定 ===
+log_level: "INFO"
+enable_detailed_logging: true
+
+# === 従来設定（Slotモードでは無効） ===
+num_agents: 2
+iterations: 1
