@@ -6,6 +6,31 @@
 
 MurmurNetは、複数の小型言語モデル（Small Language Model）を協調させることで、より高度な対話応答を生成する分散型システムです。エージェント別にモデルを指定することで、各役割に特化した最適化が可能です。
 
+## 🚀 Phase 5-8: 分散システム拡張機能
+
+### 新機能概要
+最新のアップデート（Phase 5-8）では、エンタープライズグレードの分散システム機能を追加しました：
+
+#### Phase 5: 分散協調メカニズム
+- **分散合意アルゴリズム**: Raft、PBFT、Simple Majorityによる分散合意
+- **負荷分散**: ハイブリッド負荷分散戦略（ラウンドロビン、最少負荷、能力ベース）
+- **障害検出・フェイルオーバー**: 自動的な障害検出と復旧機能
+
+#### Phase 6: 監視・メトリクス
+- **Prometheusメトリクス統合**: リアルタイムメトリクス収集・配信
+- **アラート管理**: 閾値ベースのアラート発報とSlack/Webhook通知
+- **Grafanaダッシュボード**: 分散システム可視化ダッシュボード
+
+#### Phase 7: オートスケーリング
+- **動的スケーリング**: CPU/メモリ/キュー長ベースの自動スケーリング
+- **予測スケーリング**: 機械学習による予測的スケーリング（実験的）
+- **Kubernetes統合**: K8sクラスターでの自動スケーリング
+
+#### Phase 8: パフォーマンス最適化
+- **レイテンシ最適化**: リアルタイムレイテンシ追跡・ボトルネック特定
+- **メモリ効率向上**: インテリジェントGC管理・オブジェクトプール
+- **ネットワーク最適化**: LZ4/Zstd圧縮・バッチング・接続プーリング
+
 ## 主な特徴
 
 - **分散協調アーキテクチャ**: 複数のエージェントが連携して知識を創発
@@ -15,6 +40,7 @@ MurmurNetは、複数の小型言語モデル（Small Language Model）を協調
 - **RAG統合**: 外部知識ベースとの連携
 - **並列処理サポート**: 高速化のための並列実行
 - **柔軟なプロンプト管理**: モデル固有のプロンプトテンプレート対応
+- **🆕 エンタープライズ機能**: 分散協調、監視、オートスケーリング、パフォーマンス最適化
 
 ## インストール
 
@@ -37,6 +63,47 @@ pip install -r requirements.txt
 
 # モデルキャッシュディレクトリの作成
 mkdir -p cache/models
+
+# 🆕 分散システム拡張機能のテスト
+python test_distributed_extensions.py
+```
+
+### 🆕 分散システム拡張機能の設定
+
+分散システム機能を有効にするには、設定ファイルで以下の項目を設定してください：
+
+```yaml
+# config_slots.yaml または config.yaml に追加
+
+# Phase 5: 分散協調メカニズム
+distributed_coordination:
+  enable: true
+  consensus_algorithm: "simple_majority"  # または "raft", "pbft"
+  load_balance_strategy: "hybrid"
+
+# Phase 6: 監視・メトリクス
+monitoring:
+  enable_prometheus: true
+  prometheus_port: 8000
+  alert_check_interval: 30.0
+  notification_channels:
+    - type: "webhook"
+      url: "http://localhost:8080/alerts"
+
+# Phase 7: オートスケーリング
+autoscaling:
+  enable: true
+  scaling_strategy: "hybrid"
+  min_workers: 1
+  max_workers: 10
+  target_cpu_utilization: 0.7
+
+# Phase 8: パフォーマンス最適化
+performance_optimization:
+  enable: true
+  enable_compression: true
+  compression_algorithm: "lz4"
+  enable_auto_optimization: true
 ```
 
 ## 使用方法

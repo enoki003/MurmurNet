@@ -18,20 +18,13 @@ from pathlib import Path
 import logging
 import atexit
 
-# MurmurNetパッケージへのパスを追加
-current_dir = Path(__file__).parent
-murmur_net_dir = current_dir.parent / "MurmurNet"
-if str(murmur_net_dir) not in sys.path:
-    sys.path.insert(0, str(murmur_net_dir))
-
 # murmurnetパスを追加
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
-murmurnet_dir = project_root / "MurmurNet"
 sys.path.append(str(project_root))  # プロジェクトルートをパスに追加
 
 # ここでモジュールをインポート
-from MurmurNet.distributed_slm import DistributedSLM
+from murmurnet.distributed_slm import DistributedSLM
 
 # グローバルなSLMインスタンス（シャットダウン用）
 _global_slm = None
@@ -208,7 +201,7 @@ async def safe_shutdown(slm):
         
         # 2. InputReceptionの強制終了
         try:
-            from MurmurNet.modules.input_reception import InputReception
+            from murmurnet.modules.input_reception import InputReception
             print("InputReceptionを終了中...")
             InputReception.force_exit_all()
         except Exception as e:

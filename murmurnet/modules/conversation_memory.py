@@ -30,7 +30,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 
-from MurmurNet.modules.model_factory import ModelFactory
+from .model_factory import ModelFactory
 
 logger = logging.getLogger('MurmurNet.ConversationMemory')
 

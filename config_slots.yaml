@@ -48,59 +48,93 @@ embedding:
 # === テンプレート破損対策設定 ===
 # 根本原因（テンプレート断片の生成）を防ぐ安全機構
 enable_template_validation: true    # 応答のバリデーション機能を有効化
-use_template_builder: true          # 安全なテンプレートビルダーを使用
-enable_auto_recovery: true          # 自動修復機能を有効化
-max_retry_attempts: 1               # 最大再試行回数
-template_max_retry: 1               # テンプレート生成の最大再試行回数
-template_enable_recovery: true      # テンプレート修復機能を有効化
 
-# === RAG設定 ===
-rag_mode: "dummy"               # dummy または zim
-zim_path: ""                    # ZIMファイルパス（rag_mode=zimの場合）
+# === Phase 5-8: 分散システム拡張設定 ===
 
-# === パフォーマンス設定 ===
-performance_monitoring: true
-memory_tracking: true
-blackboard_cache_size: 500
-blackboard_history_size: 1000
+# Phase 5: 分散協調メカニズム
+distributed_coordination:
+  enable: true
+  heartbeat_interval: 5.0          # ハートビート間隔（秒）
+  failure_timeout: 15.0            # 障害検出タイムアウト（秒）
+  consensus_algorithm: "simple_majority"  # 合意アルゴリズム（simple_majority/raft/pbft）
+  load_balance_strategy: "hybrid"  # 負荷分散戦略（round_robin/least_loaded/capability_aware/hybrid）
+  max_load_threshold: 0.8          # 最大負荷しきい値
 
-# === ログ設定 ===
-log_level: "INFO"
-enable_detailed_logging: true
+# Phase 6: 監視・メトリクス
+monitoring:
+  enable_prometheus: true          # Prometheusメトリクス有効化
+  prometheus_port: 8000           # Prometheusサーバーポート
+  metrics_collection_interval: 10.0  # メトリクス収集間隔（秒）
+  metrics_retention_hours: 24     # メトリクス保持時間（時間）
+  
+  # アラート設定
+  alert_check_interval: 30.0      # アラートチェック間隔（秒）
+  notification_channels:          # 通知チャンネル
+    - type: "webhook"
+      url: "http://localhost:8080/alerts"
+    # - type: "slack"
+    #   webhook_url: "YOUR_SLACK_WEBHOOK_URL"
+  
+  # Grafana設定（オプション）
+  # grafana_url: "http://localhost:3000"
+  # grafana_api_key: "YOUR_GRAFANA_API_KEY"
 
-# === 従来設定（Slotモードでは無効） ===
-num_agents: 2               # Slotモードでは無視
-iterations: 1               # Slotモードでは無視
+# Phase 7: オートスケーリング
+autoscaling:
+  enable: true
+  scaling_strategy: "hybrid"      # スケーリング戦略
+  min_workers: 1                  # 最小ワーカー数
+  max_workers: 5                  # 最大ワーカー数
+  target_cpu_utilization: 0.7    # 目標CPU使用率
+  target_memory_utilization: 0.8 # 目標メモリ使用率
+  max_queue_length: 50           # 最大キュー長
+  scale_up_threshold: 0.8        # スケールアップしきい値
+  scale_down_threshold: 0.3      # スケールダウンしきい値
+  scale_up_cooldown: 300         # スケールアップクールダウン（秒）
+  scale_down_cooldown: 600       # スケールダウンクールダウン（秒）
+  evaluation_period: 60          # 評価期間（秒）
+  enable_predictive_scaling: false  # 予測スケーリング（実験的）
+  
+  # Kubernetes設定（オプション）
+  use_kubernetes: false          # Kubernetes統合
+  # kubernetes_namespace: "default"
+  # deployment_name: "murmurnet-workers"
+  # worker_image: "murmurnet:latest"
+  # worker_cpu_request: "100m"
+  # worker_cpu_limit: "500m"
+  # worker_memory_request: "128Mi"
+  # worker_memory_limit: "512Mi"
 
-# ================================================================
-# 構造化Blackboard エージェント役割と API 規約
-# ================================================================
-#
-# 【エージェント役割】
-# - RESEARCHER    : external_knowledge セクションに書き込み (RAG、外部情報取得)
-# - CRITIC        : opinions セクションに批判的意見を書き込み 
-# - SUPPORTER     : opinions セクションに支持的意見を書き込み
-# - REFORMULATOR  : opinions セクションに改良提案を書き込み
-# - SYNTHESIZER   : summary セクションに統合結果を書き込み
-# - OUTPUT        : 全セクションを読み取り専用（最終出力生成）
-#
-# 【API使用規約】
-# 各エージェントは以下のAPIのみ使用可能:
-# - add_opinion(agent_id, agent_role, content, version_read, metadata)
-# - add_knowledge(agent_id, content, source, version_read, metadata) 
-# - update_summary(agent_id, content, version_read, metadata)
-# - get_snapshot() : 現在の状態を読み取り
-#
-# 【バージョン管理】
-# - 各書き込み時に自動でバージョンがインクリメント
-# - エージェントは読み取った版数を記録し、古い版への書き込みは拒否
-# - 1版の遅れまでは許容（競合回避）
-#
-# 【擬似非同期ステップ】
-# 1. start_round() でスナップショット配布と版数取得
-# 2. 各エージェントが並行して生成・準備
-# 3. commit_round() で一括コミット（ラウンド完了）
-# ================================================================
+# Phase 8: パフォーマンス最適化
+performance_optimization:
+  enable: true
+  
+  # レイテンシ最適化
+  enable_latency_tracing: true    # レイテンシトレース有効化
+  trace_sample_rate: 0.1          # トレースサンプリング率
+  optimization_threshold_ms: 1000 # 最適化しきい値（ms）
+  
+  # メモリ最適化
+  enable_memory_tracking: true    # メモリ追跡有効化
+  enable_gc_optimization: true    # ガベージコレクション最適化
+  memory_warning_threshold_mb: 512   # メモリ警告しきい値（MB）
+  memory_critical_threshold_mb: 1024 # メモリクリティカルしきい値（MB）
+  
+  # ネットワーク最適化
+  enable_compression: true        # データ圧縮有効化
+  compression_algorithm: "lz4"    # 圧縮アルゴリズム（lz4/zstd）
+  compression_threshold_bytes: 1024  # 圧縮しきい値（バイト）
+  enable_batching: true          # バッチング有効化
+  batch_size: 10                 # バッチサイズ
+  batch_timeout_ms: 100          # バッチタイムアウト（ms）
+  
+  # プロファイリング（開発用）
+  enable_profiling: false        # パフォーマンスプロファイリング
+  profile_output_dir: "./profiles"  # プロファイル出力ディレクトリ
+  
+  # 自動最適化
+  enable_auto_optimization: true # 自動最適化有効化
+  optimization_interval: 300     # 最適化間隔（秒）
 
 # === Slot エージェント役割マッピング ===
 slot_agent_roles:

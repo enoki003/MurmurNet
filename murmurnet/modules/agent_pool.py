@@ -18,9 +18,9 @@ import asyncio
 import psutil
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from typing import Dict, Any, List, Optional, Tuple, Callable
-from MurmurNet.modules.model_factory import ModelFactory
-from MurmurNet.modules.performance import cpu_profile
-from MurmurNet.modules.prompt_manager import get_prompt_manager
+from .model_factory import ModelFactory
+from .performance import cpu_profile
+from .prompt_manager import get_prompt_manager
 
 logger = logging.getLogger('MurmurNet.AgentPool')
 
@@ -72,7 +72,7 @@ class AgentPoolManager:
         
         # エージェント別モデル管理を初期化
         try:
-            from MurmurNet.modules.agent_model_manager import create_agent_model_manager
+            from .agent_model_manager import create_agent_model_manager
             self.model_manager = create_agent_model_manager(self.config)
             # 内部エージェント用の設定でモデルを取得
             agent_config = self.model_manager.get_model_factory_config("internal_agents")
@@ -425,7 +425,7 @@ class AgentPoolManager:
             
         # プロンプトマネージャーを使用してプロンプト構築
         try:
-            from MurmurNet.modules.prompt_manager import get_prompt_manager
+            from .prompt_manager import get_prompt_manager
             
             # モデルタイプとモデル名を取得
             model_type = self.config.get('model_type', 'llama')

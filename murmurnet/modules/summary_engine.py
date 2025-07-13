@@ -29,7 +29,7 @@ from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import numpy as np
 
-from MurmurNet.modules.model_factory import ModelFactory
+from .model_factory import ModelFactory
 
 logger = logging.getLogger('MurmurNet.SummaryEngine')
 
@@ -149,7 +149,7 @@ class SummaryEngine:
         
         # エージェント別モデル管理を初期化
         try:
-            from MurmurNet.modules.agent_model_manager import create_agent_model_manager
+            from .agent_model_manager import create_agent_model_manager
             self.model_manager = create_agent_model_manager(self.config)
             # 要約エンジン用の設定でモデルを取得
             agent_config = self.model_manager.get_model_factory_config("summary_engine")

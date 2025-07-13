@@ -22,19 +22,24 @@ if os.name == "nt":
     # ProactorEventLoopの問題を回避するためSelectorEventLoopを使用
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from MurmurNet.modules.common import setup_logger, PerformanceError
-from MurmurNet.modules.performance import PerformanceMonitor, time_function, time_async_function
-from MurmurNet.modules.input_reception import InputReception
-from MurmurNet.modules.blackboard import Blackboard
-from MurmurNet.modules.slot_blackboard import SlotBlackboard
-from MurmurNet.modules.agent_pool import AgentPoolManager
-from MurmurNet.modules.rag_retriever import RAGRetriever
-from MurmurNet.modules.output_agent import OutputAgent
-from MurmurNet.modules.summary_engine import SummaryEngine
-from MurmurNet.modules.conversation_memory import ConversationMemory
-from MurmurNet.modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
-from MurmurNet.modules.slots import SlotRunner
-from MurmurNet.modules.embedder import Embedder
+from .modules.common import setup_logger, PerformanceError
+from .modules.performance import PerformanceMonitor, time_function, time_async_function
+from .modules.input_reception import InputReception
+from .modules.redis_blackboard import create_blackboard
+from .modules.slot_blackboard import SlotBlackboard
+from .modules.agent_pool import AgentPoolManager
+from .modules.rag_retriever import RAGRetriever
+from .modules.output_agent import OutputAgent
+from .modules.summary_engine import SummaryEngine
+from .modules.conversation_memory import ConversationMemory
+from .modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
+from .modules.slots import SlotRunner
+from .modules.embedder import Embedder
+# Phase 5-8: 分散システム拡張モジュール
+from .modules.distributed_coordination import create_distributed_coordinator, create_load_balancer
+from .modules.monitoring import create_metrics_collector, create_alert_manager, create_dashboard_manager
+from .modules.autoscaling import create_autoscaler, create_kubernetes_manager
+from .modules.performance_optimization import create_distributed_optimizer
 
 class DistributedSLM:
     """
@@ -101,22 +106,23 @@ class DistributedSLM:
             self.logger.info("並列処理有効: 設定ファイルで指定")
         else:
             self.logger.info("並列処理無効: 逐次実行モード")
-          # 各モジュールの初期化
-        self.logger.info("黒板モジュールを初期化中...")
+        # 各モジュールの初期化
+        self.logger.info("分散黒板モジュールを初期化中...")
         
-        # Blackboard初期化
+        # Redis分散Blackboard初期化
         if self.use_slots:
             self.blackboard = blackboard if isinstance(blackboard, SlotBlackboard) else SlotBlackboard(self.config)
-            self.logger.info("SlotBlackboard使用")
+            self.logger.info("分散SlotBlackboard使用")
         else:
-            self.blackboard = blackboard if blackboard is not None else Blackboard(self.config)
-            self.logger.info("標準Blackboard使用")
+            self.blackboard = blackboard if blackboard is not None else create_blackboard(self.config)
+            self.logger.info("分散RedisBlackboard使用")
         
         self.logger.info("入力受信モジュールを初期化中...")
         self.input_reception = InputReception(self.config)
         
-        self.logger.info("エージェントプールを初期化中...")
-        self.agent_pool = AgentPoolManager(self.config, self.blackboard)
+        self.logger.info("エージェント管理を初期化中...")
+        # 従来のAgentPoolManagerを使用
+        self.agent_pool = AgentPoolManager(self.config)
         
         self.logger.info("RAGリトリーバーを初期化中...")
         self.rag_retriever = RAGRetriever(self.config)
@@ -125,31 +131,36 @@ class DistributedSLM:
         self.summary_engine = SummaryEngine(self.config)
         
         self.logger.info("出力エージェントを初期化中...")
-        self.output_agent = OutputAgent(self.config, shared_llm=self.agent_pool.llm)
+        # 分散エージェント使用時は直接モデルを初期化
+        self.output_agent = OutputAgent(self.config, shared_llm=None)
         
         self.logger.info("会話記憶モジュールを初期化中...")
         self.conversation_memory = ConversationMemory(self.config, self.blackboard)
         
         # Slotアーキテクチャ関連モジュール（Slotモード時のみ）
         if self.use_slots:
-            self.logger.info("Slotアーキテクチャモジュールを初期化中...")
+            self.logger.info("分散Slotアーキテクチャモジュールを初期化中...")
             
             # 埋め込み生成器の初期化
             self.embedder = Embedder(self.config)
             
             # SlotRunnerの初期化（埋め込み対応）
-            from MurmurNet.modules.model_factory import ModelFactory
+            from .modules.model_factory import ModelFactory
             self.slot_runner = SlotRunner(self.config, ModelFactory, self.embedder)
             
-            self.logger.info("Slotアーキテクチャ初期化完了")
+            self.logger.info("分散Slotアーキテクチャ初期化完了")
         else:
             self.embedder = None
             self.slot_runner = None
         
         # パフォーマンスステータスを黒板に記録
         self.blackboard.write('performance_enabled', self.performance.enabled)
-          # 初期化完了時のメモリスナップショット
+        
+        # 初期化完了時のメモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
+        
+        # Phase 5-8: 分散システム拡張コンポーネント初期化（非同期で実行）
+        self._init_distributed_extensions_task = None
         
         # ShutdownManagerに自身を登録（最高優先度で）
         register_for_shutdown(self, "DistributedSLM", priority=100)
@@ -201,7 +212,7 @@ class DistributedSLM:
         if self.use_parallel:
             await self._run_agents_parallel()
         else:
-            self.agent_pool.run_agents(self.blackboard)
+            await self._run_agents_sequential()
             
         # 2. エージェント出力収集
         agent_entries = []
@@ -233,9 +244,37 @@ class DistributedSLM:
         
         self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
     
+    async def _run_agents_sequential(self) -> None:
+        """
+        エージェントを逐次実行（内部メソッド）
+        
+        複数のエージェントを順次実行し、結果を黒板に書き込む
+        """
+        self.logger.info("エージェントを逐次実行中...")
+        
+        # パフォーマンス統計の記録
+        if hasattr(self.performance, 'record_parallel_execution'):
+            self.performance.record_parallel_execution('sequential')
+        
+        try:
+            # 従来のagent_poolを使用した逐次実行
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                # AgentPoolManagerの逐次実行メソッドを使用
+                self.agent_pool.run_agents(self.blackboard)
+            else:
+                # フォールバック: 最小限のダミー出力
+                for i in range(self.num_agents):
+                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                    
+        except Exception as e:
+            self.logger.error(f"逐次実行エラー: {str(e)}")
+            # エラーが発生した場合も最小限のダミー出力
+            for i in range(self.num_agents):
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした: {str(e)}")
+
     async def _run_agents_parallel(self) -> None:
         """
-        エージェントを並列実行（内部メソッド）
+        エージェントを並列実行（内部メソッド）- 旧式（下位互換）
         
         複数のエージェントを並列に実行し、結果を黒板に書き込む
         CPU最適化版の並列処理を使用
@@ -247,18 +286,19 @@ class DistributedSLM:
             self.performance.record_parallel_execution('parallel')
         
         try:
-            # AgentPoolManagerの最適化された並列実行を使用
-            if hasattr(self.agent_pool, 'run_agents_parallel'):
+            # 従来のagent_poolを使用した並列実行
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                # AgentPoolManagerの並列実行メソッドを使用
                 await self.agent_pool.run_agents_parallel(self.blackboard)
             else:
-                # フォールバック: 従来の並列実行
-                await self._run_agents_parallel_fallback()
+                # フォールバック: 順次実行
+                self._run_agents_sequential()
                     
         except Exception as e:
             self.logger.error(f"並列実行エラー: {str(e)}")
             # エラーが発生した場合は逐次実行にフォールバック
             self.logger.info("逐次実行にフォールバックします")
-            self.agent_pool.run_agents(self.blackboard)
+            self._run_agents_sequential()
 
     async def _run_agents_parallel_fallback(self) -> None:
         """
@@ -314,6 +354,12 @@ class DistributedSLM:
         total_start_time = time.time()
         
         self.logger.info("応答生成プロセスを開始")
+        
+        # 分散システム拡張コンポーネントの初期化（初回のみ）
+        if not hasattr(self, '_distributed_extensions_initialized'):
+            self.logger.info("分散システム拡張コンポーネントを初期化中...")
+            await self._init_distributed_extensions()
+            self._distributed_extensions_initialized = True
         
         # 新しいターンのために黒板をクリア（会話履歴は保持）
         self.blackboard.clear_current_turn()
@@ -636,17 +682,6 @@ class DistributedSLM:
             # 2. 各モジュールの個別シャットダウン
             shutdown_tasks = []
             
-            # エージェントプールのシャットダウン
-            if hasattr(self, 'agent_pool') and self.agent_pool:
-                self.logger.info("エージェントプールをシャットダウン中...")
-                try:
-                    if hasattr(self.agent_pool, 'shutdown'):
-                        shutdown_tasks.append(self._safe_shutdown(self.agent_pool, "AgentPool"))
-                    elif hasattr(self.agent_pool, '__del__'):
-                        self.agent_pool.__del__()
-                except Exception as e:
-                    self.logger.warning(f"エージェントプールシャットダウンエラー: {e}")
-            
             # RAGリトリーバーのシャットダウン
             if hasattr(self, 'rag_retriever') and self.rag_retriever:
                 self.logger.info("RAGリトリーバーをシャットダウン中...")
@@ -711,6 +746,56 @@ class DistributedSLM:
                         self.performance.clear()
                 except Exception as e:
                     self.logger.warning(f"パフォーマンスモニターシャットダウンエラー: {e}")
+            
+            # 分散システム拡張コンポーネントのシャットダウン
+            if hasattr(self, 'distributed_coordinator') and self.distributed_coordinator:
+                self.logger.info("分散協調システムをシャットダウン中...")
+                try:
+                    await self.distributed_coordinator.stop()
+                except Exception as e:
+                    self.logger.warning(f"分散協調システムシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'load_balancer') and self.load_balancer:
+                self.logger.info("ロードバランサーをシャットダウン中...")
+                try:
+                    await self.load_balancer.stop()
+                except Exception as e:
+                    self.logger.warning(f"ロードバランサーシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'metrics_collector') and self.metrics_collector:
+                self.logger.info("メトリクスコレクターをシャットダウン中...")
+                try:
+                    await self.metrics_collector.stop()
+                except Exception as e:
+                    self.logger.warning(f"メトリクスコレクターシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'alert_manager') and self.alert_manager:
+                self.logger.info("アラートマネージャーをシャットダウン中...")
+                try:
+                    await self.alert_manager.stop()
+                except Exception as e:
+                    self.logger.warning(f"アラートマネージャーシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'dashboard_manager') and self.dashboard_manager:
+                self.logger.info("ダッシュボードマネージャーをシャットダウン中...")
+                try:
+                    await self.dashboard_manager.delete_dashboard()
+                except Exception as e:
+                    self.logger.warning(f"ダッシュボードマネージャーシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'autoscaler') and self.autoscaler:
+                self.logger.info("オートスケーラーをシャットダウン中...")
+                try:
+                    await self.autoscaler.stop()
+                except Exception as e:
+                    self.logger.warning(f"オートスケーラーシャットダウンエラー: {e}")
+            
+            if hasattr(self, 'performance_optimizer') and self.performance_optimizer:
+                self.logger.info("パフォーマンス最適化システムをシャットダウン中...")
+                try:
+                    await self.performance_optimizer.stop()
+                except Exception as e:
+                    self.logger.warning(f"パフォーマンス最適化システムシャットダウンエラー: {e}")
             
             # 並列シャットダウンタスクの実行
             if shutdown_tasks:
@@ -794,7 +879,65 @@ class DistributedSLM:
                 self.logger.debug(f"{name}にshutdownメソッドがありません")
         except asyncio.TimeoutError:
             self.logger.warning(f"{name}のシャットダウンがタイムアウトしました（{timeout}秒）")
-            # タイムアウトエラーは上位に伝播させない
         except Exception as e:
             self.logger.error(f"{name}のシャットダウンエラー: {e}")
-            # エラーを上位に伝播させない（他のコンポーネントのシャットダウンを継続）
+
+    async def _init_distributed_extensions(self):
+        """
+        Phase 5-8: 分散システム拡張コンポーネントを初期化
+        """
+        try:
+            self.logger.info("分散システム拡張コンポーネント初期化開始...")
+            
+            # Phase 5: 分散協調メカニズム
+            self.logger.info("Phase 5: 分散協調システム初期化中...")
+            self.distributed_coordinator = create_distributed_coordinator(self.config)
+            self.load_balancer = create_load_balancer(self.distributed_coordinator)
+            
+            await self.distributed_coordinator.start()
+            await self.load_balancer.start()
+            
+            # Phase 6: 監視・メトリクス
+            self.logger.info("Phase 6: 監視・メトリクスシステム初期化中...")
+            self.metrics_collector = create_metrics_collector(self.config)
+            self.alert_manager = create_alert_manager(self.config, self.metrics_collector)
+            self.dashboard_manager = create_dashboard_manager(self.config)
+            
+            await self.metrics_collector.start()
+            await self.alert_manager.start()
+            await self.dashboard_manager.create_dashboard()
+            
+            # Phase 7: オートスケーリング
+            self.logger.info("Phase 7: オートスケーリングシステム初期化中...")
+            self.autoscaler = create_autoscaler(self.config)
+            self.kubernetes_manager = create_kubernetes_manager(self.config)
+            
+            await self.autoscaler.start()
+            
+            # Phase 8: パフォーマンス最適化
+            self.logger.info("Phase 8: パフォーマンス最適化システム初期化中...")
+            self.performance_optimizer = create_distributed_optimizer(self.config)
+            
+            await self.performance_optimizer.start()
+            
+            # 分散システム拡張コンポーネントをシャットダウンマネージャーに登録
+            register_for_shutdown(self.distributed_coordinator, "DistributedCoordinator", priority=90)
+            register_for_shutdown(self.load_balancer, "LoadBalancer", priority=89)
+            register_for_shutdown(self.metrics_collector, "MetricsCollector", priority=88)
+            register_for_shutdown(self.alert_manager, "AlertManager", priority=87)
+            register_for_shutdown(self.autoscaler, "AutoScaler", priority=86)
+            register_for_shutdown(self.performance_optimizer, "PerformanceOptimizer", priority=85)
+            
+            self.logger.info("分散システム拡張コンポーネント初期化完了 ✅")
+            
+        except Exception as e:
+            self.logger.error(f"分散システム拡張コンポーネント初期化エラー: {e}")
+            # 初期化に失敗した場合は基本機能のみで続行
+            self.distributed_coordinator = None
+            self.load_balancer = None
+            self.metrics_collector = None
+            self.alert_manager = None
+            self.dashboard_manager = None
+            self.autoscaler = None
+            self.kubernetes_manager = None
+            self.performance_optimizer = None

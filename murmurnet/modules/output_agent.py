@@ -28,7 +28,7 @@ from functools import lru_cache
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
-from MurmurNet.modules.model_factory import ModelFactory
+from .model_factory import ModelFactory
 
 logger = logging.getLogger('MurmurNet.OutputAgent')
 
@@ -160,7 +160,7 @@ class CPUOptimizedOutputAgent:
             logger.info("OutputAgent: 既存のLLMを再利用します（ロード時間短縮）")
         else:
             try:
-                from MurmurNet.modules.agent_model_manager import create_agent_model_manager
+                from .agent_model_manager import create_agent_model_manager
                 self.model_manager = create_agent_model_manager(self.config)
                 # 出力エージェント用の設定でモデルを取得
                 agent_config = self.model_manager.get_model_factory_config("output_agent")
