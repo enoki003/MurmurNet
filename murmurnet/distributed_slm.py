@@ -25,7 +25,7 @@ if os.name == "nt":
 from .modules.common import setup_logger, PerformanceError
 from .modules.performance import PerformanceMonitor, time_function, time_async_function
 from .modules.input_reception import InputReception
-from .modules.redis_blackboard import create_blackboard
+from .modules.local_distributed_blackboard import create_blackboard
 from .modules.slot_blackboard import SlotBlackboard
 from .modules.agent_pool import AgentPoolManager
 from .modules.rag_retriever import RAGRetriever
@@ -35,18 +35,23 @@ from .modules.conversation_memory import ConversationMemory
 from .modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
 from .modules.slots import SlotRunner
 from .modules.embedder import Embedder
-# Phase 5-8: 分散システム拡張モジュール
-from .modules.distributed_coordination import create_distributed_coordinator, create_load_balancer
-from .modules.monitoring import create_metrics_collector, create_alert_manager, create_dashboard_manager
-from .modules.autoscaling import create_autoscaler, create_kubernetes_manager
-from .modules.performance_optimization import create_distributed_optimizer
+# ローカル分散システム拡張モジュール
+from .modules.local_ray_coordinator import create_local_ray_coordinator
 
 class DistributedSLM:
     """
-    分散創発型言語モデルメインクラス
+    ローカル分散創発型言語モデルメインクラス
     
-    複数の小規模な言語モデルが協調的に動作する分散型アーキテクチャを通じて
-    高度な対話生成機能を提供する中枢システム。
+    同一マシン内で複数の小規模な言語モデルが協調的に動作する
+    ローカル分散型アーキテクチャを通じて高度な対話生成機能を提供する中枢システム。
+    
+    主要機能:
+    - マルチプロセス・マルチスレッド並列処理
+    - 共有メモリベース高速データ交換
+    - Ray分散フレームワークによる処理最適化
+    - エージェントプール動的管理
+    - RAGベースコンテキスト検索
+    - 会話記憶・要約機能
     
     特徴:
     - 複数の小規模モデルが協調動作
@@ -121,8 +126,8 @@ class DistributedSLM:
         self.input_reception = InputReception(self.config)
         
         self.logger.info("エージェント管理を初期化中...")
-        # 従来のAgentPoolManagerを使用
-        self.agent_pool = AgentPoolManager(self.config)
+        # 従来のAgentPoolManagerを使用（blackboardを渡す）
+        self.agent_pool = AgentPoolManager(self.config, self.blackboard)
         
         self.logger.info("RAGリトリーバーを初期化中...")
         self.rag_retriever = RAGRetriever(self.config)
@@ -244,7 +249,7 @@ class DistributedSLM:
         
         self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
     
-    async def _run_agents_sequential(self) -> None:
+    async    def _run_agents_sequential(self) -> None:
         """
         エージェントを逐次実行（内部メソッド）
         
@@ -256,89 +261,24 @@ class DistributedSLM:
         if hasattr(self.performance, 'record_parallel_execution'):
             self.performance.record_parallel_execution('sequential')
         
-        try:
-            # 従来のagent_poolを使用した逐次実行
-            if hasattr(self, 'agent_pool') and self.agent_pool:
-                # AgentPoolManagerの逐次実行メソッドを使用
-                self.agent_pool.run_agents(self.blackboard)
-            else:
-                # フォールバック: 最小限のダミー出力
-                for i in range(self.num_agents):
-                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-                    
-        except Exception as e:
-            self.logger.error(f"逐次実行エラー: {str(e)}")
-            # エラーが発生した場合も最小限のダミー出力
-            for i in range(self.num_agents):
-                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした: {str(e)}")
+        # AgentPoolManagerの逐次実行メソッドを使用
+        self.agent_pool.run_agents(self.blackboard)
 
     async def _run_agents_parallel(self) -> None:
         """
-        エージェントを並列実行（内部メソッド）- 旧式（下位互換）
+        エージェントを並列実行（内部メソッド）
         
         複数のエージェントを並列に実行し、結果を黒板に書き込む
-        CPU最適化版の並列処理を使用
         """
-        self.logger.info("エージェントを並列実行中（CPU最適化版）...")
+        self.logger.info("エージェントを並列実行中...")
         
         # パフォーマンス統計の記録
         if hasattr(self.performance, 'record_parallel_execution'):
             self.performance.record_parallel_execution('parallel')
         
-        try:
-            # 従来のagent_poolを使用した並列実行
-            if hasattr(self, 'agent_pool') and self.agent_pool:
-                # AgentPoolManagerの並列実行メソッドを使用
-                await self.agent_pool.run_agents_parallel(self.blackboard)
-            else:
-                # フォールバック: 順次実行
-                self._run_agents_sequential()
-                    
-        except Exception as e:
-            self.logger.error(f"並列実行エラー: {str(e)}")
-            # エラーが発生した場合は逐次実行にフォールバック
-            self.logger.info("逐次実行にフォールバックします")
-            self._run_agents_sequential()
+        # AgentPoolManagerの並列実行メソッドを使用
+        await self.agent_pool.run_agents_parallel(self.blackboard)
 
-    async def _run_agents_parallel_fallback(self) -> None:
-        """
-        フォールバック用の並列実行
-        """
-        # スレッドプール内でエージェントタスクを実行するラッパー
-        def run_agent_task(agent_id: int) -> str:
-            """エージェントタスクのスレッドプールラッパー"""
-            try:
-                # 共有モデルを使って実行（グローバルロックはagent_task内で使用）
-                return self.agent_pool._agent_task(agent_id)
-            except Exception as e:
-                self.logger.error(f"エージェント {agent_id} 実行エラー: {str(e)}")
-                import traceback
-                self.logger.debug(traceback.format_exc())
-                return f"エージェント{agent_id}は応答できませんでした"
-        
-        # イベントループを取得
-        loop = asyncio.get_event_loop()
-        
-        # 真の並列実行：すべてのエージェントを同時に実行
-        tasks = []
-        for i in range(self.num_agents):
-            # 各エージェントのタスクを作成
-            task = loop.run_in_executor(None, run_agent_task, i)
-            tasks.append(task)
-        
-        # すべてのタスクを同時に実行して結果を取得
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # 結果を黒板に書き込み
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
-                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
-            elif result:
-                self.blackboard.write(f'agent_{i}_output', result)
-            else:
-                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
-    
         
     async def generate(self, input_text: str) -> str:
         """
@@ -811,7 +751,7 @@ class DistributedSLM:
             # 3. モデルキャッシュのクリア
             self.logger.info("モデルキャッシュをクリア中...")
             try:
-                from MurmurNet.modules.model_factory import clear_model_cache
+                from .modules.model_factory import clear_model_cache
                 clear_model_cache()
             except Exception as e:
                 self.logger.warning(f"モデルキャッシュクリアエラー: {e}")
@@ -884,60 +824,18 @@ class DistributedSLM:
 
     async def _init_distributed_extensions(self):
         """
-        Phase 5-8: 分散システム拡張コンポーネントを初期化
+        ローカル分散システム拡張コンポーネントを初期化
         """
         try:
-            self.logger.info("分散システム拡張コンポーネント初期化開始...")
+            self.logger.info("ローカル分散システム拡張コンポーネント初期化開始...")
             
-            # Phase 5: 分散協調メカニズム
-            self.logger.info("Phase 5: 分散協調システム初期化中...")
-            self.distributed_coordinator = create_distributed_coordinator(self.config)
-            self.load_balancer = create_load_balancer(self.distributed_coordinator)
+            # Rayクラスター初期化をスキップ（安定性のため）
+            self.logger.info("Rayクラスター初期化をスキップ（ローカル処理最適化）")
+            self.ray_coordinator = None
             
-            await self.distributed_coordinator.start()
-            await self.load_balancer.start()
-            
-            # Phase 6: 監視・メトリクス
-            self.logger.info("Phase 6: 監視・メトリクスシステム初期化中...")
-            self.metrics_collector = create_metrics_collector(self.config)
-            self.alert_manager = create_alert_manager(self.config, self.metrics_collector)
-            self.dashboard_manager = create_dashboard_manager(self.config)
-            
-            await self.metrics_collector.start()
-            await self.alert_manager.start()
-            await self.dashboard_manager.create_dashboard()
-            
-            # Phase 7: オートスケーリング
-            self.logger.info("Phase 7: オートスケーリングシステム初期化中...")
-            self.autoscaler = create_autoscaler(self.config)
-            self.kubernetes_manager = create_kubernetes_manager(self.config)
-            
-            await self.autoscaler.start()
-            
-            # Phase 8: パフォーマンス最適化
-            self.logger.info("Phase 8: パフォーマンス最適化システム初期化中...")
-            self.performance_optimizer = create_distributed_optimizer(self.config)
-            
-            await self.performance_optimizer.start()
-            
-            # 分散システム拡張コンポーネントをシャットダウンマネージャーに登録
-            register_for_shutdown(self.distributed_coordinator, "DistributedCoordinator", priority=90)
-            register_for_shutdown(self.load_balancer, "LoadBalancer", priority=89)
-            register_for_shutdown(self.metrics_collector, "MetricsCollector", priority=88)
-            register_for_shutdown(self.alert_manager, "AlertManager", priority=87)
-            register_for_shutdown(self.autoscaler, "AutoScaler", priority=86)
-            register_for_shutdown(self.performance_optimizer, "PerformanceOptimizer", priority=85)
-            
-            self.logger.info("分散システム拡張コンポーネント初期化完了 ✅")
+            self.logger.info("ローカル分散システム拡張コンポーネント初期化完了 ✅")
             
         except Exception as e:
-            self.logger.error(f"分散システム拡張コンポーネント初期化エラー: {e}")
+            self.logger.error(f"ローカル分散システム拡張コンポーネント初期化エラー: {e}")
             # 初期化に失敗した場合は基本機能のみで続行
-            self.distributed_coordinator = None
-            self.load_balancer = None
-            self.metrics_collector = None
-            self.alert_manager = None
-            self.dashboard_manager = None
-            self.autoscaler = None
-            self.kubernetes_manager = None
-            self.performance_optimizer = None
+            self.ray_coordinator = None

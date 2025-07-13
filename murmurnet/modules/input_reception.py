@@ -242,47 +242,54 @@ class InputReception:
                 
                 # まずローカルファイルのみで試行（オフライン対応）
                 cache_folder = self.config.get('embedding_cache_folder', self.config.get('cache_folder', './models/st_cache'))
-                local_files_only = self.config.get('local_files_only', True)
+                local_files_only = self.config.get('local_files_only', False)  # デフォルトをFalseに変更（ダウンロード許可）
                 
                 try:
                     if self.debug:
-                        logger.debug(f"埋め込みモデルをローカルからロード: {model_name} (local_files_only={local_files_only})")
+                        logger.debug(f"埋め込みモデルをローカルからロード: {model_name}")
                     
-                    # configの設定に従ってモデルをロード
+                    # まずローカルファイルのみで試行
                     self._transformer = SentenceTransformer(
                         model_name, 
-                        local_files_only=local_files_only,
+                        local_files_only=True,
                         cache_folder=cache_folder
                     )
-                    logger.info(f"✓ 埋め込みモデルをローカルからロード: {model_name}")
+                    logger.info(f"✓ 埋め込みモデルをローカルキャッシュからロード: {model_name}")
                     
                 except Exception as local_error:
-                    logger.warning(f"ローカルモデルロード失敗: {local_error}")
+                    logger.info(f"ローカルキャッシュが見つかりません: {local_error}")
                     
-                    # オンライン接続を試行
+                    # ローカルにない場合はダウンロード
                     if not local_files_only:
                         try:
-                            logger.info("オンラインからモデルをダウンロード中...")
+                            logger.info(f"HuggingFaceから {model_name} をダウンロード中...")
                             self._transformer = SentenceTransformer(
                                 model_name,
+                                local_files_only=False,
                                 cache_folder=cache_folder
                             )
-                            logger.info(f"✓ 埋め込みモデルをオンラインからロード: {model_name}")
+                            logger.info(f"✓ 埋め込みモデルをダウンロード完了: {model_name}")
                         except Exception as online_error:
-                            logger.error(f"オンラインモデルロード失敗: {online_error}")
+                            logger.error(f"オンラインダウンロード失敗: {online_error}")
                             raise online_error
                     else:
-                        logger.warning("force_offline=True のため、オンライン取得をスキップ")
+                        logger.warning("local_files_only=True のため、ダウンロードをスキップ")
                         raise local_error
                         
             except ImportError:
-                logger.warning("SentenceTransformersがインストールされていません。ダミー埋め込みを使用します。")
-                self._transformer = None
+                logger.warning("SentenceTransformersがインストールされていません。SimpleEmbedderを使用します。")
+                from .simple_embedder import SimpleEmbedder
+                self._transformer = SimpleEmbedder()
                 
             except Exception as e:
                 logger.error(f"埋め込みモデルロードエラー: {e}")
-                logger.info("ダミー埋め込みにフォールバック")
-                self._transformer = None
+                logger.info("SimpleEmbedderにフォールバック")
+                try:
+                    from .simple_embedder import SimpleEmbedder
+                    self._transformer = SimpleEmbedder()
+                except Exception as fallback_error:
+                    logger.error(f"SimpleEmbedderロードエラー: {fallback_error}")
+                    self._transformer = None
 
     def _parallel_tokenize(self, texts: List[str]) -> List[List[str]]:
         """並列トークン化処理"""
@@ -343,20 +350,19 @@ class InputReception:
                     for i, embedding in zip(uncached_indices, batch_embeddings):
                         embeddings.append((i, embedding))
                 else:
-                    # ダミー埋め込み（オフライン環境対応）
-                    logger.info("SentenceTransformerが利用できません。ダミー埋め込みを使用")
+                    # SimpleEmbedder使用（オフライン環境対応）
+                    logger.info("SentenceTransformerが利用できません。SimpleEmbedderを使用")
                     for i in uncached_indices:
-                        # テキストベースの擬似埋め込み（ハッシュベース）
-                        dummy_embedding = self._create_dummy_embedding(uncached_texts[uncached_indices.index(i)])
-                        embeddings.append((i, dummy_embedding))
+                        # SimpleEmbedderでの埋め込み生成
+                        embedding = self.simple_embedder.encode([uncached_texts[uncached_indices.index(i)]])[0]
+                        embeddings.append((i, embedding))
             except Exception as e:
                 logger.error(f"バッチ埋め込み生成エラー: {e}")
-                logger.info("ダミー埋め込みにフォールバック")
+                logger.info("SimpleEmbedderにフォールバック")
                 for i in uncached_indices:
-                    # エラー時もダミー埋め込みを生成
-                    dummy_embedding = self._create_dummy_embedding(uncached_texts[uncached_indices.index(i)])
-                    embeddings.append((i, dummy_embedding))
-                    embeddings.append((i, np.zeros(384)))
+                    # SimpleEmbedderでのフォールバック埋め込み生成
+                    embedding = self.simple_embedder.encode([uncached_texts[uncached_indices.index(i)]])[0]
+                    embeddings.append((i, embedding))
         
         # インデックス順に並び替え
         embeddings.sort(key=lambda x: x[0])
@@ -475,12 +481,15 @@ class InputReception:
                         if self.debug:
                             logger.debug(f"埋め込み生成: shape={embedding.shape}")
                     else:
-                        # ダミー埋め込み
-                        result['embedding'] = np.zeros(384)  # MiniLM-L6の次元数
-                        logger.warning("ダミー埋め込みを使用")
+                        # SimpleEmbedder使用
+                        embedding = self.simple_embedder.encode([normalized])[0]
+                        result['embedding'] = embedding
+                        logger.info("SimpleEmbedderを使用")
                 except Exception as e:
                     logger.error(f"埋め込み生成エラー: {e}")
-                    result['embedding'] = np.zeros(384)  # ダミー埋め込み            
+                    # SimpleEmbedderフォールバック
+                    embedding = self.simple_embedder.encode([normalized])[0]
+                    result['embedding'] = embedding            
             return result
             
         except Exception as e:
@@ -490,7 +499,11 @@ class InputReception:
                 logger.debug(traceback.format_exc())
                 
             # エラー時のフォールバック
-            return {'normalized': input_text[:100], 'tokens': input_text.split()[:10], 'embedding': np.zeros(384)}
+            return {
+                'normalized': input_text[:100], 
+                'tokens': input_text.split()[:10], 
+                'embedding': self.simple_embedder.encode([input_text[:100]])[0]
+            }
     
     def _setup_signal_handlers(self) -> None:
         """

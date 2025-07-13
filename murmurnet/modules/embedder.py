@@ -47,10 +47,21 @@ def get_sentence_transformer(model_name: str = 'all-MiniLM-L6-v2',
         logger.info(f"🚀 SentenceTransformer初期化開始: {model_name}")
         start_time = time.time()
         
+        # オフライン実行に最適化されたキャッシュ設定
+        if cache_folder is None:
+            cache_folder = os.path.join(os.path.expanduser("~"), ".cache", "sentence_transformers")
+        
+        os.makedirs(cache_folder, exist_ok=True)
+        
+        # モデル名の正規化（sentence-transformers/ プレフィックスを除去）
+        if model_name.startswith('sentence-transformers/'):
+            model_name = model_name[len('sentence-transformers/'):]
+        
         transformer = SentenceTransformer(
             model_name,
             local_files_only=local_files_only,
-            cache_folder=cache_folder
+            cache_folder=cache_folder,
+            trust_remote_code=False  # セキュリティ強化
         )
         
         load_time = time.time() - start_time
@@ -59,10 +70,14 @@ def get_sentence_transformer(model_name: str = 'all-MiniLM-L6-v2',
         
     except ImportError:
         logger.error("❌ SentenceTransformersがインストールされていません")
-        return None
+        # SimpleEmbedderにフォールバック
+        from .simple_embedder import get_sentence_transformer as get_simple_embedder
+        return get_simple_embedder()
     except Exception as e:
         logger.error(f"❌ SentenceTransformer初期化エラー: {e}")
-        return None
+        # SimpleEmbedderにフォールバック
+        from .simple_embedder import get_sentence_transformer as get_simple_embedder
+        return get_simple_embedder()
 
 class SharedEmbedder:
     """

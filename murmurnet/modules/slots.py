@@ -334,7 +334,8 @@ class BaseSlot(ABC):
 
             if self.debug:
                 print(f"\n--- {self.name} ---")
-                print(f"システムプロンプト: {sys_prompt[:120].replace('\n', ' ')}")
+                prompt_preview = sys_prompt[:120].replace('\n', ' ')
+                print(f"システムプロンプト: {prompt_preview}")
                 print("─" * 60)
 
             response = self._generate_response(sys_prompt, usr_prompt)

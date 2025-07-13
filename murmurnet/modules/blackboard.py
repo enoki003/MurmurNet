@@ -455,3 +455,20 @@ class Blackboard:
         if self.debug:
             final_stats = self.get_performance_stats()
             print(f"Blackboard shutdown. Final stats: {final_stats}")
+
+
+def create_blackboard(config: Dict[str, Any]):
+    """
+    ローカル分散ブラックボードを作成
+    
+    Args:
+        config: 設定辞書
+        
+    Returns:
+        LocalDistributedBlackboard: ローカル分散ブラックボードインスタンス
+    """
+    from .local_distributed_blackboard import create_blackboard as create_local_distributed
+    
+    # ローカル分散ブラックボードを使用
+    print("ローカル分散ブラックボードを作成します")
+    return create_local_distributed(config)

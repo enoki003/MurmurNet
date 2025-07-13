@@ -652,7 +652,7 @@ class KubernetesManager:
             self.logger.error(f"デプロイメント作成例外: {e}")
             return False
 
-    def _create_deployment_spec(self, template: WorkerTemplate, replicas: int) -> client.V1Deployment:
+    def _create_deployment_spec(self, template: WorkerTemplate, replicas: int):
         """デプロイメント仕様を作成"""
         labels = {'app': template.name, **template.labels}
         

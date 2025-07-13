@@ -48,15 +48,17 @@ parser.add_argument('--model-path', type=str, default=None,
 # パフォーマンス最適化オプション
 parser.add_argument('--no-local-files', action='store_true', 
                     help='ローカルファイルモードを無効化（HuggingFaceへのHTTPアクセスを許可）')
+parser.add_argument('--no-distributed', action='store_true',
+                    help='分散機能を無効化（Redis/Ray不要モード）')
 parser.add_argument('--cache-folder', type=str, 
-                    default=r"C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\cache\models",
+                    default=r"C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\cache\models",
                     help='モデルキャッシュフォルダのパス')
 
 # RAGモードのオプションを追加
 parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
                     help='RAGモード（dummy: ダミーモード、zim: ZIMファイル使用）')
 parser.add_argument('--zim-path', type=str, 
-                    default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
+                    default=r"C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
                     help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
 # エージェント別モデル設定のオプションを追加
 parser.add_argument('--internal-model', type=str, default=None,
@@ -352,6 +354,9 @@ async def chat_loop(args):
         
         # 並列処理設定
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
+        
+        # 分散機能設定
+        "enable_distributed": not args.no_distributed,  # 分散機能の有効/無効
         
         # エージェント別モデル設定
         "agent_models": _build_agent_models_config(args)
