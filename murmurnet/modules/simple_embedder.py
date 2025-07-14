@@ -225,7 +225,7 @@ class SimpleEmbedder:
 
 def get_sentence_transformer(model_name: str = 'simple', 
                            cache_folder: Optional[str] = None,
-                           local_files_only: bool = True):
+                           local_files_only: bool = False):
     """
     SimpleEmbedder を SentenceTransformer互換で取得
     
