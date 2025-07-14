@@ -26,7 +26,7 @@ _EMBEDDER_LOCK = threading.Lock()
 @lru_cache(maxsize=1)
 def get_sentence_transformer(model_name: str = 'all-MiniLM-L6-v2', 
                            cache_folder: Optional[str] = None,
-                           local_files_only: bool = True):
+                           local_files_only: bool = False):
     """
     SentenceTransformerのSingleton取得
     
@@ -97,7 +97,7 @@ class SharedEmbedder:
         self.config = config
         self.model_name = config.get('embedding_model', 'all-MiniLM-L6-v2')
         self.cache_folder = config.get('cache_folder', None)
-        self.local_files_only = config.get('local_files_only', True)
+        self.local_files_only = config.get('local_files_only', False)
         self.debug = config.get('debug', False)
         
         if self.debug:
@@ -277,7 +277,7 @@ if __name__ == "__main__":
     
     config = {
         'embedding_model': 'all-MiniLM-L6-v2',
-        'local_files_only': True,
+        'local_files_only': False,
         'debug': True
     }
     
