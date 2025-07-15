@@ -50,19 +50,9 @@ class TemplateBuilder:
             role = msg.get("role", "user")
             content = msg.get("content", "").strip()
             
-            # roleの正規化 - Gemma特化
+            # roleの正規化
             if role == "assistant":
                 role = "model"
-            elif role == "system":
-                # Gemmaでは、systemロールを特別扱い
-                if i == 0:
-                    # 最初のメッセージがsystemの場合、専用フォーマット
-                    buf.append(f"{TemplateBuilder.START}system\n{content}{TemplateBuilder.END}")
-                    continue
-                else:
-                    # 途中のsystemメッセージはuserとして扱う
-                    role = "user"
-                    content = f"System: {content}"
             elif role not in TemplateBuilder.VALID_ROLES:
                 role = "user"
             

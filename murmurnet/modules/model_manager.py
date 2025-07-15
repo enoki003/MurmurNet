@@ -408,3 +408,16 @@ if __name__ == "__main__":
     print(f"同じmodelインスタンス: {manager1.model is manager2.model}")
     if time1 > 0 and time2 > 0:
         print(f"速度向上: {time1/time2:.1f}倍")
+
+
+def clear_model_cache():
+    """モデルキャッシュをクリア"""
+    global _MODEL_INSTANCES
+    with _MODEL_LOCK:
+        _MODEL_INSTANCES.clear()
+    
+    # LRUキャッシュもクリア
+    get_llama_model.cache_clear()
+    get_singleton_manager.cache_clear()
+    
+    logger.info("モデルキャッシュをクリアしました")

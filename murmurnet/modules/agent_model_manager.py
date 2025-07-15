@@ -27,7 +27,7 @@ class ModelConfig:
     top_p: float = 0.95
     repeat_penalty: float = 1.2
     cache_folder: Optional[str] = None
-    local_files_only: bool = False
+    local_files_only: bool = True
     # エージェント固有設定
     agent_role: Optional[str] = None
     description: str = ""
@@ -74,7 +74,7 @@ class AgentModelManager:
             temperature=self.config.get('temperature', 0.7),
             max_tokens=self.config.get('max_tokens', 256),
             cache_folder=self.config.get('cache_folder'),
-            local_files_only=self.config.get('local_files_only', False)
+            local_files_only=self.config.get('local_files_only', True)
         )
         
         # 各エージェント別設定の取得または生成

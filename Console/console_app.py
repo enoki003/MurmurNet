@@ -17,17 +17,39 @@ import signal
 from pathlib import Path
 import logging
 import atexit
+import gc  # メモリ効率化のために追加
 
 # murmurnetパスを追加
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
 sys.path.append(str(project_root))  # プロジェクトルートをパスに追加
 
-# ここでモジュールをインポート
-from murmurnet.distributed_slm import DistributedSLM
-
 # グローバルなSLMインスタンス（シャットダウン用）
 _global_slm = None
+
+# パフォーマンス最適化：遅延インポートのヘルパー関数
+def _lazy_import_distributed_slm():
+    """DistributedSLMを遅延インポートして起動時間を改善"""
+    try:
+        from murmurnet.distributed_slm import DistributedSLM
+        return DistributedSLM
+    except ImportError as e:
+        print(f"エラー: MurmurNetモジュールのインポートに失敗しました: {e}")
+        sys.exit(1)
+
+# パフォーマンス最適化：キャッシュフォルダの事前チェック
+def _validate_cache_folder(cache_folder):
+    """キャッシュフォルダの存在確認と作成"""
+    if not os.path.exists(cache_folder):
+        print(f"キャッシュフォルダが存在しません: {cache_folder}")
+        try:
+            os.makedirs(cache_folder, exist_ok=True)
+            print(f"キャッシュフォルダを作成しました: {cache_folder}")
+            return True
+        except Exception as e:
+            print(f"キャッシュフォルダの作成に失敗: {e}")
+            return False
+    return True
 
 # ログ設定
 parser = argparse.ArgumentParser(description="MurmurNet Console App - 分散SLMシステム")
@@ -48,17 +70,15 @@ parser.add_argument('--model-path', type=str, default=None,
 # パフォーマンス最適化オプション
 parser.add_argument('--no-local-files', action='store_true', 
                     help='ローカルファイルモードを無効化（HuggingFaceへのHTTPアクセスを許可）')
-parser.add_argument('--no-distributed', action='store_true',
-                    help='分散機能を無効化（Redis/Ray不要モード）')
 parser.add_argument('--cache-folder', type=str, 
-                    default=r"C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\MurmurNet\cache\models",
+                    default=r"C:\Users\admin\Desktop\課題研究\ワークスペース\MurmurNet\cache\models",
                     help='モデルキャッシュフォルダのパス')
 
 # RAGモードのオプションを追加
 parser.add_argument('--rag-mode', choices=['dummy', 'zim'], default='dummy', 
                     help='RAGモード（dummy: ダミーモード、zim: ZIMファイル使用）')
 parser.add_argument('--zim-path', type=str, 
-                    default=r"C:\Users\園木優陽\OneDrive\デスクトップ\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
+                    default=r"C:\Users\admin\Desktop\課題研究\KNOWAGE_DATABASE\wikipedia_en_top_nopic_2025-03.zim",
                     help='ZIMファイルのパス（RAGモードがzimの場合に使用）')
 # エージェント別モデル設定のオプションを追加
 parser.add_argument('--internal-model', type=str, default=None,
@@ -102,6 +122,12 @@ parser.add_argument('--summary-tokens', type=int, default=None,
 parser.add_argument('--max-new-tokens', type=int, default=128,
                     help='最大新規トークン数（デフォルト: 128、空レス対策）')
 
+# パフォーマンス最適化オプション
+parser.add_argument('--optimize-memory', action='store_true',
+                    help='メモリ最適化を有効化（履歴制限、定期的なガベージコレクション）')
+parser.add_argument('--history-limit', type=int, default=50,
+                    help='履歴保持数の上限（デフォルト: 50）')
+
 # 並列処理の安全性に関するオプション
 parser.add_argument('--safe-parallel', action='store_true', 
                     help='安全な並列処理モード（GGMLエラー回避のためのグローバルロックを使用）')
@@ -135,18 +161,23 @@ if args.log:
     console.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logging.getLogger('').addHandler(console)
 
-# libzimがインストールされているか確認
-try:
-    from libzim.reader import Archive
-    HAS_LIBZIM = True
-    print("libzimライブラリが利用可能です")
-except ImportError:
-    HAS_LIBZIM = False
-    print("警告: libzimライブラリがインストールされていません")
-    print("ZIMモードを使用するには、以下のコマンドを実行してください:")
-    print("pip install libzim")
-    if args.rag_mode == "zim":
-        print("ZIMモードが指定されましたが、libzimがないためdummyモードにフォールバックします")
+# libzimがインストールされているか確認（最適化済み）
+def _check_libzim():
+    """libzimライブラリの確認"""
+    try:
+        import libzim.reader
+        print("libzimライブラリが利用可能です")
+        return True
+    except ImportError:
+        print("警告: libzimライブラリがインストールされていません")
+        print("ZIMモードを使用するには、以下のコマンドを実行してください:")
+        print("pip install libzim")
+        return False
+
+# libzimチェック実行
+HAS_LIBZIM = _check_libzim()
+if not HAS_LIBZIM and hasattr(args, 'rag_mode') and args.rag_mode == "zim":
+    print("ZIMモードが指定されましたが、libzimがないためdummyモードにフォールバックします")
 
 def print_debug(slm):
     """デバッグモード時の詳細情報表示"""
@@ -355,9 +386,6 @@ async def chat_loop(args):
         # 並列処理設定
         "use_global_lock": True,  # GGMLエラー回避のためのグローバルロック
         
-        # 分散機能設定
-        "enable_distributed": not args.no_distributed,  # 分散機能の有効/無効
-        
         # エージェント別モデル設定
         "agent_models": _build_agent_models_config(args)
     }
@@ -376,15 +404,10 @@ async def chat_loop(args):
     print(f"ローカルファイルモード: {config['local_files_only']}")
     print(f"キャッシュフォルダ: {config['cache_folder']}")
     
-    # キャッシュフォルダの存在確認
-    import os
-    if not os.path.exists(config['cache_folder']):
-        print(f"警告: キャッシュフォルダが存在しません: {config['cache_folder']}")
-        try:
-            os.makedirs(config['cache_folder'], exist_ok=True)
-            print(f"キャッシュフォルダを作成しました: {config['cache_folder']}")
-        except Exception as e:
-            print(f"キャッシュフォルダの作成に失敗: {e}")
+    # キャッシュフォルダの存在確認（最適化済み）
+    if not _validate_cache_folder(config['cache_folder']):
+        print("キャッシュフォルダの初期化に失敗しました")
+        return
             
     # HuggingFaceモデルのローカルキャッシュ確認
     if config['model_type'] == 'huggingface' and config['local_files_only']:
@@ -455,8 +478,9 @@ async def chat_loop(args):
         config['use_slots'] = False
         config['use_collaboration'] = False
         
-    # SLMインスタンス作成
+    # SLMインスタンス作成（遅延インポート）
     global _global_slm
+    DistributedSLM = _lazy_import_distributed_slm()
     slm = DistributedSLM(config)
     _global_slm = slm  # グローバル参照を設定
     
@@ -537,6 +561,14 @@ async def chat_loop(args):
                 print(f"[DEBUG] 実行時間: {elapsed:.2f}秒")            # 履歴に追加
             history.append({"role": "assistant", "content": response})
             
+            # メモリ効率化：履歴管理
+            if args.optimize_memory and len(history) > args.history_limit:
+                history = history[-args.history_limit:]
+                gc.collect()  # メモリ回収
+            elif len(history) > 100:  # デフォルト制限
+                history = history[-100:]
+                gc.collect()
+            
         except KeyboardInterrupt:
             print("\n中断されました。システムをシャットダウンします...")
             try:
@@ -551,9 +583,11 @@ async def chat_loop(args):
             if args.debug:
                 import traceback
                 traceback.print_exc()
+            # エラー発生時もメモリクリーンアップ
+            gc.collect()
 
 def cleanup_system():
-    """システムの緊急クリーンアップ"""
+    """システムの緊急クリーンアップ（最適化済み）"""
     global _global_slm
     if _global_slm:
         try:
@@ -576,6 +610,8 @@ def cleanup_system():
             print(f"緊急シャットダウンエラー: {e}")
         finally:
             _global_slm = None
+            # メモリクリーンアップ
+            gc.collect()
 
 def signal_handler(signum, frame):
     """シグナルハンドラ"""

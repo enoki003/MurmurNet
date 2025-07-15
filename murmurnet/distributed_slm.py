@@ -25,7 +25,7 @@ if os.name == "nt":
 from .modules.common import setup_logger, PerformanceError
 from .modules.performance import PerformanceMonitor, time_function, time_async_function
 from .modules.input_reception import InputReception
-from .modules.local_distributed_blackboard import create_blackboard
+from .modules.blackboard import create_blackboard
 from .modules.slot_blackboard import SlotBlackboard
 from .modules.agent_pool import AgentPoolManager
 from .modules.rag_retriever import RAGRetriever
@@ -35,23 +35,13 @@ from .modules.conversation_memory import ConversationMemory
 from .modules.shutdown_manager import register_for_shutdown, get_shutdown_manager
 from .modules.slots import SlotRunner
 from .modules.embedder import Embedder
-# ローカル分散システム拡張モジュール
-from .modules.local_ray_coordinator import create_local_ray_coordinator
 
 class DistributedSLM:
     """
-    ローカル分散創発型言語モデルメインクラス
+    分散創発型言語モデルメインクラス
     
-    同一マシン内で複数の小規模な言語モデルが協調的に動作する
-    ローカル分散型アーキテクチャを通じて高度な対話生成機能を提供する中枢システム。
-    
-    主要機能:
-    - マルチプロセス・マルチスレッド並列処理
-    - 共有メモリベース高速データ交換
-    - Ray分散フレームワークによる処理最適化
-    - エージェントプール動的管理
-    - RAGベースコンテキスト検索
-    - 会話記憶・要約機能
+    複数の小規模な言語モデルが協調的に動作する分散型アーキテクチャを通じて
+    高度な対話生成機能を提供する中枢システム。
     
     特徴:
     - 複数の小規模モデルが協調動作
@@ -126,8 +116,8 @@ class DistributedSLM:
         self.input_reception = InputReception(self.config)
         
         self.logger.info("エージェント管理を初期化中...")
-        # 従来のAgentPoolManagerを使用（blackboardを渡す）
-        self.agent_pool = AgentPoolManager(self.config, self.blackboard)
+        # 従来のAgentPoolManagerを使用
+        self.agent_pool = AgentPoolManager(self.config)
         
         self.logger.info("RAGリトリーバーを初期化中...")
         self.rag_retriever = RAGRetriever(self.config)
@@ -163,9 +153,6 @@ class DistributedSLM:
         
         # 初期化完了時のメモリスナップショット
         self.performance.take_memory_snapshot("distributed_slm_init_complete")
-        
-        # Phase 5-8: 分散システム拡張コンポーネント初期化（非同期で実行）
-        self._init_distributed_extensions_task = None
         
         # ShutdownManagerに自身を登録（最高優先度で）
         register_for_shutdown(self, "DistributedSLM", priority=100)
@@ -249,7 +236,7 @@ class DistributedSLM:
         
         self.performance.take_memory_snapshot(f"iteration_{iteration+1}_end")
     
-    async    def _run_agents_sequential(self) -> None:
+    async def _run_agents_sequential(self) -> None:
         """
         エージェントを逐次実行（内部メソッド）
         
@@ -261,24 +248,89 @@ class DistributedSLM:
         if hasattr(self.performance, 'record_parallel_execution'):
             self.performance.record_parallel_execution('sequential')
         
-        # AgentPoolManagerの逐次実行メソッドを使用
-        self.agent_pool.run_agents(self.blackboard)
+        try:
+            # 従来のagent_poolを使用した逐次実行
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                # AgentPoolManagerの逐次実行メソッドを使用
+                self.agent_pool.run_agents(self.blackboard)
+            else:
+                # フォールバック: 最小限のダミー出力
+                for i in range(self.num_agents):
+                    self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+                    
+        except Exception as e:
+            self.logger.error(f"逐次実行エラー: {str(e)}")
+            # エラーが発生した場合も最小限のダミー出力
+            for i in range(self.num_agents):
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした: {str(e)}")
 
     async def _run_agents_parallel(self) -> None:
         """
-        エージェントを並列実行（内部メソッド）
+        エージェントを並列実行（内部メソッド）- 旧式（下位互換）
         
         複数のエージェントを並列に実行し、結果を黒板に書き込む
+        CPU最適化版の並列処理を使用
         """
-        self.logger.info("エージェントを並列実行中...")
+        self.logger.info("エージェントを並列実行中（CPU最適化版）...")
         
         # パフォーマンス統計の記録
         if hasattr(self.performance, 'record_parallel_execution'):
             self.performance.record_parallel_execution('parallel')
         
-        # AgentPoolManagerの並列実行メソッドを使用
-        await self.agent_pool.run_agents_parallel(self.blackboard)
+        try:
+            # 従来のagent_poolを使用した並列実行
+            if hasattr(self, 'agent_pool') and self.agent_pool:
+                # AgentPoolManagerの並列実行メソッドを使用
+                await self.agent_pool.run_agents_parallel(self.blackboard)
+            else:
+                # フォールバック: 順次実行
+                self._run_agents_sequential()
+                    
+        except Exception as e:
+            self.logger.error(f"並列実行エラー: {str(e)}")
+            # エラーが発生した場合は逐次実行にフォールバック
+            self.logger.info("逐次実行にフォールバックします")
+            self._run_agents_sequential()
 
+    async def _run_agents_parallel_fallback(self) -> None:
+        """
+        フォールバック用の並列実行
+        """
+        # スレッドプール内でエージェントタスクを実行するラッパー
+        def run_agent_task(agent_id: int) -> str:
+            """エージェントタスクのスレッドプールラッパー"""
+            try:
+                # 共有モデルを使って実行（グローバルロックはagent_task内で使用）
+                return self.agent_pool._agent_task(agent_id)
+            except Exception as e:
+                self.logger.error(f"エージェント {agent_id} 実行エラー: {str(e)}")
+                import traceback
+                self.logger.debug(traceback.format_exc())
+                return f"エージェント{agent_id}は応答できませんでした"
+        
+        # イベントループを取得
+        loop = asyncio.get_event_loop()
+        
+        # 真の並列実行：すべてのエージェントを同時に実行
+        tasks = []
+        for i in range(self.num_agents):
+            # 各エージェントのタスクを作成
+            task = loop.run_in_executor(None, run_agent_task, i)
+            tasks.append(task)
+        
+        # すべてのタスクを同時に実行して結果を取得
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 結果を黒板に書き込み
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                self.logger.error(f"エージェント {i} 処理エラー: {str(result)}")
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は応答できませんでした")
+            elif result:
+                self.blackboard.write(f'agent_{i}_output', result)
+            else:
+                self.blackboard.write(f'agent_{i}_output', f"エージェント{i}は空の応答を返しました")
+    
         
     async def generate(self, input_text: str) -> str:
         """
@@ -294,12 +346,6 @@ class DistributedSLM:
         total_start_time = time.time()
         
         self.logger.info("応答生成プロセスを開始")
-        
-        # 分散システム拡張コンポーネントの初期化（初回のみ）
-        if not hasattr(self, '_distributed_extensions_initialized'):
-            self.logger.info("分散システム拡張コンポーネントを初期化中...")
-            await self._init_distributed_extensions()
-            self._distributed_extensions_initialized = True
         
         # 新しいターンのために黒板をクリア（会話履歴は保持）
         self.blackboard.clear_current_turn()
@@ -751,7 +797,7 @@ class DistributedSLM:
             # 3. モデルキャッシュのクリア
             self.logger.info("モデルキャッシュをクリア中...")
             try:
-                from .modules.model_factory import clear_model_cache
+                from .modules.model_manager import clear_model_cache
                 clear_model_cache()
             except Exception as e:
                 self.logger.warning(f"モデルキャッシュクリアエラー: {e}")
@@ -822,20 +868,31 @@ class DistributedSLM:
         except Exception as e:
             self.logger.error(f"{name}のシャットダウンエラー: {e}")
 
-    async def _init_distributed_extensions(self):
-        """
-        ローカル分散システム拡張コンポーネントを初期化
-        """
-        try:
-            self.logger.info("ローカル分散システム拡張コンポーネント初期化開始...")
-            
-            # Rayクラスター初期化をスキップ（安定性のため）
-            self.logger.info("Rayクラスター初期化をスキップ（ローカル処理最適化）")
-            self.ray_coordinator = None
-            
-            self.logger.info("ローカル分散システム拡張コンポーネント初期化完了 ✅")
-            
         except Exception as e:
-            self.logger.error(f"ローカル分散システム拡張コンポーネント初期化エラー: {e}")
-            # 初期化に失敗した場合は基本機能のみで続行
-            self.ray_coordinator = None
+            self.logger.error(f"黒板クリアエラー: {e}")
+            # エラーが発生した場合は手動で基本メモリをクリア
+            self.blackboard.memory.clear()
+            
+            # 既存のメモリキャッシュをクリア
+            if hasattr(self.blackboard, 'memory_cache'):
+                self.blackboard.memory_cache.clear()
+            
+            # 履歴をクリア
+            if hasattr(self.blackboard, 'history'):
+                self.blackboard.history.clear()
+            
+            # 各コンポーネントを個別にシャットダウン
+            await self._shutdown_components()
+            
+            # 残りのリソースをクリア
+            if hasattr(self, 'model_cache'):
+                self.model_cache.clear()
+            if hasattr(self, 'tokenizer_cache'):
+                self.tokenizer_cache.clear()
+            
+            # 最終的に明示的にガベージコレクションを実行
+            import gc
+            gc.collect()
+            
+            self.logger.info("分散SLMシステムが緊急シャットダウンされました")
+            raise PerformanceError(f"システムシャットダウンエラー: {e}")

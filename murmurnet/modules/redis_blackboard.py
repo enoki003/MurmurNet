@@ -21,7 +21,8 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
+import weakref
 
 try:
     import redis
@@ -29,7 +30,6 @@ try:
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
-    raise ImportError("Redis is required for distributed operation. Install with: pip install redis")
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,10 @@ class RedisBlackboard:
                 - redis_password: Redis認証パスワード
                 - key_prefix: キープレフィックス (default: murmurnet:)
                 - default_ttl: デフォルトTTL秒 (default: 3600)
-                
-        Raises:
-            ImportError: Redis未インストール
-            ConnectionError: Redis接続失敗
         """
+        if not HAS_REDIS:
+            raise ImportError("Redis is required for distributed blackboard. Install with: pip install redis")
+        
         self.config = config or {}
         
         # Redis接続設定
@@ -471,24 +470,44 @@ class RedisBlackboard:
             pass
 
 
-def create_blackboard(config: Dict[str, Any] = None) -> RedisBlackboard:
+# フォールバック：Redis未使用時のローカル実装
+class LocalBlackboard:
     """
-    Redis分散ブラックボードを作成
+    Redis未使用時のローカルブラックボード
+    """
+    
+    def __init__(self, config: Dict[str, Any] = None):
+        # 既存のBlackboardクラスをインポートしてラップ
+        from .blackboard import Blackboard
+        self._local_blackboard = Blackboard(config)
+        logger.warning("Redis利用不可のため、ローカルブラックボードを使用")
+    
+    def __getattr__(self, name):
+        # メソッド委譲
+        return getattr(self._local_blackboard, name)
+
+
+def create_blackboard(config: Dict[str, Any] = None) -> Union[RedisBlackboard, LocalBlackboard]:
+    """
+    設定に応じて適切なブラックボードを作成
     
     Args:
         config: 設定辞書
         
     Returns:
-        RedisBlackboardインスタンス
-        
-    Raises:
-        ImportError: Redisライブラリが未インストール
-        ConnectionError: Redis接続失敗
+        ブラックボードインスタンス
     """
     if config is None:
         config = {}
     
-    if not HAS_REDIS:
-        raise ImportError("Redis is required for distributed operation. Install with: pip install redis")
+    # Redis使用フラグ
+    use_redis = config.get('use_redis_blackboard', True)
     
-    return RedisBlackboard(config)
+    if use_redis and HAS_REDIS:
+        try:
+            return RedisBlackboard(config)
+        except Exception as e:
+            logger.warning(f"Redis接続失敗、ローカルモードにフォールバック: {e}")
+            return LocalBlackboard(config)
+    else:
+        return LocalBlackboard(config)
